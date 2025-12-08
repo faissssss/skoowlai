@@ -1,0 +1,313 @@
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageSquare, Send, Loader2, ArrowRight, Paperclip, Mic } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface Message {
+    id: string;
+    role: 'function' | 'system' | 'user' | 'assistant' | 'data' | 'tool';
+    content: string;
+}
+
+export default function ChatAssistant({
+    context,
+    deckId,
+    isOpen,
+    onToggle
+}: {
+    context: string;
+    deckId: string;
+    isOpen: boolean;
+    onToggle: () => void;
+}) {
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Load conversation history on mount
+    useEffect(() => {
+        if (deckId && !historyLoaded) {
+            fetch(`/api/chat/history?deckId=${deckId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.messages) {
+                        setMessages(data.messages);
+                    }
+                    setHistoryLoaded(true);
+                })
+                .catch(err => {
+                    console.error('Failed to load chat history:', err);
+                    setHistoryLoaded(true);
+                });
+        }
+    }, [deckId, historyLoaded]);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const handleFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input?.trim() || isLoading) return;
+
+        const userMessage = input;
+        setInput(''); // Clear input immediately
+
+        // Add user message to UI
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: userMessage,
+        };
+        setMessages(prev => [...prev, userMsg]);
+        setIsLoading(true);
+
+        try {
+            // Call the chat API
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: userMessage }],
+                    context,
+                    deckId,
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to get response');
+
+            // Add empty assistant message
+            const assistantMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: '',
+            };
+            setMessages(prev => [...prev, assistantMsg]);
+
+            // Read the streaming response as text
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (reader) {
+                console.log('📖 Starting to read stream...');
+            }
+        } catch (error) {
+            console.error('Chat error:', error);
+            // Remove the empty assistant message on error
+            setMessages(prev => prev.slice(0, -1));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <>
+            {/* Toggle Button - Middle Right */}
+            <div className={cn(
+                "fixed top-1/2 right-0 z-50 transform -translate-y-1/2 transition-all duration-300",
+                isOpen ? "translate-x-full opacity-0" : "translate-x-0 opacity-100"
+            )}>
+                <Button
+                    onClick={onToggle}
+                    className="h-12 w-10 rounded-l-xl rounded-r-none shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center"
+                >
+                    <MessageSquare className="h-5 w-5" />
+                </Button>
+            </div>
+
+            {/* Chat Sidebar */}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed top-16 right-0 bottom-0 z-40 w-[400px] bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl"
+                    >
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-4 bg-white dark:bg-slate-950 flex-shrink-0">
+                            <div className="flex items-center justify-between">
+                                <div />
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={onToggle}
+                                    className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                                >
+                                    Hide <ArrowRight className="w-4 h-4 ml-1" />
+                                </Button>
+                            </div>
+
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Hey, I'm Sheesh.AI</h2>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm">
+                                    I can work with you on your doc and answer any questions!
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Messages - Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-6" ref={scrollRef}>
+                            <div className="space-y-6">
+                                {messages.length === 0 && (
+                                    <div className="text-center text-slate-500 mt-10">
+                                        <p className="text-sm">Type a question below to get started.</p>
+                                    </div>
+                                )}
+                                {messages.map((m: Message) => (
+                                    <div
+                                        key={m.id}
+                                        className={cn(
+                                            "flex w-full",
+                                            m.role === 'user' ? "justify-end" : "justify-start"
+                                        )}
+                                    >
+                                        <div
+                                            className={cn(
+                                                "max-w-[85%] rounded-2xl px-5 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words",
+                                                m.role === 'user'
+                                                    ? "bg-indigo-600 text-white"
+                                                    : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800"
+                                            )}
+                                        >
+                                            {m.content}
+                                        </div>
+                                    </div>
+                                ))}
+                                {isLoading && (
+                                    <div className="flex justify-start w-full">
+                                        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3 flex items-center gap-2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">Thinking...</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Input Bar - Fixed */}
+                        <div className="p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*,.pdf,.doc,.docx,.txt"
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        // TODO: Handle file upload
+                                        alert('File attachment: ' + file.name);
+                                    }
+                                }}
+                            />
+                            <form onSubmit={handleFormSubmit} className="relative flex items-center gap-2">
+                                {/* Microphone Button */}
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        if (isRecording) {
+                                            // Stop recording
+                                            mediaRecorderRef.current?.stop();
+                                            setIsRecording(false);
+                                        } else {
+                                            // Start recording
+                                            try {
+                                                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                                                const mediaRecorder = new MediaRecorder(stream);
+                                                const audioChunks: Blob[] = [];
+
+                                                mediaRecorder.ondataavailable = (event) => {
+                                                    audioChunks.push(event.data);
+                                                };
+
+                                                mediaRecorder.onstop = () => {
+                                                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                                                    setAudioBlob(audioBlob);
+                                                    stream.getTracks().forEach(track => track.stop());
+                                                    // TODO: Send audio to API
+                                                    alert('Voice recording captured!');
+                                                };
+
+                                                mediaRecorder.start();
+                                                mediaRecorderRef.current = mediaRecorder;
+                                                setIsRecording(true);
+                                            } catch (err) {
+                                                console.error('Microphone access denied:', err);
+                                                alert('Please allow microphone access to use voice recording.');
+                                            }
+                                        }
+                                    }}
+                                    className={cn(
+                                        "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                                        isRecording
+                                            ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                                            : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-white"
+                                    )}
+                                    title={isRecording ? "Stop recording" : "Voice message"}
+                                >
+                                    <Mic className="w-5 h-5" />
+                                </button>
+
+                                {/* Text Input */}
+                                <div className="flex-1 relative">
+                                    <Input
+                                        value={input || ''}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleFormSubmit(e as any);
+                                            }
+                                        }}
+                                        placeholder="Type a question here or type '@' to reference documents..."
+                                        className="w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 placeholder:text-slate-500 rounded-xl pr-20 py-3 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500"
+                                        disabled={isLoading || isRecording}
+                                    />
+
+                                    {/* Attachment Button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="absolute right-12 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                                        title="Attach file"
+                                    >
+                                        <Paperclip className="w-5 h-5" />
+                                    </button>
+
+                                    {/* Send Button */}
+                                    <Button
+                                        type="submit"
+                                        size="icon"
+                                        disabled={isLoading || !input?.trim()}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </form>
+                            <div className="text-center mt-2">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-600">
+                                    AI can make mistakes. Check important info.
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
+    );
+}
