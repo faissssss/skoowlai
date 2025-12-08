@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, CreditCard, ClipboardCheck, Share2, Menu, UserPlus, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, FileText, CreditCard, ClipboardCheck, Share2, Menu, UserPlus, Pencil, Check, X, Crown } from 'lucide-react';
 import ChatAssistant from '@/components/study/ChatAssistant';
 import TextSelectionPopup, { RewriteAction } from '@/components/study/TextSelectionPopup';
 import StudyTimer from '@/components/study/StudyTimer';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Role } from '@/lib/permissions';
 import { EditorProvider, useEditorContext, RewriteRequest } from './EditorContext';
+import PricingModal from '@/components/PricingModal';
 
 interface StudyPageLayoutProps {
     children: React.ReactNode;
@@ -45,6 +46,7 @@ function StudyPageLayoutInner({
     const [editedTitle, setEditedTitle] = useState(deck.title);
     const [currentTitle, setCurrentTitle] = useState(deck.title);
     const [isSavingTitle, setIsSavingTitle] = useState(false);
+    const [isPricingOpen, setIsPricingOpen] = useState(false);
     const titleInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
     const router = useRouter();
@@ -282,6 +284,36 @@ function StudyPageLayoutInner({
 
 
                     </nav>
+
+                    {/* Upgrade Plan Button */}
+                    <div className={cn(
+                        "p-4 border-t border-slate-200 dark:border-slate-800",
+                        isSidebarCollapsed ? "flex justify-center" : ""
+                    )}>
+                        <Button
+                            onClick={() => setIsPricingOpen(true)}
+                            className={cn(
+                                "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25",
+                                isSidebarCollapsed ? "px-2" : ""
+                            )}
+                            title={isSidebarCollapsed ? "Upgrade Plan" : undefined}
+                        >
+                            <Crown className="w-4 h-4 shrink-0" />
+                            <AnimatePresence mode="wait">
+                                {!isSidebarCollapsed && (
+                                    <motion.span
+                                        initial={{ opacity: 0, width: 0 }}
+                                        animate={{ opacity: 1, width: "auto" }}
+                                        exit={{ opacity: 0, width: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="whitespace-nowrap overflow-hidden"
+                                    >
+                                        Upgrade Plan
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                        </Button>
+                    </div>
                 </motion.aside>
 
                 {/* Main Content */}
@@ -331,6 +363,9 @@ function StudyPageLayoutInner({
                     currentUserId={currentUserId}
                 />
             )}
+
+            {/* Pricing Modal */}
+            <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
         </div>
     );
 }

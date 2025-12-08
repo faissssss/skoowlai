@@ -6,11 +6,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
     BookOpen, Clock, Youtube, Mic, Upload,
-    FileText, Search, Crown
+    FileText, Search
 } from 'lucide-react';
 import FileUpload from '@/components/study/FileUpload';
 import LiveAudioRecorder from '@/components/study/LiveAudioRecorder';
-import PricingModal from '@/components/PricingModal';
 import {
     Dialog,
     DialogContent,
@@ -32,7 +31,6 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [youtubeUrl, setYoutubeUrl] = useState('');
     const [isYoutubeLoading, setIsYoutubeLoading] = useState(false);
-    const [isPricingOpen, setIsPricingOpen] = useState(false);
 
     const router = useRouter();
     const { startLoading, stopLoading } = useGlobalLoader();
@@ -139,13 +137,6 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Welcome back! 👋</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">What would you like to study today?</p>
                 </div>
-                <Button
-                    onClick={() => setIsPricingOpen(true)}
-                    className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25 gap-2"
-                >
-                    <Crown className="w-4 h-4" />
-                    Upgrade Plan
-                </Button>
             </div>
 
             {/* Quick Create Section */}
@@ -384,12 +375,6 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     </div>
                 )}
             </div>
-
-            {/* Pricing Modal */}
-            <PricingModal
-                isOpen={isPricingOpen}
-                onClose={() => setIsPricingOpen(false)}
-            />
         </div>
     );
 }

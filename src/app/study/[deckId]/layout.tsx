@@ -59,7 +59,10 @@ export default async function StudyLayout({
                 // Create new user
                 console.log('Creating new user', email);
                 dbUser = await db.user.create({
-                    data: { email },
+                    data: {
+                        email,
+                        clerkId: clerkUser.id,
+                    },
                 });
             }
         }

@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Settings, Menu } from 'lucide-react';
+import { LayoutDashboard, Settings, Menu, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PricingModal from '@/components/PricingModal';
 
 export default function DashboardLayout({
     children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [isPricingOpen, setIsPricingOpen] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -80,6 +82,36 @@ export default function DashboardLayout({
                     );
                 })}
             </nav>
+
+            {/* Upgrade Plan Button */}
+            <div className={cn(
+                "p-4 border-t border-slate-200 dark:border-slate-800",
+                isCollapsed && !mobile ? "flex justify-center" : ""
+            )}>
+                <Button
+                    onClick={() => setIsPricingOpen(true)}
+                    className={cn(
+                        "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25",
+                        isCollapsed && !mobile ? "px-2" : ""
+                    )}
+                    title={isCollapsed && !mobile ? "Upgrade Plan" : undefined}
+                >
+                    <Crown className="w-4 h-4 shrink-0" />
+                    <AnimatePresence mode="wait">
+                        {(!isCollapsed || mobile) && (
+                            <motion.span
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: "auto" }}
+                                exit={{ opacity: 0, width: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="whitespace-nowrap overflow-hidden"
+                            >
+                                Upgrade Plan
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
+                </Button>
+            </div>
         </div>
     );
 
@@ -135,6 +167,9 @@ export default function DashboardLayout({
                 </div>
                 {children}
             </main>
+
+            {/* Pricing Modal */}
+            <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
         </div>
     );
 }
