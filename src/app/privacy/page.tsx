@@ -199,10 +199,10 @@ export default function PrivacyPolicyPage() {
                                 <p className="text-white font-medium">
                                     Email:{" "}
                                     <a
-                                        href="mailto:wibowofaisss@gmail.com"
+                                        href="mailto:yourskoowlai@gmail.com"
                                         className="text-purple-400 hover:text-purple-300 transition-colors"
                                     >
-                                        wibowofaisss@gmail.com
+                                        yourskoowlai@gmail.com
                                     </a>
                                 </p>
                             </div>
