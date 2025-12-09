@@ -260,51 +260,53 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
 
             {/* Recent Sets */}
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <Clock className="w-5 h-5 text-slate-400" />
                         Recent Study Sets
                     </h2>
 
-                    <div className="flex items-center gap-4 flex-1 justify-end">
-                        {/* Filters */}
-                        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
-                            <Button
-                                variant={filter === 'all' ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('all')}
-                                className="text-xs"
-                            >
-                                All
-                            </Button>
-                            <Button
-                                variant={filter === 'doc' ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('doc')}
-                                className="text-xs gap-1"
-                            >
-                                <FileText className="w-3 h-3" /> Docs
-                            </Button>
-                            <Button
-                                variant={filter === 'youtube' ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('youtube')}
-                                className="text-xs gap-1"
-                            >
-                                <Youtube className="w-3 h-3" /> YouTube
-                            </Button>
-                            <Button
-                                variant={filter === 'audio' ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('audio')}
-                                className="text-xs gap-1"
-                            >
-                                <Mic className="w-3 h-3" /> Audio
-                            </Button>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                        {/* Filters - scrollable on mobile */}
+                        <div className="overflow-x-auto -mx-1 px-1">
+                            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 min-w-max">
+                                <Button
+                                    variant={filter === 'all' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setFilter('all')}
+                                    className="text-xs"
+                                >
+                                    All
+                                </Button>
+                                <Button
+                                    variant={filter === 'doc' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setFilter('doc')}
+                                    className="text-xs gap-1"
+                                >
+                                    <FileText className="w-3 h-3" /> Docs
+                                </Button>
+                                <Button
+                                    variant={filter === 'youtube' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setFilter('youtube')}
+                                    className="text-xs gap-1"
+                                >
+                                    <Youtube className="w-3 h-3" /> YouTube
+                                </Button>
+                                <Button
+                                    variant={filter === 'audio' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setFilter('audio')}
+                                    className="text-xs gap-1"
+                                >
+                                    <Mic className="w-3 h-3" /> Audio
+                                </Button>
+                            </div>
                         </div>
 
-                        {/* Search Bar */}
-                        <div className="relative w-64 hidden md:block">
+                        {/* Search Bar - visible on all sizes */}
+                        <div className="relative w-full sm:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"

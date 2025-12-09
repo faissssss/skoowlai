@@ -14,8 +14,62 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "skoowl ai - AI-Powered Study Assistant",
-  description: "Your Personal AI Study Buddy. Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps.",
+  metadataBase: new URL('https://skoowl.ai'),
+  title: {
+    default: "skoowl ai - AI-Powered Study Assistant",
+    template: "%s | skoowl ai",
+  },
+  description: "Your Personal AI Study Buddy. Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps. Study smarter with AI.",
+  keywords: [
+    "AI study assistant",
+    "flashcards",
+    "quizzes",
+    "mind maps",
+    "smart notes",
+    "study tools",
+    "AI learning",
+    "PDF summarizer",
+    "YouTube summarizer",
+    "lecture notes",
+    "spaced repetition",
+  ],
+  authors: [{ name: "Skoowl AI" }],
+  creator: "Skoowl AI",
+  publisher: "Skoowl AI",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://skoowl.ai",
+    siteName: "skoowl ai",
+    title: "skoowl ai - AI-Powered Study Assistant",
+    description: "Your Personal AI Study Buddy. Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps.",
+    images: [
+      {
+        url: "/skoowl-logo.png",
+        width: 512,
+        height: 512,
+        alt: "skoowl ai logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "skoowl ai - AI-Powered Study Assistant",
+    description: "Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps.",
+    creator: "@skoowlai",
+    images: ["/skoowl-logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: "/skoowl-logo.png",
     apple: "/skoowl-logo.png",

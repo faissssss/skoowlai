@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, HelpCircle, Layers, Network, Play, Sparkles, FileType, Youtube, Headphones, Upload, Mic, Brain, Cpu, CheckCircle, GitBranch, Plus, X } from 'lucide-react';
+import { FileText, HelpCircle, Layers, Network, Play, Sparkles, FileType, Youtube, Headphones, Upload, Mic, Brain, Cpu, CheckCircle, GitBranch, Plus, X, Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import BugReportModal from '@/components/BugReportModal';
@@ -299,6 +299,7 @@ export default function LandingPage() {
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div
@@ -332,8 +333,17 @@ export default function LandingPage() {
                 <button onClick={() => setIsPricingOpen(true)} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Pricing</button>
               </div>
 
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 text-slate-400 hover:text-white transition-colors"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+
               {/* Auth Buttons */}
-              <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-3">
                 <SignedOut>
                   <Link href="/sign-in" className="text-slate-300 hover:text-white transition-colors text-sm font-medium px-4 py-2">
                     Sign In
@@ -359,6 +369,42 @@ export default function LandingPage() {
                 </SignedIn>
               </div>
             </div>
+
+            {/* Mobile Menu Dropdown */}
+            <AnimatePresence>
+              {isMobileMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="md:hidden overflow-hidden"
+                >
+                  <div className="pt-4 pb-2 space-y-3 border-t border-white/10 mt-4">
+                    <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Features</a>
+                    <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">How it Works</a>
+                    <button onClick={() => { setIsPricingOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Pricing</button>
+                    <div className="pt-3 border-t border-white/10 space-y-2">
+                      <SignedOut>
+                        <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">
+                          Sign In
+                        </Link>
+                        <Link href="/sign-up" onClick={() => setIsMobileMenuOpen(false)}>
+                          <button className="w-full px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25">
+                            Get Started
+                          </button>
+                        </Link>
+                      </SignedOut>
+                      <SignedIn>
+                        <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">
+                          Dashboard
+                        </Link>
+                      </SignedIn>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </nav>
@@ -413,12 +459,12 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Right - Hero Visual */}
+            {/* Right - Hero Visual (Hidden on mobile for cleaner experience) */}
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="relative"
+              className="relative hidden lg:block"
             >
               <HeroVisual />
             </motion.div>

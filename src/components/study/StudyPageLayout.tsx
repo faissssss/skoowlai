@@ -40,6 +40,7 @@ function StudyPageLayoutInner({
 }: StudyPageLayoutProps) {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [citation, setCitation] = useState<string | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -138,9 +139,18 @@ function StudyPageLayoutInner({
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col overflow-x-hidden">
             {/* Header */}
             <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 h-16 flex items-center sticky top-0 z-30">
-                {/* Left: Back button + Title */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                    <Link href="/dashboard">
+                {/* Left: Mobile menu + Back button + Title */}
+                <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                    {/* Mobile sidebar toggle */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="md:hidden text-slate-500 dark:text-slate-400"
+                        onClick={() => setIsMobileSidebarOpen(true)}
+                    >
+                        <Menu className="w-5 h-5" />
+                    </Button>
+                    <Link href="/dashboard" className="hidden md:block">
                         <Button variant="ghost" size="icon" className="text-slate-500 dark:text-slate-400">
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
@@ -226,12 +236,84 @@ function StudyPageLayoutInner({
 
             {/* Main Content Area with Sidebar */}
             <div className="flex-1 relative flex">
-                {/* Left Sidebar */}
+                {/* Mobile Sidebar Overlay */}
+                <AnimatePresence>
+                    {isMobileSidebarOpen && (
+                        <>
+                            {/* Backdrop */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                                onClick={() => setIsMobileSidebarOpen(false)}
+                            />
+                            {/* Mobile Drawer */}
+                            <motion.aside
+                                initial={{ x: -280 }}
+                                animate={{ x: 0 }}
+                                exit={{ x: -280 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                className="fixed left-0 top-0 bottom-0 w-[280px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 md:hidden flex flex-col"
+                            >
+                                {/* Mobile Drawer Header */}
+                                <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                    <Link href="/dashboard" className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                        <ArrowLeft className="w-4 h-4" />
+                                        <span className="text-sm font-medium">Back to Dashboard</span>
+                                    </Link>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsMobileSidebarOpen(false)}
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </Button>
+                                </div>
+
+                                {/* Mobile Navigation Items */}
+                                <nav className="flex-1 p-4 space-y-2">
+                                    {navItems.map((item) => {
+                                        const Icon = item.icon;
+                                        const isActive = pathname === item.href;
+                                        return (
+                                            <Link key={item.href} href={item.href} onClick={() => setIsMobileSidebarOpen(false)}>
+                                                <Button
+                                                    variant={isActive ? "secondary" : "ghost"}
+                                                    className={cn(
+                                                        "w-full gap-3 justify-start",
+                                                        isActive && "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400"
+                                                    )}
+                                                >
+                                                    <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                                                    <span>{item.label}</span>
+                                                </Button>
+                                            </Link>
+                                        );
+                                    })}
+                                </nav>
+
+                                {/* Mobile Upgrade Button */}
+                                <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+                                    <Button
+                                        onClick={() => { setIsPricingOpen(true); setIsMobileSidebarOpen(false); }}
+                                        className="w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25"
+                                    >
+                                        <Crown className="w-4 h-4 shrink-0" />
+                                        <span>Upgrade Plan</span>
+                                    </Button>
+                                </div>
+                            </motion.aside>
+                        </>
+                    )}
+                </AnimatePresence>
+
+                {/* Desktop Left Sidebar */}
                 <motion.aside
                     initial={false}
                     animate={{ width: isSidebarCollapsed ? 80 : 256 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col"
+                    className="hidden md:flex bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col"
                 >
                     {/* Sidebar Header with Toggle */}
                     <div className={cn(
@@ -319,8 +401,8 @@ function StudyPageLayoutInner({
                 {/* Main Content */}
                 <main
                     className={cn(
-                        "flex-1 p-6 md:p-8 transition-all duration-300 ease-in-out",
-                        isChatOpen ? "mr-[400px]" : "mr-0"
+                        "flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out",
+                        isChatOpen ? "md:mr-[400px]" : "mr-0"
                     )}
                 >
                     <div className="max-w-5xl mx-auto w-full">
