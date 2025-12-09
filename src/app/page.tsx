@@ -14,7 +14,7 @@ function StarField() {
   const [stars, setStars] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
 
   useEffect(() => {
-    const newStars = Array.from({ length: 80 }, (_, i) => ({
+    const newStars = Array.from({ length: 25 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -37,11 +37,10 @@ function StarField() {
             height: star.size,
           }}
           animate={{
-            opacity: [0.2, 0.8, 0.2],
-            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.6, 0.2],
           }}
           transition={{
-            duration: 3 + Math.random() * 2,
+            duration: 4 + Math.random() * 3,
             repeat: Infinity,
             delay: star.delay,
           }}
@@ -148,9 +147,7 @@ function FeatureCard({ icon, title, delay, className }: {
       transition={{ duration: 0.5, delay }}
       className={`absolute ${className}`}
     >
-      <motion.div
-        animate={{ y: [-3, 3, -3] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      <div
         className="bg-slate-900/80 backdrop-blur-xl border border-purple-500/40 rounded-2xl px-5 py-3.5 shadow-lg shadow-purple-500/20"
       >
         <div className="flex items-center gap-3">
@@ -159,7 +156,7 @@ function FeatureCard({ icon, title, delay, className }: {
           </div>
           <span className="text-white font-semibold">{title}</span>
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -174,16 +171,8 @@ function CenterNode() {
       className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
     >
       <div className="relative">
-        <motion.div
-          animate={{
-            boxShadow: [
-              "0 0 40px rgba(168, 85, 247, 0.5), 0 0 80px rgba(99, 102, 241, 0.3)",
-              "0 0 60px rgba(168, 85, 247, 0.7), 0 0 100px rgba(99, 102, 241, 0.4)",
-              "0 0 40px rgba(168, 85, 247, 0.5), 0 0 80px rgba(99, 102, 241, 0.3)",
-            ],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-32 h-32 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-purple-700 flex items-center justify-center border-2 border-purple-400/50"
+        <div
+          className="w-32 h-32 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-purple-700 flex items-center justify-center border-2 border-purple-400/50 shadow-[0_0_50px_rgba(168,85,247,0.5),0_0_80px_rgba(99,102,241,0.3)]"
         >
           <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/15 to-transparent" />
           <div className="flex flex-col items-center gap-2 relative z-10">
@@ -196,14 +185,7 @@ function CenterNode() {
               <FileText className="w-7 h-7 text-white" />
             </div>
           </div>
-        </motion.div>
-
-        {/* Pulsing ring */}
-        <motion.div
-          animate={{ scale: [1, 1.15], opacity: [0.5, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute inset-0 rounded-3xl border-2 border-purple-400"
-        />
+        </div>
       </div>
     </motion.div>
   );
@@ -513,24 +495,6 @@ export default function LandingPage() {
                 viewport={{ once: true }}
               />
               {/* Animated pulse dots */}
-              <motion.circle
-                cx="400"
-                cy="50"
-                r="6"
-                fill="#a855f7"
-                filter="url(#glow)"
-                animate={{ cx: [200, 600], opacity: [0, 1, 0] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-              />
-              <motion.circle
-                cx="800"
-                cy="50"
-                r="6"
-                fill="#22d3ee"
-                filter="url(#glow)"
-                animate={{ cx: [600, 1000], opacity: [0, 1, 0] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-              />
             </svg>
 
             {/* Step Cards */}
@@ -554,17 +518,15 @@ export default function LandingPage() {
                   {/* Icon Group */}
                   <div className="mb-6 flex items-center justify-center">
                     <div className="relative">
-                      <motion.div
-                        animate={{ boxShadow: ['0 0 20px rgba(59, 130, 246, 0.3)', '0 0 40px rgba(59, 130, 246, 0.5)', '0 0 20px rgba(59, 130, 246, 0.3)'] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 flex items-center justify-center"
+                      <div
+                        className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.4)]"
                       >
                         <div className="flex items-center gap-1">
                           <FileText className="w-6 h-6 text-blue-400" />
                           <Mic className="w-5 h-5 text-cyan-400" />
                           <Youtube className="w-5 h-5 text-red-400" />
                         </div>
-                      </motion.div>
+                      </div>
                       <Upload className="absolute -bottom-2 -right-2 w-8 h-8 text-blue-400 bg-slate-900 rounded-lg p-1.5 border border-blue-400/30" />
                     </div>
                   </div>
@@ -586,10 +548,8 @@ export default function LandingPage() {
                 className="group relative"
               >
                 {/* Enhanced purple glow for the "magic" step */}
-                <motion.div
-                  animate={{ opacity: [0.3, 0.5, 0.3] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/30 to-pink-500/20 blur-xl"
+                <div
+                  className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/30 to-pink-500/20 blur-xl opacity-40"
                 />
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
                 <div className="relative p-8 rounded-3xl bg-slate-900/70 backdrop-blur-xl border border-purple-500/30 group-hover:border-purple-400/60 transition-all h-full">
@@ -600,31 +560,11 @@ export default function LandingPage() {
 
                   {/* AI Brain Icon */}
                   <div className="mb-6 flex items-center justify-center">
-                    <motion.div
-                      animate={{
-                        boxShadow: ['0 0 30px rgba(168, 85, 247, 0.4)', '0 0 50px rgba(168, 85, 247, 0.6)', '0 0 30px rgba(168, 85, 247, 0.4)'],
-                      }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-400/40 flex items-center justify-center"
+                    <div
+                      className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-400/40 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.5)]"
                     >
                       <Brain className="w-10 h-10 text-purple-400" />
-                      {/* Data particles flowing in */}
-                      <motion.div
-                        animate={{ x: [-20, 0], opacity: [0, 1, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
-                        className="absolute left-0 top-1/2 w-2 h-2 rounded-full bg-cyan-400"
-                      />
-                      <motion.div
-                        animate={{ x: [-20, 0], opacity: [0, 1, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-                        className="absolute left-0 top-1/3 w-1.5 h-1.5 rounded-full bg-purple-400"
-                      />
-                      <motion.div
-                        animate={{ x: [-20, 0], opacity: [0, 1, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
-                        className="absolute left-0 top-2/3 w-1.5 h-1.5 rounded-full bg-pink-400"
-                      />
-                    </motion.div>
+                    </div>
                   </div>
 
                   <h3 className="text-xl font-bold text-white mb-3">Deep Processing</h3>
@@ -652,10 +592,8 @@ export default function LandingPage() {
 
                   {/* Output Tools Icon */}
                   <div className="mb-6 flex items-center justify-center">
-                    <motion.div
-                      animate={{ boxShadow: ['0 0 20px rgba(34, 211, 238, 0.3)', '0 0 40px rgba(34, 211, 238, 0.5)', '0 0 20px rgba(34, 211, 238, 0.3)'] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-400/30 flex items-center justify-center"
+                    <div
+                      className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.4)]"
                     >
                       <div className="grid grid-cols-2 gap-2">
                         <FileText className="w-5 h-5 text-blue-400" />
@@ -663,7 +601,7 @@ export default function LandingPage() {
                         <Layers className="w-5 h-5 text-cyan-400" />
                         <Network className="w-5 h-5 text-pink-400" />
                       </div>
-                    </motion.div>
+                    </div>
                   </div>
 
                   <h3 className="text-xl font-bold text-white mb-3">Start Studying</h3>
@@ -1179,13 +1117,13 @@ export default function LandingPage() {
       </footer>
 
       {/* Bug Report Modal */}
-      <BugReportModal isOpen={isBugReportOpen} onClose={() => setIsBugReportOpen(false)} />
+      {isBugReportOpen && <BugReportModal isOpen={isBugReportOpen} onClose={() => setIsBugReportOpen(false)} />}
 
       {/* Feedback Modal */}
-      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+      {isFeedbackOpen && <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />}
 
       {/* Pricing Modal */}
-      <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
+      {isPricingOpen && <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />}
     </div>
   );
 }
