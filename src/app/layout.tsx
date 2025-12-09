@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://skoowl.ai'),
+  metadataBase: new URL('https://www.skoowlai.com'),
   title: {
     default: "skoowl ai - AI-Powered Study Assistant",
     template: "%s | skoowl ai",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://skoowl.ai",
+    url: "https://www.skoowlai.com",
     siteName: "skoowl ai",
     title: "skoowl ai - AI-Powered Study Assistant",
     description: "Your Personal AI Study Buddy. Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps.",
