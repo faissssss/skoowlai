@@ -180,7 +180,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         <DialogHeader>
                             <DialogTitle>YouTube Summary</DialogTitle>
                             <DialogDescription>
-                                Paste a YouTube video URL to generate study notes.
+                                Paste a YouTube video URL to generate study notes from its captions.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="mt-4 space-y-4">
@@ -193,6 +193,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                     onChange={(e) => setYoutubeUrl(e.target.value)}
                                     className="w-full p-2 border rounded-md dark:bg-slate-950 dark:border-slate-800"
                                 />
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    ⏱️ Max 60 minutes • Video must have captions/subtitles enabled
+                                </p>
                             </div>
                             <Button
                                 onClick={handleYoutubeSubmit}
