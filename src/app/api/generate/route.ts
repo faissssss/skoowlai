@@ -77,19 +77,57 @@ export async function POST(req: NextRequest) {
                 console.log('🎬 Video ID:', videoId);
 
                 try {
-                    const { YoutubeTranscript } = await import('@danielxceron/youtube-transcript');
-
-                    // Try to get transcript with the video ID directly (this package has InnerTube fallback)
-                    const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-
-                    if (!transcript || transcript.length === 0) {
+                    // Use Supadata API for transcript (supports auto-fallback to AI transcription)
+                    const supadataApiKey = process.env.SUPADATA_API_KEY;
+                    if (!supadataApiKey) {
+                        console.error('❌ SUPADATA_API_KEY not configured');
                         return NextResponse.json({
-                            error: 'No captions available',
-                            details: 'This video does not have captions/subtitles available. Please try a video with closed captions enabled.'
+                            error: 'Configuration error',
+                            details: 'YouTube transcript service is not configured. Please contact support.'
+                        }, { status: 500 });
+                    }
+
+                    const youtubeFullUrl = `https://www.youtube.com/watch?v=${videoId}`;
+                    const supadataUrl = `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(youtubeFullUrl)}&mode=auto`;
+
+                    console.log('🔄 Fetching transcript from Supadata...');
+                    const supadataRes = await fetch(supadataUrl, {
+                        method: 'GET',
+                        headers: {
+                            'x-api-key': supadataApiKey,
+                        },
+                    });
+
+                    if (!supadataRes.ok) {
+                        const errorData = await supadataRes.json().catch(() => ({}));
+                        console.error('❌ Supadata API error:', supadataRes.status, errorData);
+
+                        if (supadataRes.status === 404) {
+                            return NextResponse.json({
+                                error: 'Video not found',
+                                details: 'Could not find this video. It may be private, age-restricted, or unavailable.'
+                            }, { status: 400 });
+                        }
+
+                        return NextResponse.json({
+                            error: 'Failed to get transcript',
+                            details: errorData.message || 'Unable to extract transcript from this video. Please try a different video.'
                         }, { status: 400 });
                     }
 
-                    text = transcript.map(t => t.text).join(' ');
+                    const supadataData = await supadataRes.json();
+                    console.log('📝 Supadata response:', JSON.stringify(supadataData).slice(0, 200));
+
+                    // Extract transcript text from Supadata response
+                    // Supadata returns { content: [{ text: "...", offset: 0, duration: 5 }, ...] }
+                    if (!supadataData.content || supadataData.content.length === 0) {
+                        return NextResponse.json({
+                            error: 'No transcript available',
+                            details: 'Could not extract transcript from this video. The video may not have any spoken content.'
+                        }, { status: 400 });
+                    }
+
+                    text = supadataData.content.map((segment: any) => segment.text).join(' ');
 
                     if (!text || text.trim().length < 50) {
                         return NextResponse.json({
@@ -112,31 +150,15 @@ export async function POST(req: NextRequest) {
                         title = 'YouTube Video';
                     }
 
-                    console.log('✅ Transcript fetched, length:', text.length, 'Title:', title);
-                    sourceType = 'youtube'; // Mark as YouTube source
+                    console.log('✅ Transcript fetched via Supadata, length:', text.length, 'Title:', title);
+                    sourceType = 'youtube';
 
                 } catch (transcriptErr: any) {
                     console.error('❌ Transcript fetch error:', transcriptErr);
-
-                    // Provide user-friendly error messages
-                    let errorMessage = 'Failed to fetch video transcript';
-                    let details = transcriptErr.message || String(transcriptErr);
-
-                    if (details.includes('disabled') || details.includes('Transcript is disabled')) {
-                        errorMessage = 'Captions are disabled';
-                        details = 'The video owner has disabled captions for this video. Please try a different video with enabled subtitles.';
-                    } else if (details.includes('not available') || details.includes('Could not find')) {
-                        errorMessage = 'No captions available';
-                        details = 'This video does not have captions/subtitles. Please try a video with closed captions enabled.';
-                    } else if (details.includes('private') || details.includes('unavailable')) {
-                        errorMessage = 'Video unavailable';
-                        details = 'This video is private, age-restricted, or unavailable. Please try a different video.';
-                    }
-
                     return NextResponse.json({
-                        error: errorMessage,
-                        details: details
-                    }, { status: 400 });
+                        error: 'Failed to process video',
+                        details: transcriptErr.message || 'An error occurred while processing this video. Please try again.'
+                    }, { status: 500 });
                 }
             }
         } else if (contentType.includes('multipart/form-data')) {

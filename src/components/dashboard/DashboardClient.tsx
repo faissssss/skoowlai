@@ -194,7 +194,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                     className="w-full p-2 border rounded-md dark:bg-slate-950 dark:border-slate-800"
                                 />
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    ⏱️ Max 60 minutes • Video must have captions/subtitles enabled
+                                    ⏱️ Max 60 minutes • Works with or without captions
                                 </p>
                             </div>
                             <Button
