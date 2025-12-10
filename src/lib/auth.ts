@@ -21,14 +21,17 @@ export async function getAuthenticatedUser() {
             where: { clerkId: userId }
         });
 
-        // If user doesn't exist, create them
+        // If user doesn't exist, create them (or update clerkId if email exists from different environment)
         if (!user) {
             // Get user details from Clerk
             const clerkUser = await currentUser();
             const email = clerkUser?.emailAddresses?.[0]?.emailAddress || `user-${userId}@skoowl.ai`;
 
-            user = await db.user.create({
-                data: {
+            // Use upsert to handle switching between dev/prod Clerk environments
+            user = await db.user.upsert({
+                where: { email: email },
+                update: { clerkId: userId }, // Update clerkId for existing email (switching environments)
+                create: {
                     clerkId: userId,
                     email: email,
                 }

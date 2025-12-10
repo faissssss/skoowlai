@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,39 +7,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============ MODELS ============
-
 model User {
-  id            String         @id @default(cuid())
-  clerkId       String         @unique  // Clerk user ID for authentication
-  email         String         @unique
-  createdAt     DateTime       @default(now())
-  isDeleted     Boolean        @default(false)
-  deletedAt     DateTime?
-  decks         Deck[]
-  collaborators Collaborator[]
+  id              String         @id @default(cuid())
+  clerkId         String         @unique
+  email           String         @unique
+  createdAt       DateTime       @default(now())
+  isDeleted       Boolean        @default(false)
+  deletedAt       DateTime?
+  dailyUsageCount Int            @default(0)
+  lastUsageDate   DateTime?
+  collaborators   Collaborator[]
+  decks           Deck[]
 }
 
 model Deck {
   id            String         @id @default(cuid())
   userId        String
   title         String
-  content       String         // Original extracted text
-  summary       String         // Generated notes (Markdown)
-  sourceType    String         @default("doc") // 'doc', 'youtube', or 'audio'
-  fileUrl       String?        // Optional file URL for uploaded documents
-  fileType      String?        // Optional MIME type of the uploaded file
-  isPublic      Boolean        @default(false) // Anyone with link can view
+  content       String
+  summary       String
+  sourceType    String         @default("doc")
+  fileUrl       String?
+  fileType      String?
+  isPublic      Boolean        @default(false)
   createdAt     DateTime       @default(now())
   isDeleted     Boolean        @default(false)
   deletedAt     DateTime?
-  
-  user          User           @relation(fields: [userId], references: [id])
   cards         Card[]
-  quizzes       Quiz[]
   messages      ChatMessage[]
-  mindmap       MindMap?
   collaborators Collaborator[]
+  user          User           @relation(fields: [userId], references: [id])
+  mindmap       MindMap?
+  quizzes       Quiz[]
 }
 
 model Card {
@@ -52,60 +48,55 @@ model Card {
   back      String
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
 }
 
 model Quiz {
   id        String    @id @default(cuid())
   deckId    String
   question  String
-  options   String    // JSON string of options
-  answer    String    // Correct answer
-  hint      String?   // Optional hint for the question
+  options   String
+  answer    String
+  hint      String?
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {
   id        String    @id @default(cuid())
   deckId    String
-  role      String    // 'user' or 'assistant'
+  role      String
   content   String
-  citation  String?   // Optional citation text
+  citation  String?
   createdAt DateTime  @default(now())
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
 }
 
 model MindMap {
   id        String    @id @default(cuid())
   deckId    String    @unique
-  nodes     String    // JSON string of React Flow nodes
-  edges     String    // JSON string of React Flow edges
+  nodes     String
+  edges     String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
 }
 
 model Collaborator {
-  id           String    @id @default(cuid())
-  userId       String
-  deckId       String
-  role         String    // 'VIEWER', 'EDITOR', 'OWNER'
-  createdAt    DateTime  @default(now())
-  isDeleted    Boolean   @default(false)
-  deletedAt    DateTime?
-  
-  user         User      @relation(fields: [userId], references: [id])
-  deck         Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, deckId]) // One role per user per deck
+  id        String    @id @default(cuid())
+  userId    String
+  deckId    String
+  role      String
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, deckId])
 }

@@ -3,6 +3,7 @@ import OpenAI, { toFile } from 'openai';
 import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { verifyUsageLimits, USAGE_LIMITS } from '@/lib/usageVerifier';
 
 export const maxDuration = 120; // Allow longer processing time for audio
 
@@ -51,6 +52,13 @@ export async function POST(req: NextRequest) {
             bytes[i] = binaryString.charCodeAt(i);
         }
         const buffer = Buffer.from(bytes);
+
+        // Verify usage limits with audio file size
+        const usageCheck = await verifyUsageLimits({
+            inputType: 'audio',
+            fileSize: buffer.length
+        });
+        if (!usageCheck.success) return usageCheck.errorResponse!;
 
         // Create a File-like object for Groq
         const audioFile = await toFile(buffer, fileName || 'audio.webm', {

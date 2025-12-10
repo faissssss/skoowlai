@@ -4,6 +4,7 @@ import { streamText } from 'ai';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
+import { verifyUsageLimits, incrementUsage, USAGE_LIMITS, InputType } from '@/lib/usageVerifier';
 
 // Route segment config
 export const maxDuration = 120;
@@ -34,13 +35,13 @@ export async function POST(req: NextRequest) {
             if (body.audioNotes) {
                 console.log('🎤 Processing pre-transcribed audio notes');
 
-                // Get authenticated user
-                const { user, errorResponse } = await requireAuth();
-                if (errorResponse) return errorResponse;
+                // Verify usage limits (audio notes already validated in generate-audio-notes)
+                const usageCheck = await verifyUsageLimits({ inputType: 'audio' });
+                if (!usageCheck.success) return usageCheck.errorResponse!;
 
                 const deck = await db.deck.create({
                     data: {
-                        userId: user.id,
+                        userId: usageCheck.user.id,
                         title: body.title || 'Audio Recording',
                         content: body.audioTranscript || 'Audio Content',
                         summary: body.audioNotes,
@@ -48,11 +49,21 @@ export async function POST(req: NextRequest) {
                     } as any,
                 });
 
+                // Increment usage count after successful creation
+                await incrementUsage(usageCheck.user.id);
+
                 return NextResponse.json({ deckId: deck.id });
             }
 
             if (body.youtubeUrl) {
                 console.log('📺 Processing YouTube URL:', body.youtubeUrl);
+
+                // Verify usage limits for YouTube
+                const usageCheck = await verifyUsageLimits({
+                    inputType: 'youtube',
+                    youtubeUrl: body.youtubeUrl
+                });
+                if (!usageCheck.success) return usageCheck.errorResponse!;
 
                 // Extract video ID from various YouTube URL formats
                 const videoIdMatch = body.youtubeUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/|youtube\.com\/shorts\/)([^&\n?#]+)/);
@@ -137,6 +148,14 @@ export async function POST(req: NextRequest) {
             if (!file) {
                 return NextResponse.json({ error: 'No file provided' }, { status: 400 });
             }
+
+            // Determine input type and verify usage limits
+            const inputType: InputType = file.type.startsWith('audio/') ? 'audio' : 'document';
+            const usageCheck = await verifyUsageLimits({
+                inputType,
+                fileSize: file.size
+            });
+            if (!usageCheck.success) return usageCheck.errorResponse!;
 
             title = file.name;
             const buffer = Buffer.from(await file.arrayBuffer());
@@ -417,9 +436,12 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
                 title: title,
                 content: text || 'Audio Content',
                 summary: generatedSummary,
-                sourceType: sourceType, // Will be recognized after `npx prisma generate`
+                sourceType: sourceType,
             } as any,
         });
+
+        // Increment usage count after successful deck creation
+        await incrementUsage(user.id);
 
         return NextResponse.json({ deckId: deck.id });
 
