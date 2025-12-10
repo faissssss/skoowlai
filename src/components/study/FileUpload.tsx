@@ -108,7 +108,7 @@ export default function FileUpload() {
                     <div>
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Upload your material</h3>
                         <p className="text-slate-500 dark:text-slate-400 mt-1">Drag & drop or click to browse</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">PDF, DOCX, PPT, TXT (Max 10MB)</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">📄 PDF, DOCX, PPT, TXT • Max 10MB</p>
                     </div>
                     <input
                         type="file"

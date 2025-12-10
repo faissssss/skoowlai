@@ -399,7 +399,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
                 {state === 'complete' && (<Button onClick={handleReset} variant="outline" className="flex-1 h-14 text-lg">Record Another</Button>)}
             </div>
 
-            {state === 'idle' && (<p className="text-xs text-slate-400 text-center">💡 Use Chrome or Edge for live transcription. Recording works in all browsers.</p>)}
+            {state === 'idle' && (<p className="text-xs text-slate-400 text-center">🎙️ Max 60 minutes • Use Chrome or Edge for live transcription</p>)}
         </div>
     );
 }
