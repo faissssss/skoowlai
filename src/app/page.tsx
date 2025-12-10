@@ -8,6 +8,7 @@ import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import BugReportModal from '@/components/BugReportModal';
 import FeedbackModal from '@/components/FeedbackModal';
 import PricingModal from '@/components/PricingModal';
+import { IS_PRE_LAUNCH } from '@/lib/config';
 
 // Floating particles background
 function StarField() {
@@ -330,7 +331,9 @@ export default function LandingPage() {
               <div className="hidden md:flex items-center gap-8">
                 <a href="#features" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Features</a>
                 <a href="#how-it-works" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">How it Works</a>
-                <button onClick={() => setIsPricingOpen(true)} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Pricing</button>
+                {!IS_PRE_LAUNCH && (
+                  <button onClick={() => setIsPricingOpen(true)} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Pricing</button>
+                )}
               </div>
 
               {/* Mobile Menu Button */}
@@ -383,7 +386,9 @@ export default function LandingPage() {
                   <div className="pt-4 pb-2 space-y-3 border-t border-white/10 mt-4">
                     <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Features</a>
                     <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">How it Works</a>
-                    <button onClick={() => { setIsPricingOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Pricing</button>
+                    {!IS_PRE_LAUNCH && (
+                      <button onClick={() => { setIsPricingOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Pricing</button>
+                    )}
                     <div className="pt-3 border-t border-white/10 space-y-2">
                       <SignedOut>
                         <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">

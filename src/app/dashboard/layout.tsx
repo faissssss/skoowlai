@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PricingModal from '@/components/PricingModal';
+import { IS_PRE_LAUNCH } from '@/lib/config';
 
 export default function DashboardLayout({
     children,
@@ -83,35 +84,37 @@ export default function DashboardLayout({
                 })}
             </nav>
 
-            {/* Upgrade Plan Button */}
-            <div className={cn(
-                "p-4 border-t border-slate-200 dark:border-slate-800",
-                isCollapsed && !mobile ? "flex justify-center" : ""
-            )}>
-                <Button
-                    onClick={() => setIsPricingOpen(true)}
-                    className={cn(
-                        "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25",
-                        isCollapsed && !mobile ? "px-2" : ""
-                    )}
-                    title={isCollapsed && !mobile ? "Upgrade Plan" : undefined}
-                >
-                    <Crown className="w-4 h-4 shrink-0" />
-                    <AnimatePresence mode="wait">
-                        {(!isCollapsed || mobile) && (
-                            <motion.span
-                                initial={{ opacity: 0, width: 0 }}
-                                animate={{ opacity: 1, width: "auto" }}
-                                exit={{ opacity: 0, width: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="whitespace-nowrap overflow-hidden"
-                            >
-                                Upgrade Plan
-                            </motion.span>
+            {/* Upgrade Plan Button - Hidden during pre-launch */}
+            {!IS_PRE_LAUNCH && (
+                <div className={cn(
+                    "p-4 border-t border-slate-200 dark:border-slate-800",
+                    isCollapsed && !mobile ? "flex justify-center" : ""
+                )}>
+                    <Button
+                        onClick={() => setIsPricingOpen(true)}
+                        className={cn(
+                            "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25",
+                            isCollapsed && !mobile ? "px-2" : ""
                         )}
-                    </AnimatePresence>
-                </Button>
-            </div>
+                        title={isCollapsed && !mobile ? "Upgrade Plan" : undefined}
+                    >
+                        <Crown className="w-4 h-4 shrink-0" />
+                        <AnimatePresence mode="wait">
+                            {(!isCollapsed || mobile) && (
+                                <motion.span
+                                    initial={{ opacity: 0, width: 0 }}
+                                    animate={{ opacity: 1, width: "auto" }}
+                                    exit={{ opacity: 0, width: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="whitespace-nowrap overflow-hidden"
+                                >
+                                    Upgrade Plan
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </Button>
+                </div>
+            )}
         </div>
     );
 

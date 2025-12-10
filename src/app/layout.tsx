@@ -81,6 +81,7 @@ import { Toaster } from "sonner";
 import { TimerProvider } from "@/contexts/TimerContext";
 import CookieConsent from "@/components/CookieConsent";
 import GlobalLoaderWrapper from "@/components/GlobalLoaderWrapper";
+import PreLaunchWelcomeModal from "@/components/PreLaunchWelcomeModal";
 
 export default function RootLayout({
   children,
@@ -134,6 +135,7 @@ export default function RootLayout({
               </TimerProvider>
             </GlobalLoaderWrapper>
             <Toaster />
+            <PreLaunchWelcomeModal />
             <CookieConsent />
           </ThemeProvider>
         </body>

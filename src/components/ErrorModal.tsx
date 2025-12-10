@@ -11,6 +11,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AlertTriangle, Clock, Zap } from 'lucide-react';
+import { IS_PRE_LAUNCH } from '@/lib/config';
 
 interface ErrorModalContextType {
     showError: (title: string, message: string, type?: 'error' | 'limit') => void;
@@ -63,7 +64,7 @@ export function ErrorModalProvider({ children }: { children: ReactNode }) {
                     <AlertDialogDescription className="text-base text-slate-600 dark:text-slate-400 mt-2">
                         {message}
                     </AlertDialogDescription>
-                    {type === 'limit' && (
+                    {type === 'limit' && !IS_PRE_LAUNCH && (
                         <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
                             <div className="flex items-center gap-2">
                                 <Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />

@@ -115,7 +115,7 @@ export async function verifyUsageLimits(options: VerifyOptions): Promise<VerifyR
             errorResponse: NextResponse.json(
                 {
                     error: 'Daily limit reached',
-                    details: `You've used all ${USAGE_LIMITS.DAILY_LIMIT} of your daily study sets. Your limit resets at midnight. Upgrade to Student plan for unlimited access!`,
+                    details: `You've used all ${USAGE_LIMITS.DAILY_LIMIT} of your daily study sets. Your limit resets at midnight. Come back tomorrow to create more!`,
                     limit: USAGE_LIMITS.DAILY_LIMIT,
                     used: currentCount,
                     resetTime: 'midnight',
