@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PricingModal from '@/components/PricingModal';
 import { IS_PRE_LAUNCH } from '@/lib/config';
+import PreLaunchWelcomeModal from '@/components/PreLaunchWelcomeModal';
 
 export default function DashboardLayout({
     children,
@@ -173,6 +174,9 @@ export default function DashboardLayout({
 
             {/* Pricing Modal */}
             <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
+
+            {/* Pre-Launch Welcome Modal */}
+            <PreLaunchWelcomeModal />
         </div>
     );
 }
