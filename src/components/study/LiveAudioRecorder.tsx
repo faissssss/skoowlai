@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square, Loader2, CheckCircle2, AlertCircle, Volume2, Pause, Play, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'processing' | 'complete' | 'error';
 
@@ -284,7 +285,17 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             setState('complete');
             onComplete(data.notes, data.transcript, data.title);
         } catch (err) {
-            setError('Failed to process audio. Please try again.');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to process audio. Please try again.';
+            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
+
+            if (isLimitError) {
+                toast.error('Usage Limit Reached', {
+                    description: errorMessage,
+                    duration: 5000,
+                });
+            }
+
+            setError(errorMessage);
             setState('error');
         }
     };

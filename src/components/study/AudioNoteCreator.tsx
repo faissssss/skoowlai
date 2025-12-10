@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Square, Loader2, CheckCircle2, Upload, FileAudio, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 type RecordingStep = 'idle' | 'recording' | 'uploading' | 'transcribing' | 'generating' | 'complete' | 'error';
 
@@ -227,7 +228,17 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
 
         } catch (err) {
             console.error('Error processing audio:', err);
-            setError(err instanceof Error ? err.message : 'Failed to process audio');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to process audio';
+            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
+
+            if (isLimitError) {
+                toast.error('Usage Limit Reached', {
+                    description: errorMessage,
+                    duration: 5000,
+                });
+            }
+
+            setError(errorMessage);
             setStep('error');
         }
     };
