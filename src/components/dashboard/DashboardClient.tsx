@@ -21,6 +21,7 @@ import {
 import DeleteDeckButton from '@/components/dashboard/DeleteDeckButton';
 import { cn } from '@/lib/utils';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
+import { toast } from 'sonner';
 
 interface DashboardClientProps {
     decks: any[];
@@ -102,7 +103,12 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             router.push(`/study/${data.deckId}`);
         } catch (error) {
             console.error(error);
-            alert(error instanceof Error ? error.message : 'Failed to process YouTube video');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to process YouTube video';
+            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
+            toast.error(isLimitError ? 'Usage Limit Reached' : 'Processing Failed', {
+                description: errorMessage,
+                duration: 5000,
+            });
         } finally {
             setIsYoutubeLoading(false);
             setYoutubeUrl('');

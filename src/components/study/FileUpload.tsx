@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
+import { toast } from 'sonner';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes (Free Beta limit)
 
@@ -84,7 +85,12 @@ export default function FileUpload() {
             router.push(`/study/${data.deckId}`);
         } catch (error) {
             console.error('Error uploading file:', error);
-            alert(error instanceof Error ? error.message : 'Failed to process file. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to process file. Please try again.';
+            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
+            toast.error(isLimitError ? 'Usage Limit Reached' : 'Upload Failed', {
+                description: errorMessage,
+                duration: 5000,
+            });
         } finally {
             setIsUploading(false);
             stopLoading();
