@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes (Free Beta limit)
 
 export default function FileUpload() {
     const [file, setFile] = useState<File | null>(null);
@@ -102,7 +102,7 @@ export default function FileUpload() {
                     <div>
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Upload your material</h3>
                         <p className="text-slate-500 dark:text-slate-400 mt-1">Drag & drop or click to browse</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">PDF, DOCX, PPT, TXT (Max 50MB)</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">PDF, DOCX, PPT, TXT (Max 10MB)</p>
                     </div>
                     <input
                         type="file"
@@ -131,7 +131,7 @@ export default function FileUpload() {
                                     File too large
                                 </p>
                                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 break-words">
-                                    Your file is {(file.size / 1024 / 1024).toFixed(1)} MB. Max size is 50MB.
+                                    Your file is {(file.size / 1024 / 1024).toFixed(1)} MB. Max size is 10MB.
                                 </p>
                             </div>
                         </div>
