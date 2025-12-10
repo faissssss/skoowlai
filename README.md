@@ -2,7 +2,7 @@
 
 > **Your Personal AI Study Buddy.**  
 > Instantly transform documents, videos, and recordings into interactive notes, flashcards, quizzes, and mind maps.
-
+Grab your skoowl ai here! www.skoowlai.com
 ![Skoowl AI Banner](/public/skoowl-logo.png)
 
 ## 🚀 Overview
