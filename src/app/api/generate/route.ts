@@ -258,6 +258,14 @@ export async function POST(req: NextRequest) {
         // Construct the messages for generateObject
         const promptText = `You are an expert educational content creator specializing in creating comprehensive, well-structured study notes. Your goal is to transform the provided content into beautifully formatted, highly readable study notes that students will love.
 
+**CRITICAL LANGUAGE RULE (HIGHEST PRIORITY):**
+- Analyze the input text to determine its **dominant language** (e.g., Indonesian, English, Spanish, French, etc.)
+- Your output MUST be in that **exact same language** - 100% consistency required
+- Do NOT mix languages. Do NOT switch languages midway through your response
+- If the input is in Indonesian, ALL headers, bullet points, summaries, learning objectives, and content must be in Indonesian
+- If the input is in English, ALL content must be in English
+- This applies to every element: titles, section headers, explanations, examples, tips, and conclusions
+
 **CRITICAL REQUIREMENTS:**
 
 1. **Create COMPREHENSIVE notes** - Cover ALL important concepts, definitions, examples, and details from the source material

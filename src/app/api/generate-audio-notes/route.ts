@@ -15,7 +15,15 @@ const groq = new OpenAI({
 
 const NOTE_GENERATION_PROMPT = `You are an expert academic tutor. You will be given a raw transcript of a lecture or study session. Your task is to rewrite this transcript into clear, structured Markdown study notes.
 
-CRITICAL RULES:
+**CRITICAL LANGUAGE RULE:**
+- Analyze the input text to determine its **dominant language** (e.g., Indonesian, English, Spanish, French, etc.)
+- Your output MUST be in that **exact same language** - 100% consistency required
+- Do NOT mix languages. Do NOT switch languages midway through your response
+- If the input is in Indonesian, ALL headers, bullet points, summaries, and content must be in Indonesian
+- If the input is in English, ALL content must be in English
+- This applies to every element: titles, section headers, explanations, examples, and conclusions
+
+CRITICAL FORMATTING RULES:
 1. Create a Title based on the content (use # heading)
 2. Use ## headers for main topics
 3. Use bullet points for details
