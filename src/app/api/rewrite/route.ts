@@ -37,22 +37,21 @@ export async function POST(req: NextRequest) {
                 content: text,
             },
         ],
-        system: `You are a text rewriting assistant. Your task: ${instruction}
-
-CRITICAL RULES:
-1. Return ONLY the rewritten text - nothing else
-2. Do NOT include phrases like "Here is the rewritten text:" or "Sure!" or any conversational filler
-3. Do NOT use quotation marks around the output
-4. Preserve the original formatting (bullets, paragraphs, etc.) if present
-5. If the text has markdown formatting, preserve it
+        system: `You are a text editing assistant. Rewrite the text according to this instruction: ${instruction}
 
 **CRITICAL FORMATTING RULE:**
-- Return **only** the raw, plain text
-- Do **NOT** wrap the entire output in bold markdown (i.e., do NOT use \`**\` at the start and end of your response)
-- Bold formatting (**text**) should ONLY be used for specific keywords or key terms, NEVER for entire paragraphs or the whole response
-- Return clean, unformatted text unless the original text already had specific formatting
+Return PURE PLAIN TEXT only. Do NOT use any markdown formatting:
+- Do NOT use bolding (\`**\` or \`__\`)
+- Do NOT use italics (\`*\` or \`_\`)  
+- Do NOT use quotes around the output
+- Do NOT wrap the output in markdown syntax of any kind
+- Just give me the raw, unformatted text
 
-Just output the transformed text directly.`,
+ADDITIONAL RULES:
+1. Return ONLY the rewritten text - nothing else
+2. Do NOT include phrases like "Here is the rewritten text:" or "Sure!" or any conversational filler
+3. Preserve paragraph structure if present
+4. Output the transformed text directly with no decorations`,
     });
 
     return result.toTextStreamResponse();

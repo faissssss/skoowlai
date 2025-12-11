@@ -256,157 +256,83 @@ export async function POST(req: NextRequest) {
         console.log('📝 Text content preview (first 500 chars):', text?.slice(0, 500) || 'NO TEXT');
 
         // Construct the messages for generateObject
-        const promptText = `You are an expert educational content creator specializing in creating comprehensive, well-structured study notes. Your goal is to transform the provided content into beautifully formatted, highly readable study notes that students will love.
+        const promptText = `**Role:** Senior Academic Researcher & Note Taker
+**Task:** Create comprehensive, detail-rich study notes from the input text.
+**Goal:** Capture ALL relevant information. Do not over-summarize; prioritize completeness.
 
-**CRITICAL LANGUAGE RULE (HIGHEST PRIORITY):**
-- Analyze the input text to determine its **dominant language** (e.g., Indonesian, English, Spanish, French, etc.)
-- Your output MUST be in that **exact same language** - 100% consistency required
-- Do NOT mix languages. Do NOT switch languages midway through your response
-- If the input is in Indonesian, ALL headers, bullet points, summaries, learning objectives, and content must be in Indonesian
-- If the input is in English, ALL content must be in English
-- This applies to every element: titles, section headers, explanations, examples, tips, and conclusions
+**1. STRICT LANGUAGE PROTOCOL:**
+* **Detect:** Identify the Dominant Language of the input text.
+* **Consistency:** The ENTIRE output (headers, bullets, explanations) MUST be in that Dominant Language.
+* **Translation:** Translate the bracketed section headers below into the Dominant Language naturally.
+* **NO MIXING:** If input is Korean, "Key Terminology" must be written as "핵심 용어". If Indonesian, use Indonesian headers entirely.
 
-**CRITICAL REQUIREMENTS:**
+**2. THE "COMPREHENSIVE" TEMPLATE:**
 
-1. **Create COMPREHENSIVE notes** - Cover ALL important concepts, definitions, examples, and details from the source material
-2. **Use CLEAR STRUCTURE** - Organize content logically with proper heading hierarchy
-3. **Make it VISUALLY APPEALING** - Use emojis strategically to enhance readability (but don't overuse them)
-4. **Write in CLEAR, SIMPLE language** - Explain complex concepts in an easy-to-understand way
-5. **Include PLENTY OF EXAMPLES** - Provide code examples, real-world applications, or illustrations where relevant
-6. **Use BULLET POINTS and LISTS** for easy scanning
-7. **Highlight KEY TERMS** with **bold text**
-8. **Create LOGICAL SECTIONS** that flow naturally
+# 📚 [Study Notes: {Insert Title of Source Material}]
 
-**REQUIRED STRUCTURE for the 'summary' field:**
-
-# 📚 [Clear, Descriptive Title]
-
-> [One-sentence overview that captures the essence of the topic]
+> **[Executive Summary]**
+> *(Provide a concise 2-3 sentence summary of the entire document here.)*
 
 ---
 
-## 🎯 Learning Objectives
-
-After studying these notes, you will be able to:
-- [Objective 1]
-- [Objective 2]
-- [Objective 3]
-
----
-
-## 📖 Overview
-
-[2-3 paragraphs providing context and background. Explain what this topic is about, why it matters, and how it fits into the bigger picture.]
+## 1. 📖 [Key Terminology & Definitions]
+*(List every major technical term, acronym, or concept defined in the text.)*
+* **[Term 1]**: (Definition)
+* **[Term 2]**: (Definition)
+* *(Continue for all important terms...)*
 
 ---
 
-## 🔑 Key Concepts
+## 2. 🔍 [Comprehensive Analysis]
+*(CRITICAL INSTRUCTION: Analyze the source text's structure. If the source has 3 main chapters/arguments, create 3 subsections below. Mirror the source structure - do not miss any sections.)*
 
-### [Concept 1 Name]
-**Definition:** [Clear definition]
+### 2.1 [Main Topic 1 from Source]
+* **[Core Concept]**: (Detailed explanation)
+* **[Supporting Detail]**: (Data, dates, or specific arguments mentioned)
+* *Context:* (Why is this important?)
 
-**Explanation:** [Detailed explanation in simple terms]
+### 2.2 [Main Topic 2 from Source]
+* *(Continue mirroring the source text's flow...)*
 
-**Example:**
-\`\`\`
-[Code example or practical illustration]
-\`\`\`
-
-**Key Points:**
-- [Important detail 1]
-- [Important detail 2]
-
-### [Concept 2 Name]
-[Same structure as above]
-
-[... Continue for all major concepts ...]
+### 2.3 [Main Topic 3 from Source]
+* *(Add as many subsections as needed to cover ALL content...)*
 
 ---
 
-## 💡 Detailed Content
-
-### [Section 1 - Descriptive Title]
-
-[Comprehensive explanation of this section's topic]
-
-**Important Points:**
-- [Point 1 with details]
-- [Point 2 with details]
-- [Point 3 with details]
-
-**Example:**
-\`\`\`
-[Relevant code or example]
-\`\`\`
-
-### [Section 2 - Descriptive Title]
-[Continue with the same detailed approach]
-
-[... Add as many sections as needed to cover all content ...]
+## 3. 💡 [Key Examples & Evidence]
+*(Extract specific examples, case studies, or scenarios mentioned in the text to illustrate the concepts.)*
+* **Example 1:** (Describe the example) → **Relevance:** (What does it prove?)
+* **Example 2:** (Describe the example) → **Relevance:** (What does it prove?)
 
 ---
 
-## ⚙️ Practical Applications
-
-[How is this topic used in real-world scenarios? Provide 2-3 concrete examples]
-
-1. **[Use Case 1]**
-   - [Description]
-   - [Why it's useful]
-
-2. **[Use Case 2]**
-   - [Description]
-   - [Why it's useful]
+## 4. 📊 [Important Formulas / Dates / Figures]
+*(If applicable. If the source contains no formulas, dates, or figures, OMIT this section entirely.)*
+* (List equations, historical dates, statistics, or key people mentioned)
 
 ---
 
-## ⚠️ Common Mistakes & Tips
-
-**Common Mistakes:**
-- ❌ [Mistake 1] - [Why it's wrong]
-- ❌ [Mistake 2] - [Why it's wrong]
-
-**Pro Tips:**
-- ✅ [Tip 1]
-- ✅ [Tip 2]
-- ✅ [Tip 3]
+## 5. ✅ [Summary & Key Takeaways]
+*(Bullet points of the "Big Picture" conclusions from the source material)*
+* [Key takeaway 1]
+* [Key takeaway 2]
+* [Key takeaway 3]
 
 ---
 
-## 📝 Summary & Key Takeaways
+**3. FORMATTING RULES:**
+* **Bold** all key terms and definitions
+* Use **Bullet points** for readability and easy scanning
+* Use proper markdown headers (# ## ###)
+* Add blank lines between sections for readability
+* Add horizontal rules (---) between major sections
+* Use emojis strategically to enhance readability (but don't overuse)
+* **NO** mixing languages - 100% consistency required
+* **NO** hallucinated info - only use what is explicitly in the source
+* **NO** tables - use bullet points or clear text formatting instead
+* ALWAYS complete every sentence and section - never cut off mid-thought
 
-**In summary:**
-[2-3 sentences summarizing the main points]
-
-**Remember these key points:**
-1. [Key takeaway 1]
-2. [Key takeaway 2]
-3. [Key takeaway 3]
-
----
-
-## 🔗 Related Topics
-
-- [Related topic 1]
-- [Related topic 2]
-- [Related topic 3]
-
-**IMPORTANT FORMATTING RULES:**
-- Use proper markdown headers (# ## ###)
-- Add blank lines between sections for readability
-- Use code blocks (\`\`\`) for code examples
-- Use **bold** for key terms and definitions
-- Use bullet points (-) for lists
-- Use numbered lists (1. 2. 3.) for sequential steps
-- Add horizontal rules (---) between major sections
-- Choose emojis that are relevant and helpful, not random
-- DO NOT use tables - use bullet points or clear text formatting instead
-- Be CONCISE but COMPLETE - avoid unnecessary padding or repetition
-- Focus on key information and insights, skip filler content
-- ALWAYS complete every sentence and section - never cut off mid-thought
-- Prioritize finishing the content over making it longer
-
-**CRITICAL: You MUST base your notes ONLY on the source content provided below. Do NOT invent, hallucinate, or add information that is not present in the source material. If the source is about thermodynamics, your notes must be about thermodynamics.**
+**CRITICAL: Base your notes ONLY on the source content provided below. Do NOT invent or add information not present in the source material.**
 
 ${text ? `**SOURCE CONTENT TO ANALYZE (CREATE NOTES FROM THIS EXACT CONTENT):**
 
