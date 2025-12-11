@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.skoowlai.com'),
+  // Canonical URL - tells Google this is the primary URL (prevents duplicates)
+  alternates: {
+    canonical: 'https://www.skoowlai.com',
+  },
   title: {
     default: "skoowl ai - AI-Powered Study Assistant",
     template: "%s | skoowl ai",
@@ -73,6 +77,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/skoowl-logo.png",
     apple: "/skoowl-logo.png",
+    shortcut: "/skoowl-logo.png",
   },
 };
 
