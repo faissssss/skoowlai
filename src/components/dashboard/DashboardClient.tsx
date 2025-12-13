@@ -435,8 +435,13 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 isOpen={showConfigModal}
                 onClose={() => {
                     setShowConfigModal(false);
-                    setPendingYoutubeUrl('');
-                    setPendingAudioData(null);
+                    // Re-open the original dialog when cancelled
+                    if (pendingYoutubeUrl) {
+                        setYoutubeDialogOpen(true);
+                    } else if (pendingAudioData) {
+                        setAudioDialogOpen(true);
+                    }
+                    // Don't clear pending data so user can try again
                 }}
                 onGenerate={handleGenerateWithConfig}
                 isLoading={isYoutubeLoading}
