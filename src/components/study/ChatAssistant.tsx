@@ -7,6 +7,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import RewriteSuggestionCard, { RewriteAction } from './RewriteSuggestionCard';
 import FocusReadModal from '@/components/FocusReadModal';
 import type { Editor } from '@tiptap/core';
@@ -93,6 +96,8 @@ function TypingMessage({
         return (
             <div className="text-sm leading-relaxed whitespace-pre-wrap">
                 <ReactMarkdown
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
                     components={{
                         strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
                         em: ({ node, ...props }) => <em className="italic" {...props} />,
@@ -122,6 +127,8 @@ function TypingMessage({
     return (
         <div className="text-sm leading-relaxed whitespace-pre-wrap">
             <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
                 components={{
                     strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
                     em: ({ node, ...props }) => <em className="italic" {...props} />,

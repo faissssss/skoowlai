@@ -4,6 +4,9 @@ import { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface FocusReadModalProps {
     isOpen: boolean;
@@ -73,6 +76,8 @@ export default function FocusReadModal({ isOpen, onClose, content, title }: Focu
                             <div className="flex-1 overflow-y-auto p-8 md:p-12">
                                 <article className="prose prose-invert prose-lg max-w-none text-slate-200 leading-8">
                                     <ReactMarkdown
+                                        remarkPlugins={[remarkMath]}
+                                        rehypePlugins={[rehypeKatex]}
                                         components={{
                                             p: ({ node, ...props }) => (
                                                 <p className="mb-6 text-lg leading-8 text-slate-200" {...props} />
