@@ -35,6 +35,10 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [youtubeUrl, setYoutubeUrl] = useState('');
     const [isYoutubeLoading, setIsYoutubeLoading] = useState(false);
 
+    // Controlled dialog state - allows closing when config modal opens
+    const [youtubeDialogOpen, setYoutubeDialogOpen] = useState(false);
+    const [audioDialogOpen, setAudioDialogOpen] = useState(false);
+
     // NoteConfig modal state
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [pendingYoutubeUrl, setPendingYoutubeUrl] = useState('');
@@ -81,6 +85,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const handleYoutubeClickGenerate = () => {
         if (!youtubeUrl) return;
         setPendingYoutubeUrl(youtubeUrl);
+        setYoutubeDialogOpen(false); // Close YouTube dialog first
         setShowConfigModal(true);
     };
 
@@ -229,7 +234,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     </DialogContent>
                 </Dialog>
 
-                <Dialog>
+                <Dialog open={youtubeDialogOpen} onOpenChange={setYoutubeDialogOpen}>
                     <DialogTrigger asChild>
                         <div>
                             <QuickCreateCard
@@ -272,7 +277,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     </DialogContent>
                 </Dialog>
 
-                <Dialog>
+                <Dialog open={audioDialogOpen} onOpenChange={setAudioDialogOpen}>
                     <DialogTrigger asChild>
                         <div>
                             <QuickCreateCard
@@ -294,8 +299,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         <div className="mt-4">
                             <LiveAudioRecorder
                                 onComplete={(notes, transcript, title) => {
-                                    // Store audio data and show config modal
+                                    // Store audio data, close dialog, and show config modal
                                     setPendingAudioData({ notes, transcript, title: title || 'Audio Recording' });
+                                    setAudioDialogOpen(false); // Close Audio dialog first
                                     setShowConfigModal(true);
                                 }}
                             />
