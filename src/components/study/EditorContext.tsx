@@ -35,14 +35,24 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // Utility to strip markdown formatting from AI output (safety net)
     const stripMarkdownFormatting = (text: string): string => {
-        return text
-            .replace(/^\*\*|\*\*$/g, '')   // Remove ** at start/end (bold)
-            .replace(/^__|\__$/g, '')      // Remove __ at start/end (bold alt)
-            .replace(/^\*([^*]+)\*$/g, '$1') // Remove single * wrapper (italics)
-            .replace(/^_([^_]+)_$/g, '$1')   // Remove single _ wrapper (italics alt)
-            .replace(/^"|"$/g, '')         // Remove quotes at start/end
-            .replace(/^'|'$/g, '')         // Remove single quotes at start/end
-            .trim();
+        let cleaned = text;
+
+        // Remove ALL bold markers (**text** and __text__) throughout the text
+        cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');  // **bold** -> bold
+        cleaned = cleaned.replace(/__([^_]+)__/g, '$1');       // __bold__ -> bold
+
+        // Remove ALL italic markers (*text* and _text_) throughout the text
+        // Be careful not to match ** or __
+        cleaned = cleaned.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, '$1');  // *italic* -> italic
+        cleaned = cleaned.replace(/(?<!_)_(?!_)([^_]+)(?<!_)_(?!_)/g, '$1');         // _italic_ -> italic
+
+        // Remove quotes at start/end
+        cleaned = cleaned.replace(/^["']|["']$/g, '');
+
+        // Remove any stray ** or __ at start/end that weren't caught
+        cleaned = cleaned.replace(/^[\*_]{1,2}|[\*_]{1,2}$/g, '');
+
+        return cleaned.trim();
     };
 
     const handleRewriteInsert = useCallback(async (newText: string, range: { from: number; to: number }) => {
