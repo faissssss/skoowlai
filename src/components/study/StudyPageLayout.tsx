@@ -8,6 +8,7 @@ import { ArrowLeft, FileText, CreditCard, ClipboardCheck, Share2, Menu, UserPlus
 import ChatAssistant from '@/components/study/ChatAssistant';
 import TextSelectionPopup, { RewriteAction } from '@/components/study/TextSelectionPopup';
 import StudyTimer from '@/components/study/StudyTimer';
+import { useTimer } from '@/contexts/TimerContext';
 import ShareModal from '@/components/ShareModal';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,6 +53,7 @@ function StudyPageLayoutInner({
     const titleInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
     const router = useRouter();
+    const { isRunning: isTimerRunning, isPaused: isTimerPaused } = useTimer();
 
     // Auto-collapse sidebar on scroll
     useEffect(() => {
@@ -232,8 +234,10 @@ function StudyPageLayoutInner({
                     )}
                 </div>
 
-                {/* Center: Empty spacer (timer moved to floating) */}
-                <div className="flex-1" />
+                {/* Center: Timer when idle */}
+                <div className="flex-1 flex justify-center">
+                    {!isTimerRunning && !isTimerPaused && <StudyTimer />}
+                </div>
 
                 {/* Right: Share Button */}
                 <div className="w-[180px] md:w-[250px] flex-shrink-0 flex justify-end">
@@ -250,10 +254,12 @@ function StudyPageLayoutInner({
                 </div>
             </header>
 
-            {/* Floating Timer - Fixed position at top center, always visible */}
-            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-                <StudyTimer />
-            </div>
+            {/* Floating Timer - Only visible when timer is running/paused */}
+            {(isTimerRunning || isTimerPaused) && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+                    <StudyTimer />
+                </div>
+            )}
 
             {/* Main Content Area with Sidebar */}
             <div className="flex-1 relative flex">
