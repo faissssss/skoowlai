@@ -85,7 +85,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const handleYoutubeClickGenerate = () => {
         if (!youtubeUrl) return;
         setPendingYoutubeUrl(youtubeUrl);
-        setYoutubeDialogOpen(false); // Close YouTube dialog first
+        // Keep dialog open - its backdrop will show behind config modal
         setShowConfigModal(true);
     };
 
@@ -95,6 +95,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
 
         // Handle YouTube URL generation
         if (pendingYoutubeUrl) {
+            setYoutubeDialogOpen(false); // Now close the dialog
             await processYoutubeWithConfig(pendingYoutubeUrl, config);
             setPendingYoutubeUrl('');
             return;
@@ -102,6 +103,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
 
         // Handle Audio generation
         if (pendingAudioData) {
+            setAudioDialogOpen(false); // Now close the dialog
             await processAudioWithConfig(pendingAudioData, config);
             setPendingAudioData(null);
             return;
@@ -299,9 +301,8 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         <div className="mt-4">
                             <LiveAudioRecorder
                                 onComplete={(notes, transcript, title) => {
-                                    // Store audio data, close dialog, and show config modal
+                                    // Store audio data and show config modal (keep dialog open for backdrop)
                                     setPendingAudioData({ notes, transcript, title: title || 'Audio Recording' });
-                                    setAudioDialogOpen(false); // Close Audio dialog first
                                     setShowConfigModal(true);
                                 }}
                             />
@@ -435,13 +436,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 isOpen={showConfigModal}
                 onClose={() => {
                     setShowConfigModal(false);
-                    // Re-open the original dialog when cancelled
-                    if (pendingYoutubeUrl) {
-                        setYoutubeDialogOpen(true);
-                    } else if (pendingAudioData) {
-                        setAudioDialogOpen(true);
-                    }
-                    // Don't clear pending data so user can try again
+                    // Dialogs are already open, user can try again or close them
                 }}
                 onGenerate={handleGenerateWithConfig}
                 isLoading={isYoutubeLoading}

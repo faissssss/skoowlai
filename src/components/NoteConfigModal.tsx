@@ -62,12 +62,12 @@ export default function NoteConfigModal({
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Backdrop - solid dark to fully cover (matches FileUpload style) */}
+                    {/* Backdrop - transparent for click-to-close only (matches shadcn Dialog style) */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/90 z-[100]"
+                        className="fixed inset-0 z-[100]"
                         onClick={onClose}
                     />
 
