@@ -12,7 +12,10 @@ export async function GET(req: NextRequest) {
     try {
         const messages = await db.chatMessage.findMany({
             where: { deckId },
-            orderBy: { createdAt: 'asc' },
+            orderBy: [
+                { createdAt: 'asc' },
+                { id: 'asc' }, // Secondary sort by ID for consistent ordering
+            ],
         });
 
         // Convert to AI SDK format

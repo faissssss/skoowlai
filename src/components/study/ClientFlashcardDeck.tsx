@@ -24,8 +24,8 @@ export default function ClientFlashcardDeck({ cards }: { cards: any[] }) {
         <div className="space-y-8">
             <Flashcard
                 key={currentIndex} // Force re-render on change to reset flip state
-                front={cards[currentIndex].front}
-                back={cards[currentIndex].back}
+                frontContent={cards[currentIndex].front}
+                backContent={cards[currentIndex].back}
             />
 
             <div className="flex items-center justify-center gap-4">

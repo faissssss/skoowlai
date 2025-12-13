@@ -12,7 +12,15 @@ export default async function StudyLayout({
     params: Promise<{ deckId: string }>;
 }) {
     const { deckId } = await params;
-    const clerkUser = await currentUser();
+
+    // Get current Clerk user with error handling
+    let clerkUser;
+    try {
+        clerkUser = await currentUser();
+    } catch (error) {
+        console.error('Clerk authentication error:', error);
+        clerkUser = null;
+    }
 
     // Get deck
     const deck = await db.deck.findUnique({

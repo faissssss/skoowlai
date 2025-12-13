@@ -348,8 +348,8 @@ export default function ClientFlashcardDeck({
 
             <Flashcard
                 key={currentIndex}
-                front={cards[currentIndex].front}
-                back={cards[currentIndex].back}
+                frontContent={cards[currentIndex].front}
+                backContent={cards[currentIndex].back}
             />
 
             <div className="flex items-center justify-center gap-4">

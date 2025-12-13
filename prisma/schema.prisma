@@ -30,6 +30,7 @@ model Deck {
   fileUrl       String?
   fileType      String?
   isPublic      Boolean        @default(false)
+  noteConfig    Json?          // Stores { depth, style, tone } preferences after generation
   createdAt     DateTime       @default(now())
   isDeleted     Boolean        @default(false)
   deletedAt     DateTime?

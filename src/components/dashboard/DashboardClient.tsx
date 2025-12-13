@@ -22,6 +22,8 @@ import DeleteDeckButton from '@/components/dashboard/DeleteDeckButton';
 import { cn } from '@/lib/utils';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import { toast } from 'sonner';
+import NoteConfigModal from '@/components/NoteConfigModal';
+import { NoteConfig } from '@/lib/noteConfig/types';
 
 interface DashboardClientProps {
     decks: any[];
@@ -32,6 +34,11 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [youtubeUrl, setYoutubeUrl] = useState('');
     const [isYoutubeLoading, setIsYoutubeLoading] = useState(false);
+
+    // NoteConfig modal state
+    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [pendingYoutubeUrl, setPendingYoutubeUrl] = useState('');
+    const [pendingAudioData, setPendingAudioData] = useState<{ notes: string; transcript: string; title: string } | null>(null);
 
     const router = useRouter();
     const { startLoading, stopLoading } = useGlobalLoader();
@@ -70,12 +77,36 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         }
     };
 
-    const handleYoutubeSubmit = async () => {
+    // Show config modal when user clicks YouTube "Generate Notes"
+    const handleYoutubeClickGenerate = () => {
         if (!youtubeUrl) return;
+        setPendingYoutubeUrl(youtubeUrl);
+        setShowConfigModal(true);
+    };
+
+    // Handle config selection and start generation
+    const handleGenerateWithConfig = async (config: NoteConfig) => {
+        setShowConfigModal(false);
+
+        // Handle YouTube URL generation
+        if (pendingYoutubeUrl) {
+            await processYoutubeWithConfig(pendingYoutubeUrl, config);
+            setPendingYoutubeUrl('');
+            return;
+        }
+
+        // Handle Audio generation
+        if (pendingAudioData) {
+            await processAudioWithConfig(pendingAudioData, config);
+            setPendingAudioData(null);
+            return;
+        }
+    };
+
+    const processYoutubeWithConfig = async (url: string, config: NoteConfig) => {
         setIsYoutubeLoading(true);
         startLoading('Fetching video transcript...');
         try {
-            // Update progress messages
             const transcriptTimer = setTimeout(() => {
                 startLoading('Analyzing video content...');
             }, 2000);
@@ -87,7 +118,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ youtubeUrl }),
+                body: JSON.stringify({ youtubeUrl: url, noteConfig: config }),
             });
 
             clearTimeout(transcriptTimer);
@@ -113,6 +144,33 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             setIsYoutubeLoading(false);
             setYoutubeUrl('');
             stopLoading();
+        }
+    };
+
+    const processAudioWithConfig = async (audioData: { notes: string; transcript: string; title: string }, config: NoteConfig) => {
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    audioNotes: audioData.notes,
+                    audioTranscript: audioData.transcript,
+                    title: audioData.title || 'Audio Recording',
+                    noteConfig: config
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error:', response.status, errorText);
+                throw new Error(`Failed to create study set: ${errorText}`);
+            }
+
+            const data = await response.json();
+            router.push(`/study/${data.deckId}`);
+        } catch (error) {
+            console.error('Error creating deck:', error);
+            toast.error('Failed to save notes. Please try again.');
         }
     };
 
@@ -204,7 +262,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                 </p>
                             </div>
                             <Button
-                                onClick={handleYoutubeSubmit}
+                                onClick={handleYoutubeClickGenerate}
                                 disabled={isYoutubeLoading || !youtubeUrl}
                                 className="w-full bg-red-600 hover:bg-red-700 text-white"
                             >
@@ -235,31 +293,10 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
 
                         <div className="mt-4">
                             <LiveAudioRecorder
-                                onComplete={async (notes, transcript, title) => {
-                                    // Create a new deck with the generated notes
-                                    try {
-                                        const response = await fetch('/api/generate', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                audioNotes: notes,
-                                                audioTranscript: transcript,
-                                                title: title || 'Audio Recording'
-                                            }),
-                                        });
-
-                                        if (!response.ok) {
-                                            const errorText = await response.text();
-                                            console.error('API Error:', response.status, errorText);
-                                            throw new Error(`Failed to create study set: ${errorText}`);
-                                        }
-
-                                        const data = await response.json();
-                                        router.push(`/study/${data.deckId}`);
-                                    } catch (error) {
-                                        console.error('Error creating deck:', error);
-                                        alert('Failed to save notes. Please try again.');
-                                    }
+                                onComplete={(notes, transcript, title) => {
+                                    // Store audio data and show config modal
+                                    setPendingAudioData({ notes, transcript, title: title || 'Audio Recording' });
+                                    setShowConfigModal(true);
                                 }}
                             />
                         </div>
@@ -386,6 +423,18 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     </div>
                 )}
             </div>
+
+            {/* Note Configuration Modal */}
+            <NoteConfigModal
+                isOpen={showConfigModal}
+                onClose={() => {
+                    setShowConfigModal(false);
+                    setPendingYoutubeUrl('');
+                    setPendingAudioData(null);
+                }}
+                onGenerate={handleGenerateWithConfig}
+                isLoading={isYoutubeLoading}
+            />
         </div>
     );
 }

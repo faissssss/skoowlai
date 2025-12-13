@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import { toast } from 'sonner';
+import NoteConfigModal from '@/components/NoteConfigModal';
+import { NoteConfig } from '@/lib/noteConfig/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes (Free Beta limit)
 
@@ -15,6 +17,7 @@ export default function FileUpload() {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [sizeError, setSizeError] = useState(false);
+    const [showConfigModal, setShowConfigModal] = useState(false);
     const router = useRouter();
     const { startLoading, stopLoading } = useGlobalLoader();
 
@@ -49,13 +52,23 @@ export default function FileUpload() {
         setSizeError(false);
     };
 
-    const handleUpload = async () => {
+    // Show config modal when user clicks Generate
+    const handleGenerateClick = () => {
+        if (!file || sizeError) return;
+        setShowConfigModal(true);
+    };
+
+    // Actual upload with config
+    const handleUpload = async (config: NoteConfig) => {
         if (!file || sizeError) return;
 
+        setShowConfigModal(false);
         setIsUploading(true);
         startLoading('Uploading your document...');
+
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('noteConfig', JSON.stringify(config));
 
         try {
             // Update progress after short delay to show upload started
@@ -197,7 +210,7 @@ export default function FileUpload() {
 
                     {/* Action Button */}
                     <Button
-                        onClick={handleUpload}
+                        onClick={handleGenerateClick}
                         className={cn(
                             "w-full h-10",
                             sizeError
@@ -219,6 +232,14 @@ export default function FileUpload() {
                     </Button>
                 </div>
             )}
+
+            {/* Note Configuration Modal */}
+            <NoteConfigModal
+                isOpen={showConfigModal}
+                onClose={() => setShowConfigModal(false)}
+                onGenerate={handleUpload}
+                isLoading={isUploading}
+            />
         </div>
     );
 }

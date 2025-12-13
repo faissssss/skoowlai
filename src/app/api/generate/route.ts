@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
 import { verifyUsageLimits, incrementUsage, USAGE_LIMITS, InputType } from '@/lib/usageVerifier';
+import { NoteConfig, DEFAULT_NOTE_CONFIG, buildSystemPrompt } from '@/lib/noteConfig';
 
 // Route segment config
 export const maxDuration = 120;
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
         let title = 'Study Set';
         let sourceType = 'doc'; // Track source: 'doc', 'youtube', or 'audio'
         let parts: any[] = [];
+        let noteConfig: NoteConfig = DEFAULT_NOTE_CONFIG; // Default config
 
         const contentType = req.headers.get('content-type') || '';
 
@@ -30,6 +32,16 @@ export async function POST(req: NextRequest) {
             console.log('📦 Received JSON body keys:', Object.keys(body));
             console.log('📦 audioNotes exists:', !!body.audioNotes);
             console.log('📦 audioNotes length:', body.audioNotes?.length || 0);
+
+            // Extract noteConfig if provided
+            if (body.noteConfig) {
+                noteConfig = {
+                    depth: body.noteConfig.depth || DEFAULT_NOTE_CONFIG.depth,
+                    style: body.noteConfig.style || DEFAULT_NOTE_CONFIG.style,
+                    tone: body.noteConfig.tone || DEFAULT_NOTE_CONFIG.tone,
+                };
+                console.log('📝 Using custom noteConfig:', noteConfig);
+            }
 
             // Handle pre-processed audio notes from /api/generate-audio-notes
             if (body.audioNotes) {
@@ -164,8 +176,24 @@ export async function POST(req: NextRequest) {
         } else if (contentType.includes('multipart/form-data')) {
             const formData = await req.formData();
             const file = formData.get('file') as File;
+            const noteConfigStr = formData.get('noteConfig') as string | null;
 
             console.log('📄 File received:', file?.name, file?.type, file?.size);
+
+            // Parse noteConfig from FormData if provided
+            if (noteConfigStr) {
+                try {
+                    const parsedConfig = JSON.parse(noteConfigStr);
+                    noteConfig = {
+                        depth: parsedConfig.depth || DEFAULT_NOTE_CONFIG.depth,
+                        style: parsedConfig.style || DEFAULT_NOTE_CONFIG.style,
+                        tone: parsedConfig.tone || DEFAULT_NOTE_CONFIG.tone,
+                    };
+                    console.log('📝 Using custom noteConfig from FormData:', noteConfig);
+                } catch (e) {
+                    console.warn('⚠️ Failed to parse noteConfig from FormData, using defaults');
+                }
+            }
 
             if (!file) {
                 return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -254,9 +282,19 @@ export async function POST(req: NextRequest) {
 
         console.log('🤖 Starting AI generation...');
         console.log('📝 Text content preview (first 500 chars):', text?.slice(0, 500) || 'NO TEXT');
+        console.log('📝 Using noteConfig:', noteConfig);
+
+        // Build custom system prompt based on user preferences
+        const customSystemPrompt = buildSystemPrompt(noteConfig);
 
         // Construct the messages for generateObject
-        const promptText = `**Role:** Senior Academic Researcher & Note Taker
+        const promptText = `${customSystemPrompt}
+
+---
+
+**ADDITIONAL INSTRUCTIONS:**
+
+**Role:** Senior Academic Researcher & Note Taker
 **Task:** Create comprehensive, detail-rich study notes from the input text.
 **Goal:** Capture ALL relevant information. Do not over-summarize; prioritize completeness.
 
@@ -393,6 +431,7 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
                 content: text || 'Audio Content',
                 summary: generatedSummary,
                 sourceType: sourceType,
+                noteConfig: noteConfig, // Save user's preference so they can't change it later
             } as any,
         });
 

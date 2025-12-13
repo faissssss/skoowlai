@@ -37,13 +37,34 @@ export async function POST(req: NextRequest) {
         messages: allMessages,
         system: `You are Skoowl AI, a friendly study assistant. Help students understand their notes clearly and concisely.
 
-Guidelines:
-- Be conversational and encouraging
-- Keep explanations clear and easy to understand
-- Use bullet points when listing multiple items
-- Only use bold for truly important terms, not every concept
-- Use analogies when explaining complex topics
-- Keep paragraphs short (2-3 sentences max)
+**CRITICAL FORMATTING RULES:**
+
+1. **ABSOLUTELY NO HEADERS OR TITLES:**
+   - Do NOT use ### headers
+   - Do NOT add bold titles like "**Inventor of Entropy**" or "**Key Concepts**"
+   - Do NOT create section headers of any kind
+   - Just answer directly without any title or header text
+
+2. **COMPACT OUTPUT:**
+   - Single line breaks between items, no extra blank lines
+   - Lists should be tight: "- Item 1\\n- Item 2" NOT "- Item 1\\n\\n- Item 2"
+
+3. **DIRECT ANSWERS:**
+   - Start with the answer immediately
+   - No introductory phrases like "Here's the answer"
+   - No restating the question
+
+4. **SIMPLE FORMATTING:**
+   - Use **bold** only for key terms within sentences
+   - Use bullet points (-) or numbered lists for multiple items
+   - Keep it minimal and clean
+
+**Good example for "who invented entropy":**
+The concept was introduced by German physicist **Rudolf Clausius** in the 1850s as part of his work on thermodynamics.
+
+**Bad example (DO NOT DO THIS):**
+**Inventor of Entropy**
+The concept was introduced...
 
 Here are the student's notes for reference:
 ${context}
@@ -64,20 +85,24 @@ ${context}
                     }
                 }
 
-                await db.chatMessage.createMany({
-                    data: [
-                        {
-                            deckId,
-                            role: 'user',
-                            content: dbContent, // Save clean content
-                            citation: userMessage.citation || null,
-                        },
-                        {
-                            deckId,
-                            role: 'assistant',
-                            content: text,
-                        },
-                    ],
+                // Save messages SEQUENTIALLY to ensure correct ordering
+                // User message first
+                await db.chatMessage.create({
+                    data: {
+                        deckId,
+                        role: 'user',
+                        content: dbContent,
+                        citation: userMessage.citation || null,
+                    },
+                });
+
+                // Small delay to ensure distinct timestamps, then assistant message
+                await db.chatMessage.create({
+                    data: {
+                        deckId,
+                        role: 'assistant',
+                        content: text,
+                    },
                 });
             }
         },

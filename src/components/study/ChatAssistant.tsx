@@ -2,12 +2,13 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, ArrowRight, Mic, MicOff, Paperclip, X, Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Loader2, ArrowRight, Mic, MicOff, Paperclip, X, Trash2, Maximize2 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import RewriteSuggestionCard, { RewriteAction } from './RewriteSuggestionCard';
+import FocusReadModal from '@/components/FocusReadModal';
 import type { Editor } from '@tiptap/core';
 import type { RewriteRequest } from './EditorContext';
 import {
@@ -26,6 +27,7 @@ interface Message {
     citation?: string; // Store citation separately
     files?: { name: string; type: string; url: string }[];
     isStreaming?: boolean; // Flag for streaming state
+    isHistorical?: boolean; // True for messages loaded from DB
 }
 
 // Helper to clean up AI response formatting
@@ -42,6 +44,106 @@ const formatAIResponse = (text: string) => {
 
     return formatted;
 };
+
+// Typing animation component for AI messages
+// Shows content with typing animation and cursor during streaming (real-time only)
+function TypingMessage({
+    content,
+    isStreaming,
+    isHistorical = false, // True for messages loaded from DB after refresh
+}: {
+    content: string;
+    isStreaming?: boolean;
+    isHistorical?: boolean;
+}) {
+    const [displayedLength, setDisplayedLength] = useState(isHistorical ? content.length : 0);
+    const prevContentLengthRef = useRef(0);
+
+    // Format the content for proper markdown rendering
+    const formattedContent = formatAIResponse(content);
+
+    useEffect(() => {
+        // Skip animation for historical messages
+        if (isHistorical) {
+            setDisplayedLength(content.length);
+            return;
+        }
+
+        // Reset when new message starts
+        if (content.length < prevContentLengthRef.current) {
+            setDisplayedLength(0);
+        }
+        prevContentLengthRef.current = content.length;
+
+        // Typing animation - catch up to current content
+        if (displayedLength < content.length) {
+            const charsPerTick = 8;
+            const tickInterval = 20;
+
+            const timer = setTimeout(() => {
+                setDisplayedLength(prev => Math.min(prev + charsPerTick, content.length));
+            }, tickInterval);
+
+            return () => clearTimeout(timer);
+        }
+    }, [content, displayedLength, isHistorical]);
+
+    // For historical messages, always show full content immediately
+    if (isHistorical) {
+        return (
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                <ReactMarkdown
+                    components={{
+                        strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+                        em: ({ node, ...props }) => <em className="italic" {...props} />,
+                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-0.5" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5" {...props} />,
+                        li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
+                        h1: ({ node, ...props }) => <h1 className="text-base font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
+                        h2: ({ node, ...props }) => <h2 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
+                        h3: ({ node, ...props }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0" {...props} />,
+                        hr: ({ node, ...props }) => <hr className="my-2 border-slate-200 dark:border-slate-700" {...props} />,
+                        code: ({ node, ...props }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs" {...props} />,
+                    }}
+                >
+                    {formattedContent}
+                </ReactMarkdown>
+            </div>
+        );
+    }
+
+    // Real-time messages with typing animation
+    const isTyping = displayedLength < content.length;
+    const displayContent = isStreaming || isTyping
+        ? formatAIResponse(content.slice(0, displayedLength))
+        : formattedContent;
+
+    return (
+        <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            <ReactMarkdown
+                components={{
+                    strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+                    em: ({ node, ...props }) => <em className="italic" {...props} />,
+                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-0.5" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5" {...props} />,
+                    li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
+                    h1: ({ node, ...props }) => <h1 className="text-base font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0" {...props} />,
+                    hr: ({ node, ...props }) => <hr className="my-2 border-slate-200 dark:border-slate-700" {...props} />,
+                    code: ({ node, ...props }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs" {...props} />,
+                }}
+            >
+                {displayContent}
+            </ReactMarkdown>
+            {(isStreaming || isTyping) && (
+                <span className="inline-block w-1.5 h-4 bg-indigo-500 ml-0.5 animate-pulse rounded-sm align-middle" />
+            )}
+        </div>
+    );
+}
 
 // RewriteRequest is imported from EditorContext in StudyPageLayout
 
@@ -76,6 +178,7 @@ export default function ChatAssistant({
     const [showClearDialog, setShowClearDialog] = useState(false);
     const [rewriteResult, setRewriteResult] = useState<string>('');
     const [isRewriting, setIsRewriting] = useState(false);
+    const [focusContent, setFocusContent] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +190,12 @@ export default function ChatAssistant({
                 .then(res => res.json())
                 .then(data => {
                     if (data.messages && data.messages.length > 0) {
-                        setMessages(data.messages);
+                        // Mark all loaded messages as historical (no typing animation)
+                        const historicalMessages = data.messages.map((msg: Message) => ({
+                            ...msg,
+                            isHistorical: true
+                        }));
+                        setMessages(historicalMessages);
                     }
                 })
                 .catch(err => {
@@ -409,7 +517,8 @@ export default function ChatAssistant({
                     const chunk = decoder.decode(value, { stream: true });
                     const lines = chunk.split('\n');
 
-                    for (const line of lines) {
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
                         if (!line.trim()) continue;
 
                         let textToAdd = '';
@@ -430,6 +539,10 @@ export default function ChatAssistant({
                             }
                         } else if (!line.startsWith('e:') && !line.startsWith('d:')) {
                             textToAdd = line;
+                            // CRITICAL: Add newline back if we split it out
+                            if (i < lines.length - 1) {
+                                textToAdd += '\n';
+                            }
                         }
 
                         if (textToAdd) {
@@ -498,8 +611,8 @@ export default function ChatAssistant({
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
                         className="fixed top-16 right-0 bottom-0 z-40 w-[400px] bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl"
                     >
-                        {/* Header */}
-                        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-4 bg-white dark:bg-slate-950 flex-shrink-0">
+                        {/* Header - Toolbar Only */}
+                        <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex-shrink-0">
                             <div className="flex items-center justify-between">
                                 <Button
                                     variant="ghost"
@@ -519,20 +632,21 @@ export default function ChatAssistant({
                                     Hide <ArrowRight className="w-4 h-4 ml-1" />
                                 </Button>
                             </div>
-
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Hey, I'm skoowl ai</h2>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm">
-                                    I can work with you on your doc and answer any questions!
-                                </p>
-                            </div>
                         </div>
 
                         {/* Messages - Scrollable */}
                         <div className="flex-1 overflow-y-auto p-6" ref={scrollRef}>
                             <div className="space-y-6">
+                                {/* Intro Header - Scrollable with messages */}
+                                <div className="pb-4 border-b border-slate-200 dark:border-slate-800 mb-2">
+                                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Hey, I'm skoowl ai</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm">
+                                        I can work with you on your doc and answer any questions!
+                                    </p>
+                                </div>
+
                                 {messages.length === 0 && (
-                                    <div className="text-center text-slate-500 mt-10">
+                                    <div className="text-center text-slate-500 mt-6">
                                         <p className="text-sm">Type a question below to get started.</p>
                                     </div>
                                 )}
@@ -558,34 +672,33 @@ export default function ChatAssistant({
 
                                         <div
                                             className={cn(
-                                                "max-w-[85%] rounded-2xl px-5 py-3 text-sm leading-relaxed",
+                                                "max-w-[85%] rounded-2xl px-5 py-3 text-sm leading-relaxed relative group",
                                                 m.role === 'user'
                                                     ? "bg-indigo-600 text-white"
                                                     : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800"
                                             )}
                                         >
+                                            {/* Focus Read Button - Only for assistant messages */}
+                                            {m.role === 'assistant' && m.content && !m.isStreaming && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setFocusContent(m.content);
+                                                    }}
+                                                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 transition-all"
+                                                    title="Focus Read"
+                                                >
+                                                    <Maximize2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
 
                                             {/* Message content */}
                                             {m.role === 'assistant' ? (
-                                                <div className="text-sm leading-relaxed">
-                                                    <ReactMarkdown
-                                                        components={{
-                                                            strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
-                                                            em: ({ node, ...props }) => <em className="italic" {...props} />,
-                                                            p: ({ node, ...props }) => <p className="mb-3 last:mb-0" {...props} />,
-                                                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-3 space-y-1" {...props} />,
-                                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-3 space-y-1" {...props} />,
-                                                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                                            h1: ({ node, ...props }) => <h1 className="text-lg font-semibold mb-2 mt-3 first:mt-0" {...props} />,
-                                                            h2: ({ node, ...props }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0" {...props} />,
-                                                            h3: ({ node, ...props }) => <h3 className="text-sm font-semibold mb-2 mt-3 first:mt-0" {...props} />,
-                                                            hr: ({ node, ...props }) => <hr className="my-3 border-slate-200 dark:border-slate-700" {...props} />,
-                                                            code: ({ node, ...props }) => <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs" {...props} />,
-                                                        }}
-                                                    >
-                                                        {formatAIResponse(m.content)}
-                                                    </ReactMarkdown>
-                                                </div>
+                                                <TypingMessage
+                                                    content={m.content}
+                                                    isStreaming={m.isStreaming}
+                                                    isHistorical={m.isHistorical}
+                                                />
                                             ) : (
                                                 <div className="whitespace-pre-wrap break-words">{m.content}</div>
                                             )}
@@ -764,6 +877,14 @@ export default function ChatAssistant({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Focus Read Modal */}
+            <FocusReadModal
+                isOpen={focusContent !== null}
+                onClose={() => setFocusContent(null)}
+                content={focusContent || ''}
+                title="AI Response"
+            />
         </>
     );
 }

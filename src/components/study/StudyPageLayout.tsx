@@ -40,7 +40,7 @@ function StudyPageLayoutInner({
     userRole
 }: StudyPageLayoutProps) {
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true); // Collapsed by default
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [citation, setCitation] = useState<string | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -52,6 +52,23 @@ function StudyPageLayoutInner({
     const titleInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
     const router = useRouter();
+
+    // Auto-collapse sidebar on scroll
+    useEffect(() => {
+        let lastScrollY = window.scrollY;
+
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            // Collapse sidebar when scrolling down more than 50px
+            if (currentScrollY > lastScrollY && currentScrollY > 50 && !isSidebarCollapsed) {
+                setIsSidebarCollapsed(true);
+            }
+            lastScrollY = currentScrollY;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [isSidebarCollapsed]);
 
     const { editorRef, rewriteRequest, setRewriteRequest, handleRewriteInsert, setDeckId } = useEditorContext();
 
@@ -215,10 +232,8 @@ function StudyPageLayoutInner({
                     )}
                 </div>
 
-                {/* Center: Pomodoro Timer */}
-                <div className="flex-1 flex justify-center">
-                    <StudyTimer />
-                </div>
+                {/* Center: Empty spacer (timer moved to floating) */}
+                <div className="flex-1" />
 
                 {/* Right: Share Button */}
                 <div className="w-[180px] md:w-[250px] flex-shrink-0 flex justify-end">
@@ -234,6 +249,11 @@ function StudyPageLayoutInner({
                     )}
                 </div>
             </header>
+
+            {/* Floating Timer - Fixed position at top center, always visible */}
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+                <StudyTimer />
+            </div>
 
             {/* Main Content Area with Sidebar */}
             <div className="flex-1 relative flex">
