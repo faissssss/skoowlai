@@ -33,24 +33,30 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         editorRef.current = editor;
     }, []);
 
-    // Utility to strip markdown formatting from AI output (safety net)
+    // Utility to strip ALL markdown formatting from AI output (aggressive cleanup)
     const stripMarkdownFormatting = (text: string): string => {
         let cleaned = text;
 
-        // Remove ALL bold markers (**text** and __text__) throughout the text
-        cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');  // **bold** -> bold
-        cleaned = cleaned.replace(/__([^_]+)__/g, '$1');       // __bold__ -> bold
+        // Remove ALL bold markers (**text** and __text__) - handle nested cases
+        cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '$1');  // **bold** -> bold
+        cleaned = cleaned.replace(/__(.+?)__/g, '$1');       // __bold__ -> bold
 
-        // Remove ALL italic markers (*text* and _text_) throughout the text
-        // Be careful not to match ** or __
-        cleaned = cleaned.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, '$1');  // *italic* -> italic
-        cleaned = cleaned.replace(/(?<!_)_(?!_)([^_]+)(?<!_)_(?!_)/g, '$1');         // _italic_ -> italic
+        // Remove ALL italic markers (*text* and _text_) - be careful with asterisks
+        cleaned = cleaned.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');  // *italic* -> italic
+        cleaned = cleaned.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, '$1');         // _italic_ -> italic
+
+        // Remove markdown headers (# ## ### etc) at start of lines
+        cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
 
         // Remove quotes at start/end
         cleaned = cleaned.replace(/^["']|["']$/g, '');
 
         // Remove any stray ** or __ at start/end that weren't caught
         cleaned = cleaned.replace(/^[\*_]{1,2}|[\*_]{1,2}$/g, '');
+
+        // Remove any remaining ** or __ anywhere (safety net)
+        cleaned = cleaned.replace(/\*\*/g, '');
+        cleaned = cleaned.replace(/__/g, '');
 
         return cleaned.trim();
     };
@@ -60,12 +66,19 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             // Clean the text before inserting (remove unwanted markdown formatting)
             const cleanText = stripMarkdownFormatting(newText);
 
-            // Insert the cleaned text
+            // Insert as PLAIN TEXT with NO formatting
+            // Use unsetAllMarks to ensure no bold/italic/etc is applied
             editorRef.current
                 .chain()
                 .focus()
                 .setTextSelection(range)
-                .insertContent(cleanText)
+                .deleteSelection()
+                .unsetAllMarks() // Clear any active formatting
+                .insertContent(cleanText, {
+                    parseOptions: {
+                        preserveWhitespace: true,
+                    },
+                })
                 .run();
 
             // Auto-save the notes

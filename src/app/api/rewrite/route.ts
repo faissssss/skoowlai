@@ -37,18 +37,27 @@ export async function POST(req: NextRequest) {
                 content: text,
             },
         ],
-        system: `You are a text editing assistant. Rewrite the user's text according to their selected action: "${action}" (${instruction}).
+        system: `**Role:** Professional Multi-lingual Editor
+**Task:** Rewrite the user's input text based on the selected action: "${action}" (${instruction}).
 
-**CRITICAL FORMATTING RULES (STRICT COMPLIANCE REQUIRED):**
-1. **PLAIN TEXT ONLY:** Return the rewritten text as pure, raw text.
-2. **NO MARKDOWN WRAPPING:** Do NOT wrap the output in bold tags (\`**\`), italics (\`*\` or \`_\`), or quotes.
-3. **NO META-COMMENTARY:** Do not add phrases like "Here is the rewritten version:" or "Result:" or "Sure!". Just output the text itself.
-4. **NO HIGHLIGHTING:** Do not bold changes or key terms. The user needs to insert this text directly into a document, so any formatting will break their editor.
+**CRITICAL RULES (MUST FOLLOW):**
 
-ADDITIONAL RULES:
-- Return ONLY the rewritten text - nothing else
-- Preserve paragraph structure if present
-- Output the transformed text directly with no decorations`,
+1. **STRICT LANGUAGE MATCHING (HIGHEST PRIORITY):**
+   * **Detect** the language of the input text (e.g., Indonesian, English, Spanish, Korean, Japanese, Chinese, etc.).
+   * **Output** the rewritten text in the **EXACT SAME LANGUAGE** as the input.
+   * **DO NOT translate.** If input is Korean, output MUST be Korean. If Spanish, output Spanish.
+   * Example: Input "Saya suka belajar" (Indonesian) → Output MUST be in Indonesian, NOT English.
+
+2. **PLAIN TEXT ONLY:**
+   * Return pure, raw text only.
+   * **NO MARKDOWN:** Do NOT wrap output in bold tags (\`**\`), italics (\`*\` or \`_\`), or quotes.
+   * **NO META-COMMENTARY:** Do not add "Here is the rewritten version:" or "Result:" or "Sure!".
+   * **NO HIGHLIGHTING:** Do not bold changes or key terms.
+
+3. **OUTPUT RULES:**
+   * Return ONLY the rewritten text - nothing else
+   * Preserve paragraph structure if present
+   * Output the transformed text directly with no decorations`,
     });
 
     return result.toTextStreamResponse();

@@ -510,7 +510,7 @@ export default function ClientQuiz({
                                     </div>
                                 </div>
 
-                                {/* Correct Answer with Reveal Toggle */}
+                                {/* Correct Answer (Embedded - Read Only) */}
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
                                         <label className="text-sm font-medium text-slate-300">Correct Answer</label>
@@ -528,19 +528,13 @@ export default function ClientQuiz({
                                         </Button>
                                     </div>
                                     {isRevealed ? (
-                                        <select
-                                            value={quiz.answer}
-                                            onChange={(e) => handleUpdateQuiz(qIndex, 'answer', e.target.value)}
-                                            className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-green-500/30 text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
-                                        >
-                                            <option value="">Select correct answer</option>
-                                            {quiz.options.map((option, i) => (
-                                                <option key={i} value={option}>{option || `Option ${i + 1}`}</option>
-                                            ))}
-                                        </select>
+                                        <div className="px-4 py-3 rounded-lg bg-green-500/10 border-2 border-green-500/40 text-green-300 font-medium flex items-center gap-2">
+                                            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                            <span>{quiz.answer || 'No answer set'}</span>
+                                        </div>
                                     ) : (
                                         <div className="px-4 py-2 rounded-lg bg-slate-900 border border-white/10 text-slate-500 italic">
-                                            Hidden - click Reveal to edit
+                                            Hidden - click Reveal to view
                                         </div>
                                     )}
                                 </div>

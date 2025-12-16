@@ -12,11 +12,12 @@ type QuizDifficulty = 'basic' | 'intermediate' | 'advanced' | 'expert';
 type QuizScope = 'summary' | 'granular' | 'full';
 
 // Combined schema for quiz generation with hints
+// IMPORTANT: answer.min(1) ensures answers are NEVER empty
 const quizSchema = z.object({
     questions: z.array(z.object({
-        question: z.string().describe('The quiz question'),
+        question: z.string().min(1).describe('The quiz question'),
         options: z.array(z.string()).describe('Answer options (4 for MC, 2 for T/F, empty for fill-in)'),
-        answer: z.string().describe('The correct answer'),
+        answer: z.string().min(1).describe('The correct answer - MUST be non-empty'),
         type: z.string().describe('Question type: multiple-choice, true-false, or fill-in'),
         hint: z.string().describe('A helpful hint that guides the student toward the answer without giving it away'),
     })).describe('A list of quiz questions with hints'),
@@ -56,11 +57,12 @@ function buildQuizPrompt(
 **REQUIREMENTS:**
 1. Create exactly ${count} questions
 2. Each question should test a different aspect of the content
-3. Ensure all answers are correct and verifiable from the source
-4. Match the difficulty level specified
-5. For multiple-choice: make distractors plausible but clearly wrong
-6. For true-false: include both true and false statements
-7. For fill-in: the blank should be for a key term or concept, use _____ to show the blank
+3. **CRITICAL: EVERY question MUST have a valid, non-empty 'answer' field - this is MANDATORY**
+4. Ensure all answers are correct and verifiable from the source
+5. Match the difficulty level specified
+6. For multiple-choice: make distractors plausible but clearly wrong. The 'answer' must be one of the options EXACTLY.
+7. For true-false: include both true and false statements. The 'answer' must be exactly "True" or "False".
+8. For fill-in: the blank should be for a key term or concept, use _____ to show the blank. The 'answer' must be the word/phrase that fills the blank.
 
 **HINT REQUIREMENTS:**
 - Each question MUST have a helpful hint
@@ -121,13 +123,29 @@ export async function POST(req: NextRequest) {
             where: { deckId },
         });
 
+        // CRITICAL: Filter out any questions without valid answers
+        // This ensures "No answer set" is IMPOSSIBLE
+        const validQuestions = object.questions.filter(q => {
+            const hasAnswer = q.answer && q.answer.trim().length > 0;
+            if (!hasAnswer) {
+                console.warn('Filtered out question without answer:', q.question);
+            }
+            return hasAnswer;
+        });
+
+        if (validQuestions.length === 0) {
+            return NextResponse.json({
+                error: 'Failed to generate quiz: No valid questions with answers were created',
+            }, { status: 500 });
+        }
+
         // Store generated quizzes in database WITH HINTS
         await db.quiz.createMany({
-            data: object.questions.map((q) => ({
+            data: validQuestions.map((q) => ({
                 deckId,
                 question: q.question,
                 options: JSON.stringify(q.options),
-                answer: q.answer,
+                answer: q.answer.trim(), // Ensure trimmed answer
                 hint: q.hint || null, // Store the generated hint
             })),
         });

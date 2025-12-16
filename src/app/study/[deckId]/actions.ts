@@ -164,13 +164,20 @@ export async function saveAllQuizzes(
         // Process updates and creates
         const activeQuizzes = quizzes.filter(q => !q.isDeleted);
         for (const quiz of activeQuizzes) {
+            // CRITICAL: Validate that answers exist (answers are embedded and read-only in UI)
+            // This is a safety check - answers should always be present
+            if (!quiz.answer || quiz.answer.trim().length === 0) {
+                console.error('Quiz missing answer, skipping:', quiz.question);
+                continue; // Skip quizzes without valid answers
+            }
+
             if (quiz.isNew || !quiz.id) {
                 await db.quiz.create({
                     data: {
                         deckId,
                         question: quiz.question,
                         options: JSON.stringify(quiz.options),
-                        answer: quiz.answer,
+                        answer: quiz.answer.trim(),
                         hint: quiz.hint || null,
                     },
                 });
@@ -180,7 +187,7 @@ export async function saveAllQuizzes(
                     data: {
                         question: quiz.question,
                         options: JSON.stringify(quiz.options),
-                        answer: quiz.answer,
+                        answer: quiz.answer.trim(),
                         hint: quiz.hint || null,
                     },
                 });
