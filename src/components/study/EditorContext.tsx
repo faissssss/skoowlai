@@ -66,18 +66,17 @@ export function EditorProvider({ children }: { children: ReactNode }) {
             // Clean the text before inserting (remove unwanted markdown formatting)
             const cleanText = stripMarkdownFormatting(newText);
 
-            // Insert as PLAIN TEXT with NO formatting
-            // Use unsetAllMarks to ensure no bold/italic/etc is applied
+            // CRITICAL: Insert as explicit text node with NO marks
+            // This prevents TipTap from inheriting bold/italic from surrounding text
             editorRef.current
                 .chain()
                 .focus()
                 .setTextSelection(range)
                 .deleteSelection()
-                .unsetAllMarks() // Clear any active formatting
-                .insertContent(cleanText, {
-                    parseOptions: {
-                        preserveWhitespace: true,
-                    },
+                .insertContent({
+                    type: 'text',
+                    text: cleanText,
+                    marks: [], // Explicitly NO formatting marks
                 })
                 .run();
 
