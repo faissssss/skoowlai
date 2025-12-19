@@ -14,14 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.skoowlai.com'),
-  // Canonical URL - tells Google this is the primary URL (prevents duplicates)
+  // Use non-www as the canonical base URL
+  metadataBase: new URL('https://skoowlai.com'),
+  // Canonical URL - tells Google this is the primary URL (prevents www vs non-www duplicates)
   alternates: {
-    canonical: 'https://www.skoowlai.com',
+    canonical: '/',
   },
   title: {
-    default: "skoowl ai - AI-Powered Study Assistant",
-    template: "%s | skoowl ai",
+    default: "Skoowl AI - AI-Powered Study Assistant",
+    template: "%s | Skoowl AI",
   },
   description: "Your Personal AI Study Buddy. Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps. Study smarter with AI.",
   keywords: [
@@ -43,25 +44,34 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://www.skoowlai.com",
-    siteName: "skoowl ai",
-    title: "skoowl ai - AI-Powered Study Assistant",
-    description: "Your Personal AI Study Buddy. Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps.",
+    url: "https://skoowlai.com",
+    siteName: "Skoowl AI",
+    title: "Skoowl AI - AI-Powered Study Assistant",
+    description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     images: [
       {
-        url: "/skoowl-logo.png",
-        width: 512,
-        height: 512,
-        alt: "skoowl ai logo",
+        url: "https://skoowlai.com/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Skoowl AI - AI-Powered Study Assistant",
+        type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "skoowl ai - AI-Powered Study Assistant",
-    description: "Turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps.",
+    title: "Skoowl AI - AI-Powered Study Assistant",
+    description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     creator: "@skoowlai",
-    images: ["/skoowl-logo.png"],
+    site: "@skoowlai",
+    images: [
+      {
+        url: "https://skoowlai.com/twitter-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Skoowl AI - AI-Powered Study Assistant",
+      },
+    ],
   },
   robots: {
     index: true,
@@ -74,11 +84,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: {
-    icon: "/skoowl-logo.png",
-    apple: "/skoowl-logo.png",
-    shortcut: "/skoowl-logo.png",
-  },
+  // Next.js auto-detects icon.ico in src/app/ - no manual config needed
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
