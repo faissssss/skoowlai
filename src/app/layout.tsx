@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     images: [
       {
-        url: "https://skoowlai.com/opengraph-image.png",
+        url: "https://skoowlai.com/opengraph-image.png?v=2",
         width: 1200,
         height: 630,
         alt: "Skoowl AI - AI-Powered Study Assistant",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     site: "@skoowlai",
     images: [
       {
-        url: "https://skoowlai.com/twitter-image.png",
+        url: "https://skoowlai.com/twitter-image.png?v=2",
         width: 1200,
         height: 630,
         alt: "Skoowl AI - AI-Powered Study Assistant",
