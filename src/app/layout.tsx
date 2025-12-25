@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     images: [
       {
-        url: "https://skoowlai.com/twitter-image.png",
+        url: "https://skoowlai.com/twitter-card.png",
         width: 1200,
         height: 630,
         alt: "Unlock Your Study Potential with Skoowl AI",
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     site: "@skoowlai",
     images: [
       {
-        url: "https://skoowlai.com/twitter-image.png",
+        url: "https://skoowlai.com/twitter-card.png",
         width: 1200,
         height: 630,
         alt: "Unlock Your Study Potential with Skoowl AI",
