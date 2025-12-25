@@ -48,7 +48,14 @@ export const metadata: Metadata = {
     siteName: "Skoowl AI",
     title: "Skoowl AI - AI-Powered Study Assistant",
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
-    // Images auto-detected from src/app/opengraph-image.png
+    images: [
+      {
+        url: "https://skoowlai.com/twitter-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Unlock Your Study Potential with Skoowl AI",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -56,7 +63,14 @@ export const metadata: Metadata = {
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     creator: "@skoowlai",
     site: "@skoowlai",
-    // Images auto-detected from src/app/twitter-image.png
+    images: [
+      {
+        url: "https://skoowlai.com/twitter-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Unlock Your Study Potential with Skoowl AI",
+      },
+    ],
   },
   robots: {
     index: true,
