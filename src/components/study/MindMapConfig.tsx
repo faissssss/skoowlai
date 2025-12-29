@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2, Network, Check } from 'lucide-react';
+import { Sparkles, Loader2, Network, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 
 interface MindMapConfigProps {
     deckId: string;
+    isOpen: boolean;
+    onClose: () => void;
     onGenerated: () => void;
 }
 
@@ -144,7 +147,7 @@ const depthOptions = [
     { value: 'deep', label: 'Detailed', description: 'Comprehensive coverage' },
 ];
 
-export default function MindMapConfig({ deckId, onGenerated }: MindMapConfigProps) {
+export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: MindMapConfigProps) {
     const [depth, setDepth] = useState('medium');
     const [layout, setLayout] = useState('mindmap');
     const [colorTheme, setColorTheme] = useState('indigo');
@@ -178,167 +181,190 @@ export default function MindMapConfig({ deckId, onGenerated }: MindMapConfigProp
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-8">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Network className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Generate Mind Map</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Visualize your notes as an interactive diagram
-                    </p>
-                </div>
-            </div>
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop with blur */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+                        onClick={onClose}
+                    />
 
-            <div className="space-y-8">
-                {/* Layout Selection with Visual Previews */}
-                <div className="text-center">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-                        Layout Style
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {layoutOptions.map((option) => (
-                            <button
-                                key={option.value}
-                                onClick={() => setLayout(option.value)}
-                                disabled={isGenerating}
-                                className={cn(
-                                    "relative p-4 rounded-xl border-2 transition-all duration-200 text-left group",
-                                    layout === option.value
-                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50 dark:bg-slate-800/50",
-                                    isGenerating && "opacity-50 cursor-not-allowed"
-                                )}
-                            >
-                                {/* Selection indicator */}
-                                {layout === option.value && (
-                                    <div className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
-                                        <Check className="w-3 h-3 text-white" />
+                    {/* Modal */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
+                    >
+                        <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto max-h-[90vh] overflow-y-auto">
+                            {/* Header */}
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                        <Network className="w-5 h-5 text-white" />
                                     </div>
-                                )}
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Generate Mind Map</h2>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Visualize your notes as a diagram</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                                {/* Icon Preview */}
-                                <div className={cn(
-                                    "w-full h-12 mb-3 transition-colors",
-                                    layout === option.value
-                                        ? "text-indigo-600 dark:text-indigo-400"
-                                        : "text-slate-400 dark:text-slate-500 group-hover:text-slate-500 dark:group-hover:text-slate-400"
-                                )}>
-                                    {option.icon}
+                            {/* Content */}
+                            <div className="p-6 space-y-6">
+                                {/* Layout Selection with Visual Previews */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                                        Layout Style
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {layoutOptions.map((option) => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => setLayout(option.value)}
+                                                disabled={isGenerating}
+                                                className={cn(
+                                                    "relative p-3 rounded-xl border-2 transition-all duration-200 text-left group",
+                                                    layout === option.value
+                                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                                                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50 dark:bg-slate-800/50",
+                                                    isGenerating && "opacity-50 cursor-not-allowed"
+                                                )}
+                                            >
+                                                {/* Selection indicator */}
+                                                {layout === option.value && (
+                                                    <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center">
+                                                        <Check className="w-2.5 h-2.5 text-white" />
+                                                    </div>
+                                                )}
+
+                                                {/* Icon Preview */}
+                                                <div className={cn(
+                                                    "w-full h-8 mb-2 transition-colors",
+                                                    layout === option.value
+                                                        ? "text-indigo-600 dark:text-indigo-400"
+                                                        : "text-slate-400 dark:text-slate-500 group-hover:text-slate-500 dark:group-hover:text-slate-400"
+                                                )}>
+                                                    {option.icon}
+                                                </div>
+
+                                                {/* Label */}
+                                                <div className={cn(
+                                                    "font-medium text-xs",
+                                                    layout === option.value
+                                                        ? "text-indigo-700 dark:text-indigo-300"
+                                                        : "text-slate-700 dark:text-slate-300"
+                                                )}>
+                                                    {option.label}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                {/* Label */}
-                                <div className={cn(
-                                    "font-medium text-sm",
-                                    layout === option.value
-                                        ? "text-indigo-700 dark:text-indigo-300"
-                                        : "text-slate-700 dark:text-slate-300"
-                                )}>
-                                    {option.label}
+                                {/* Color Theme Selection */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                                        Color Theme
+                                    </label>
+                                    <div className="flex flex-wrap gap-2 justify-center">
+                                        {colorThemes.map((theme) => (
+                                            <button
+                                                key={theme.value}
+                                                onClick={() => setColorTheme(theme.value)}
+                                                disabled={isGenerating}
+                                                className={cn(
+                                                    "relative flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-200",
+                                                    colorTheme === theme.value
+                                                        ? "border-slate-900 dark:border-white bg-slate-100 dark:bg-slate-800"
+                                                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
+                                                    isGenerating && "opacity-50 cursor-not-allowed"
+                                                )}
+                                            >
+                                                {/* Color dots */}
+                                                <div className="flex -space-x-1">
+                                                    {theme.colors.map((color, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="w-4 h-4 rounded-full border-2 border-white dark:border-slate-800"
+                                                            style={{ backgroundColor: color }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className={cn(
+                                                    "text-xs font-medium",
+                                                    colorTheme === theme.value
+                                                        ? "text-slate-900 dark:text-white"
+                                                        : "text-slate-600 dark:text-slate-400"
+                                                )}>
+                                                    {theme.label}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400">
-                                    {option.description}
+
+                                {/* Depth Selection */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                                        Depth Level
+                                    </label>
+                                    <div className="flex flex-wrap gap-2 justify-center">
+                                        {depthOptions.map((option) => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => setDepth(option.value)}
+                                                disabled={isGenerating}
+                                                className={cn(
+                                                    "px-4 py-2 rounded-xl border-2 transition-all duration-200",
+                                                    depth === option.value
+                                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                                                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600",
+                                                    isGenerating && "opacity-50 cursor-not-allowed"
+                                                )}
+                                            >
+                                                <span className="font-medium text-sm">{option.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                            </div>
 
-                {/* Color Theme Selection */}
-                <div className="text-center">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-                        Color Theme
-                    </label>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                        {colorThemes.map((theme) => (
-                            <button
-                                key={theme.value}
-                                onClick={() => setColorTheme(theme.value)}
-                                disabled={isGenerating}
-                                className={cn(
-                                    "relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all duration-200",
-                                    colorTheme === theme.value
-                                        ? "border-slate-900 dark:border-white bg-slate-100 dark:bg-slate-800"
-                                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
-                                    isGenerating && "opacity-50 cursor-not-allowed"
-                                )}
-                            >
-                                {/* Color dots */}
-                                <div className="flex -space-x-1">
-                                    {theme.colors.map((color, i) => (
-                                        <div
-                                            key={i}
-                                            className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-800"
-                                            style={{ backgroundColor: color }}
-                                        />
-                                    ))}
-                                </div>
-                                <span className={cn(
-                                    "text-sm font-medium",
-                                    colorTheme === theme.value
-                                        ? "text-slate-900 dark:text-white"
-                                        : "text-slate-600 dark:text-slate-400"
-                                )}>
-                                    {theme.label}
-                                </span>
-                                {colorTheme === theme.value && (
-                                    <Check className="w-4 h-4 text-slate-900 dark:text-white" />
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Depth Selection */}
-                <div className="text-center">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-                        Depth Level
-                    </label>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                        {depthOptions.map((option) => (
-                            <button
-                                key={option.value}
-                                onClick={() => setDepth(option.value)}
-                                disabled={isGenerating}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg border-2 transition-all duration-200",
-                                    depth === option.value
-                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600",
-                                    isGenerating && "opacity-50 cursor-not-allowed"
-                                )}
-                            >
-                                <span className="font-medium text-sm">{option.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Generate Button */}
-                <Button
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-12 text-lg font-semibold shadow-lg"
-                >
-                    {isGenerating ? (
-                        <>
-                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                            Generating...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="w-5 h-5 mr-2" />
-                            Generate Mind Map
-                        </>
-                    )}
-                </Button>
-
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                    AI will analyze your notes and create an interactive diagram
-                </p>
-            </div>
-        </div>
+                            {/* Footer */}
+                            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                                <Button
+                                    onClick={handleGenerate}
+                                    disabled={isGenerating}
+                                    className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium text-base rounded-xl shadow-lg shadow-violet-500/25 transition-all"
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                            Generating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-5 h-5 mr-2" />
+                                            Generate Mind Map
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
     );
 }

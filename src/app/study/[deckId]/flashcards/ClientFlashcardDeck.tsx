@@ -77,7 +77,6 @@ export default function ClientFlashcardDeck({
     };
 
     const handleStartPlay = () => {
-        // CRITICAL: Immediately close Edit mode when switching to Play
         setViewMode('PLAY');
         setCurrentIndex(0);
     };
@@ -97,7 +96,6 @@ export default function ClientFlashcardDeck({
         try {
             const result = await saveAllFlashcards(deckId, editingCards);
             if (result.success) {
-                // Refresh cards from server
                 await fetchCards();
                 setViewMode('VIEW');
                 setEditingCards([]);
@@ -145,80 +143,103 @@ export default function ClientFlashcardDeck({
         );
     }
 
-    if (showConfig) {
-        return <FlashcardConfig deckId={deckId} onGenerated={handleGenerated} />;
-    }
+    // Config modal (overlay on existing content)
+    const configModal = (
+        <FlashcardConfig
+            deckId={deckId}
+            isOpen={showConfig}
+            onClose={() => setShowConfig(false)}
+            onGenerated={handleGenerated}
+        />
+    );
 
     if (cards.length === 0) {
-        return <FlashcardConfig deckId={deckId} onGenerated={handleGenerated} />;
+        return (
+            <>
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <CreditCard className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No Flashcards Yet</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-4">Generate flashcards from your notes</p>
+                    <Button onClick={() => setShowConfig(true)} className="bg-violet-600 hover:bg-violet-700 text-white">
+                        <CreditCard className="w-4 h-4 mr-2" /> Create Flashcards
+                    </Button>
+                </div>
+                {configModal}
+            </>
+        );
     }
 
     // ============ VIEW MODE ============
     if (viewMode === 'VIEW') {
         return (
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
-                            <CreditCard className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Flashcards</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {cards.length} cards • Review and memorize
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={handleStartEdit}
-                            className="gap-2"
-                        >
-                            <Edit3 className="w-4 h-4" /> Edit
-                        </Button>
-                        <Button
-                            onClick={handleStartPlay}
-                            className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25"
-                        >
-                            <PlayCircle className="w-4 h-4" /> Play
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Card List Preview */}
-                <div className="space-y-3">
-                    {cards.slice(0, 5).map((card, index) => (
-                        <div
-                            key={card.id}
-                            className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center"
-                        >
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{card.front}</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{card.back}</p>
+            <>
+                {configModal}
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
+                                <CreditCard className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xs text-slate-400 ml-4">#{index + 1}</span>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Flashcards</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    {cards.length} cards • Review and memorize
+                                </p>
+                            </div>
                         </div>
-                    ))}
-                    {cards.length > 5 && (
-                        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                            +{cards.length - 5} more cards
-                        </p>
-                    )}
-                </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={handleStartEdit}
+                                className="gap-2"
+                            >
+                                <Edit3 className="w-4 h-4" /> Edit
+                            </Button>
+                            <Button
+                                onClick={handleStartPlay}
+                                className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25"
+                            >
+                                <PlayCircle className="w-4 h-4" /> Play
+                            </Button>
+                        </div>
+                    </div>
 
-                <div className="flex justify-center">
-                    <Button
-                        variant="ghost"
-                        onClick={handleRegenerate}
-                        className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                    >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Regenerate with different settings
-                    </Button>
+                    {/* Card List Preview */}
+                    <div className="space-y-3">
+                        {cards.slice(0, 5).map((card, index) => (
+                            <div
+                                key={card.id}
+                                className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center"
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{card.front}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{card.back}</p>
+                                </div>
+                                <span className="text-xs text-slate-400 ml-4">#{index + 1}</span>
+                            </div>
+                        ))}
+                        {cards.length > 5 && (
+                            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                                +{cards.length - 5} more cards
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex justify-center">
+                        <Button
+                            variant="ghost"
+                            onClick={handleRegenerate}
+                            className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                        >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Regenerate with different settings
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -323,57 +344,60 @@ export default function ClientFlashcardDeck({
 
     // ============ PLAY MODE ============
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-white" />
+        <>
+            {configModal}
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <CreditCard className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Flashcards</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Review and memorize key concepts
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Flashcards</h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Review and memorize key concepts
-                        </p>
-                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={handleBackToView}
+                        className="gap-2"
+                    >
+                        <List className="w-4 h-4" /> View All
+                    </Button>
                 </div>
-                <Button
-                    variant="outline"
-                    onClick={handleBackToView}
-                    className="gap-2"
-                >
-                    <List className="w-4 h-4" /> View All
-                </Button>
-            </div>
 
-            <Flashcard
-                key={currentIndex}
-                frontContent={cards[currentIndex].front}
-                backContent={cards[currentIndex].back}
-            />
+                <Flashcard
+                    key={currentIndex}
+                    frontContent={cards[currentIndex].front}
+                    backContent={cards[currentIndex].back}
+                />
 
-            <div className="flex items-center justify-center gap-4">
-                <Button variant="outline" onClick={handlePrev} disabled={cards.length <= 1}>
-                    <ChevronLeft className="w-4 h-4 mr-2" /> Previous
-                </Button>
-                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    {currentIndex + 1} / {cards.length}
-                </span>
-                <Button variant="outline" onClick={handleNext} disabled={cards.length <= 1}>
-                    Next <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-            </div>
+                <div className="flex items-center justify-center gap-4">
+                    <Button variant="outline" onClick={handlePrev} disabled={cards.length <= 1}>
+                        <ChevronLeft className="w-4 h-4 mr-2" /> Previous
+                    </Button>
+                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                        {currentIndex + 1} / {cards.length}
+                    </span>
+                    <Button variant="outline" onClick={handleNext} disabled={cards.length <= 1}>
+                        Next <ChevronRight className="w-4 h-4 ml-2" />
+                    </Button>
+                </div>
 
-            <div className="flex justify-center">
-                <Button
-                    variant="ghost"
-                    onClick={handleRegenerate}
-                    className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-                >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Regenerate with different settings
-                </Button>
+                <div className="flex justify-center">
+                    <Button
+                        variant="ghost"
+                        onClick={handleRegenerate}
+                        className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate with different settings
+                    </Button>
+                </div>
             </div>
-        </div>
+        </>
     );
 }

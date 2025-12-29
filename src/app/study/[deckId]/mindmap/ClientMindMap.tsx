@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import MindMapEditor from '@/components/study/MindMapEditor';
 import MindMapConfig from '@/components/study/MindMapConfig';
+import { Button } from '@/components/ui/button';
 import { Network, RefreshCw } from 'lucide-react';
 
 interface ClientMindMapProps {
@@ -51,41 +52,68 @@ export default function ClientMindMap({ deckId, initialNodes, initialEdges }: Cl
         setShowConfig(true);
     };
 
-    if (showConfig) {
-        return <MindMapConfig deckId={deckId} onGenerated={handleGenerated} />;
+    // Config modal (overlay on existing content)
+    const configModal = (
+        <MindMapConfig
+            deckId={deckId}
+            isOpen={showConfig}
+            onClose={() => setShowConfig(false)}
+            onGenerated={handleGenerated}
+        />
+    );
+
+    if (nodes.length === 0) {
+        return (
+            <>
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Network className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No Mind Map Yet</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-4">Generate a mind map from your notes</p>
+                    <Button onClick={() => setShowConfig(true)} className="bg-violet-600 hover:bg-violet-700 text-white">
+                        <Network className="w-4 h-4 mr-2" /> Create Mind Map
+                    </Button>
+                </div>
+                {configModal}
+            </>
+        );
     }
 
     return (
-        <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Network className="w-5 h-5 text-white" />
+        <>
+            {configModal}
+            <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <Network className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Mind Map</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Interactive visualization of your notes
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Mind Map</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Interactive visualization of your notes
-                    </p>
-                </div>
+
+                {/* Mind Map Editor */}
+                <MindMapEditor
+                    deckId={deckId}
+                    initialNodes={nodes}
+                    initialEdges={edges}
+                    onSave={handleSave}
+                />
+
+                {/* Regenerate Button - Outside the box */}
+                <button
+                    onClick={handleRegenerate}
+                    className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mx-auto"
+                >
+                    <RefreshCw className="w-4 h-4" />
+                    Regenerate with different settings
+                </button>
             </div>
-
-            {/* Mind Map Editor */}
-            <MindMapEditor
-                deckId={deckId}
-                initialNodes={nodes}
-                initialEdges={edges}
-                onSave={handleSave}
-            />
-
-            {/* Regenerate Button - Outside the box */}
-            <button
-                onClick={handleRegenerate}
-                className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mx-auto"
-            >
-                <RefreshCw className="w-4 h-4" />
-                Regenerate with different settings
-            </button>
-        </div>
+        </>
     );
 }

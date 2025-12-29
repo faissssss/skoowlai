@@ -1,18 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChoiceChipGroup } from '@/components/ui/choice-chip';
-import { Loader2, Brain, Clock, CheckCircle2, HelpCircle, Edit3, Shuffle } from 'lucide-react';
+import { Loader2, Brain, Clock, CheckCircle2, HelpCircle, Edit3, Shuffle, X } from 'lucide-react';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 
 interface QuizConfigProps {
     deckId: string;
+    isOpen: boolean;
+    onClose: () => void;
     onGenerated: (timer: string, count: number) => void;
 }
 
-export default function QuizConfig({ deckId, onGenerated }: QuizConfigProps) {
+export default function QuizConfig({ deckId, isOpen, onClose, onGenerated }: QuizConfigProps) {
     const [timer, setTimer] = useState('none');
     const [type, setType] = useState('multiple-choice');
     const [difficulty, setDifficulty] = useState('basic');
@@ -78,99 +81,131 @@ export default function QuizConfig({ deckId, onGenerated }: QuizConfigProps) {
     ];
 
     return (
-        <div className="max-w-2xl mx-auto">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Brain className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Create Quiz</h2>
-                    <p className="text-slate-500 dark:text-slate-400">Configure your quiz generation preferences</p>
-                </div>
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop with blur */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+                        onClick={onClose}
+                    />
 
-                <div className="space-y-8">
-                    <div className="text-center">
-                        <ChoiceChipGroup
-                            label="Timer"
-                            options={timerOptions}
-                            value={timer}
-                            onChange={setTimer}
-                            disabled={isGenerating}
-                            centered
-                        />
-                    </div>
-
-                    <div className="text-center">
-                        <ChoiceChipGroup
-                            label="Question Type"
-                            options={typeOptions}
-                            value={type}
-                            onChange={setType}
-                            disabled={isGenerating}
-                            centered
-                        />
-                    </div>
-
-                    <div className="text-center">
-                        <ChoiceChipGroup
-                            label="Difficulty"
-                            options={difficultyOptions}
-                            value={difficulty}
-                            onChange={setDifficulty}
-                            disabled={isGenerating}
-                            centered
-                        />
-                    </div>
-
-                    <div className="text-center">
-                        <ChoiceChipGroup
-                            label="Count"
-                            options={countOptions}
-                            value={count}
-                            onChange={setCount}
-                            disabled={isGenerating}
-                            centered
-                        />
-                        {count === 'custom' && (
-                            <div className="mt-3 flex justify-center">
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    max="50"
-                                    value={customCount}
-                                    onChange={(e) => setCustomCount(e.target.value)}
-                                    placeholder="Enter number (1-50)"
-                                    className="w-48 text-center dark:bg-slate-900 dark:border-slate-600"
-                                    disabled={isGenerating}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="mt-10">
-                    <Button
-                        onClick={handleCreate}
-                        disabled={isGenerating || (count === 'custom' && (!customCount || parseInt(customCount) < 1))}
-                        className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6 text-base font-semibold rounded-xl shadow-lg shadow-violet-500/20 hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-300"
+                    {/* Modal */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
                     >
-                        {isGenerating ? (
-                            <>
-                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Brain className="w-5 h-5 mr-2" />
-                                Generate Quiz
-                            </>
-                        )}
-                    </Button>
-                    <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
-                        AI will analyze your notes and create an interactive quiz
-                    </p>
-                </div>
-            </div>
-        </div>
+                        <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto">
+                            {/* Header */}
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                                        <Brain className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Create Quiz</h2>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Configure your quiz preferences</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 space-y-6">
+                                <div className="text-center">
+                                    <ChoiceChipGroup
+                                        label="Timer"
+                                        options={timerOptions}
+                                        value={timer}
+                                        onChange={setTimer}
+                                        disabled={isGenerating}
+                                        centered
+                                    />
+                                </div>
+
+                                <div className="text-center">
+                                    <ChoiceChipGroup
+                                        label="Question Type"
+                                        options={typeOptions}
+                                        value={type}
+                                        onChange={setType}
+                                        disabled={isGenerating}
+                                        centered
+                                    />
+                                </div>
+
+                                <div className="text-center">
+                                    <ChoiceChipGroup
+                                        label="Difficulty"
+                                        options={difficultyOptions}
+                                        value={difficulty}
+                                        onChange={setDifficulty}
+                                        disabled={isGenerating}
+                                        centered
+                                    />
+                                </div>
+
+                                <div className="text-center">
+                                    <ChoiceChipGroup
+                                        label="Count"
+                                        options={countOptions}
+                                        value={count}
+                                        onChange={setCount}
+                                        disabled={isGenerating}
+                                        centered
+                                    />
+                                    {count === 'custom' && (
+                                        <div className="mt-3 flex justify-center">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                max="50"
+                                                value={customCount}
+                                                onChange={(e) => setCustomCount(e.target.value)}
+                                                placeholder="Enter number (1-50)"
+                                                className="w-48 text-center dark:bg-slate-900 dark:border-slate-600"
+                                                disabled={isGenerating}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                                <Button
+                                    onClick={handleCreate}
+                                    disabled={isGenerating || (count === 'custom' && (!customCount || parseInt(customCount) < 1))}
+                                    className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium text-base rounded-xl shadow-lg shadow-violet-500/25 transition-all"
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                            Generating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Brain className="w-5 h-5 mr-2" />
+                                            Generate Quiz
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
     );
 }

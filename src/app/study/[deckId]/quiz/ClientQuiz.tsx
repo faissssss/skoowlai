@@ -315,85 +315,108 @@ export default function ClientQuiz({
         );
     }
 
-    if (showConfig) {
-        return <QuizConfig deckId={deckId} onGenerated={handleGenerated} />;
-    }
+    // Config modal (overlay on existing content)
+    const configModal = (
+        <QuizConfig
+            deckId={deckId}
+            isOpen={showConfig}
+            onClose={() => setShowConfig(false)}
+            onGenerated={handleGenerated}
+        />
+    );
 
     if (quizzes.length === 0) {
-        return <QuizConfig deckId={deckId} onGenerated={handleGenerated} />;
+        return (
+            <>
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <ClipboardCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No Quiz Yet</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-4">Generate a quiz from your notes</p>
+                    <Button onClick={() => setShowConfig(true)} className="bg-violet-600 hover:bg-violet-700 text-white">
+                        <ClipboardCheck className="w-4 h-4 mr-2" /> Create Quiz
+                    </Button>
+                </div>
+                {configModal}
+            </>
+        );
     }
 
     // ============ VIEW MODE ============
     if (viewMode === 'VIEW') {
         return (
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
-                            <ClipboardCheck className="w-5 h-5 text-white" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Quiz</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {quizzes.length} questions • Test your knowledge
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={handleStartEdit}
-                            className="gap-2"
-                        >
-                            <Edit3 className="w-4 h-4" strokeWidth={1.5} /> Edit
-                        </Button>
-                        <Button
-                            onClick={handleStartPlay}
-                            className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25"
-                        >
-                            <PlayCircle className="w-4 h-4" strokeWidth={1.5} /> Play
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Question List Preview */}
-                <div className="space-y-3">
-                    {quizzes.slice(0, 5).map((quiz, index) => (
-                        <div
-                            key={quiz.id}
-                            className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-slate-900 dark:text-slate-100">{quiz.question}</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                        {quiz.options.length} options
-                                        {quiz.hint && <span className="ml-2 text-amber-500">💡 Has hint</span>}
-                                    </p>
-                                </div>
-                                <span className="text-xs text-slate-400 ml-4">#{index + 1}</span>
+            <>
+                {configModal}
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                                <ClipboardCheck className="w-5 h-5 text-white" strokeWidth={1.5} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Quiz</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    {quizzes.length} questions • Test your knowledge
+                                </p>
                             </div>
                         </div>
-                    ))}
-                    {quizzes.length > 5 && (
-                        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                            +{quizzes.length - 5} more questions
-                        </p>
-                    )}
-                </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={handleStartEdit}
+                                className="gap-2"
+                            >
+                                <Edit3 className="w-4 h-4" strokeWidth={1.5} /> Edit
+                            </Button>
+                            <Button
+                                onClick={handleStartPlay}
+                                className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25"
+                            >
+                                <PlayCircle className="w-4 h-4" strokeWidth={1.5} /> Play
+                            </Button>
+                        </div>
+                    </div>
 
-                <div className="flex justify-center">
-                    <Button
-                        variant="ghost"
-                        onClick={handleRegenerate}
-                        className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-                    >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Regenerate with different settings
-                    </Button>
+                    {/* Question List Preview */}
+                    <div className="space-y-3">
+                        {quizzes.slice(0, 5).map((quiz, index) => (
+                            <div
+                                key={quiz.id}
+                                className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-slate-900 dark:text-slate-100">{quiz.question}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                            {quiz.options.length} options
+                                            {quiz.hint && <span className="ml-2 text-amber-500">💡 Has hint</span>}
+                                        </p>
+                                    </div>
+                                    <span className="text-xs text-slate-400 ml-4">#{index + 1}</span>
+                                </div>
+                            </div>
+                        ))}
+                        {quizzes.length > 5 && (
+                            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                                +{quizzes.length - 5} more questions
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex justify-center">
+                        <Button
+                            variant="ghost"
+                            onClick={handleRegenerate}
+                            className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                        >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Regenerate with different settings
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
