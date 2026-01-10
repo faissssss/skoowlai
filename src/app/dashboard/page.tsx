@@ -18,17 +18,38 @@ export default async function Dashboard() {
         // Attempt to diagnose the specific error
         let errorDetails = "Unknown error";
         try {
+            // 1. Test basic connection
             await db.$connect();
-            // If connection works, try to fetch user manually to see prisma error
+
+            // 2. Get Clerk details
             const { userId } = await import('@clerk/nextjs/server').then(m => m.auth());
+            const currentUser = await import('@clerk/nextjs/server').then(m => m.currentUser());
+            const userEmail = currentUser?.emailAddresses?.[0]?.emailAddress;
+
             if (userId) {
-                await db.user.findUnique({ where: { clerkId: userId } });
-                errorDetails = `Connection successful. User ${userId} not found in DB.`;
+                // 3. Check if user exists by Clerk ID
+                const userById = await db.user.findUnique({ where: { clerkId: userId } });
+
+                if (userById) {
+                    errorDetails = `SUCCESS: User found in DB by Clerk ID (${userId}).\n\nIssue is likely in 'getAuthenticatedUser' logic or upstream middleware.\nUser ID: ${userById.id}\nEmail: ${userById.email}`;
+                } else {
+                    // 4. Check if user exists by Email (mismatch case)
+                    if (userEmail) {
+                        const userByEmail = await db.user.findUnique({ where: { email: userEmail } });
+                        if (userByEmail) {
+                            errorDetails = `MISMATCH: User found by email (${userEmail}) but Clerk ID does not match.\n\nDB Clerk ID: ${userByEmail.clerkId}\nCurrent Clerk ID: ${userId}\n\nAction: Needs resync.`;
+                        } else {
+                            errorDetails = `MISSING: User not found by Clerk ID (${userId}) OR Email (${userEmail}).\n\nAction: User needs to be created.`;
+                        }
+                    } else {
+                        errorDetails = `MISSING: User not found by Clerk ID (${userId}). No email available to check.`;
+                    }
+                }
             } else {
                 errorDetails = "Clerk userId is null (not signed in?)";
             }
         } catch (e: any) {
-            errorDetails = e.message || JSON.stringify(e);
+            errorDetails = `Connection/Query Error: ${e.message || JSON.stringify(e)}`;
         }
 
         console.error("Dashboard Access Denied:", errorDetails);
