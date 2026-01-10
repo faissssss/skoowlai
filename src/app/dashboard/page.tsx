@@ -15,7 +15,69 @@ export default async function Dashboard() {
     const user = await getAuthenticatedUser();
     // Debugging: Show error instead of redirecting to see why user is null
     if (!user) {
-        redirect('/');
+        // Attempt to diagnose the specific error
+        let errorDetails = "Unknown error";
+        try {
+            await db.$connect();
+            // If connection works, try to fetch user manually to see prisma error
+            const { userId } = await import('@clerk/nextjs/server').then(m => m.auth());
+            if (userId) {
+                await db.user.findUnique({ where: { clerkId: userId } });
+                errorDetails = `Connection successful. User ${userId} not found in DB.`;
+            } else {
+                errorDetails = "Clerk userId is null (not signed in?)";
+            }
+        } catch (e: any) {
+            errorDetails = e.message || JSON.stringify(e);
+        }
+
+        console.error("Dashboard Access Denied:", errorDetails);
+
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-slate-50 dark:bg-slate-950">
+                <div className="max-w-2xl space-y-6">
+                    <h1 className="text-3xl font-bold text-red-500">Access Error Diagnostics</h1>
+
+                    <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 text-left overflow-hidden shadow-2xl">
+                        <div className="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                            <span className="font-mono text-slate-400 text-sm">System Diagnostics</span>
+                        </div>
+
+                        <div className="space-y-3 font-mono text-xs md:text-sm text-slate-300">
+                            <div>
+                                <span className="text-slate-500">Timestamp:</span>
+                                <span className="ml-2 text-indigo-400">{new Date().toISOString()}</span>
+                            </div>
+                            <div>
+                                <span className="text-slate-500">Status:</span>
+                                <span className="ml-2 text-emerald-400">Authenticated (Clerk)</span>
+                            </div>
+                            <div>
+                                <span className="text-slate-500">Database:</span>
+                                <span className="ml-2 text-red-400">Connection Failed / Query Error</span>
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t border-slate-700">
+                                <span className="text-slate-500 block mb-2">Detailed Error Log:</span>
+                                <pre className="p-3 rounded bg-black/50 text-red-300 whitespace-pre-wrap break-all border border-red-900/30">
+                                    {errorDetails}
+                                </pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
+                        <p className="mb-2"><strong>Likely Cause:</strong> Missing or incorrect Production Environment Variables.</p>
+                        <p className="text-sm">Please check your Vercel Project Settings &gt; Environment Variables.</p>
+                    </div>
+
+                    <a href="/" className="inline-block px-6 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
+                        Return to Home
+                    </a>
+                </div>
+            </div>
+        );
     }
 
     let decks: DeckWithCount[] = [];
