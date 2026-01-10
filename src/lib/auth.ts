@@ -1,5 +1,5 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { db } from './db';
+import { db, withRetry } from './db';
 import { NextResponse } from 'next/server';
 
 /**
@@ -17,9 +17,9 @@ export async function getAuthenticatedUser() {
         }
 
         // Try to find existing user by Clerk ID
-        let user = await db.user.findUnique({
+        let user = await withRetry(() => db.user.findUnique({
             where: { clerkId: userId }
-        });
+        }));
 
         // If user doesn't exist, create them (or update clerkId if email exists from different environment)
         if (!user) {
@@ -28,14 +28,14 @@ export async function getAuthenticatedUser() {
             const email = clerkUser?.emailAddresses?.[0]?.emailAddress || `user-${userId}@skoowl.ai`;
 
             // Use upsert to handle switching between dev/prod Clerk environments
-            user = await db.user.upsert({
+            user = await withRetry(() => db.user.upsert({
                 where: { email: email },
                 update: { clerkId: userId }, // Update clerkId for existing email (switching environments)
                 create: {
                     clerkId: userId,
                     email: email,
                 }
-            });
+            }));
         }
 
         return user;
