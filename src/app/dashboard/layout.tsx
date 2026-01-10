@@ -177,7 +177,7 @@ export default function DashboardLayout({
             <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
 
             {/* Pre-Launch Welcome Modal */}
-            <WelcomeModal />
+            {IS_PRE_LAUNCH && <WelcomeModal />}
         </div>
     );
 }
