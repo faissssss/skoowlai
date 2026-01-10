@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
-    // Allow large file uploads through middleware (50MB)
-    middlewareClientMaxBodySize: '50mb',
+    // Allow large file uploads through proxy (50MB)
+    proxyClientMaxBodySize: '50mb',
   },
   serverExternalPackages: ['openai'],
   async headers() {
