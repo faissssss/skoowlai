@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
+import { z } from 'zod';
+import { requireAuth } from '@/lib/auth';
+import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 
 export const maxDuration = 30;
 
@@ -10,16 +13,32 @@ const groq = new OpenAI({
 });
 
 export async function POST(req: NextRequest) {
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
+    // Rate limit check
+    const rateLimitResponse = await checkRateLimitFromRequest(req);
+    if (rateLimitResponse) return rateLimitResponse;
+
     try {
         const body = await req.json();
-        const { audio, mimeType } = body;
 
-        if (!audio) {
+        const voiceTranscribeSchema = z.object({
+            audio: z.string().min(1), // Base64 string
+            mimeType: z.string().regex(/^audio\/.+/).optional() // Optional but must be audio type if present
+        }).strict();
+
+        const payload = voiceTranscribeSchema.safeParse(body);
+
+        if (!payload.success) {
             return NextResponse.json(
-                { error: 'No audio data provided' },
+                { error: 'Invalid request', details: payload.error.flatten() },
                 { status: 400 }
             );
         }
+
+        const { audio, mimeType } = payload.data;
 
         console.log('🎙️ Voice note received, transcribing with Groq Whisper...');
 

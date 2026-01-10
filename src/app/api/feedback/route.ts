@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 
 interface FeedbackPayload {
     type: "feature" | "improvement" | "general";
@@ -30,6 +31,10 @@ const typeConfig = {
 };
 
 export async function POST(request: NextRequest) {
+    // Rate limit check: Very strict for feedback spam prevention (5 req / 60s)
+    const rateLimitResponse = await checkRateLimitFromRequest(request, 5, '60 s');
+    if (rateLimitResponse) return rateLimitResponse;
+
     try {
         const body: FeedbackPayload = await request.json();
         const { type, category, summary, details, user } = body;

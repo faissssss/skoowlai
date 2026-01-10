@@ -1,53 +1,97 @@
 'use client';
 
 import Link from 'next/link';
+import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, HelpCircle, Layers, Network, Play, Sparkles, FileType, Youtube, Headphones, Upload, Mic, Brain, Cpu, CheckCircle, GitBranch, Plus, X, Menu } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { FileText, Mic, Youtube, Brain, Layers, CheckCircle, Network, Sparkles, Menu, X, Upload, FileType, Headphones, Users, HelpCircle, Plus } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import BugReportModal from '@/components/BugReportModal';
 import FeedbackModal from '@/components/FeedbackModal';
 import PricingModal from '@/components/PricingModal';
+import Testimonials from '@/components/landing/Testimonials';
+
+import { AnimatedGradientText } from '@/components/magicui/animated-gradient-text';
+import { AvatarCircles } from '@/components/magicui/avatar-circles';
 import { IS_PRE_LAUNCH } from '@/lib/config';
 
-// Floating particles background
-function StarField() {
-  const [stars, setStars] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
+// Avatar data for social proof
+const avatarUrls = [
+  { imageUrl: "https://avatars.githubusercontent.com/u/16860528" },
+  { imageUrl: "https://avatars.githubusercontent.com/u/20110627" },
+  { imageUrl: "https://avatars.githubusercontent.com/u/106103625" },
+  { imageUrl: "https://avatars.githubusercontent.com/u/59228569" },
+  { imageUrl: "https://avatars.githubusercontent.com/u/59442788" },
+];
+
+// Count-up number component with scroll trigger
+function CountUpNumber({ value, duration = 2.5, className }: { value: number; duration?: number; className?: string }) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const newStars = Array.from({ length: 25 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      delay: Math.random() * 5,
-    }));
-    setStars(newStars);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const startTime = performance.now();
+          const animate = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / (duration * 1000), 1);
+            // easeOut curve
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(easeOut * value));
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            }
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [value, duration, hasAnimated]);
+
+  return <span ref={ref} className={className}>{count}+</span>;
+}
+
+// Text loop effect component for dynamic text
+const dynamicWords = ['Smart Notes', 'Quizzes', 'Flashcards', 'Mind Maps'];
+
+function TextLoop() {
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentWordIndex((prev) => (prev + 1) % dynamicWords.length);
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {stars.map((star) => (
-        <motion.div
-          key={star.id}
-          className="absolute rounded-full bg-white"
-          style={{
-            left: `${star.x}%`,
-            top: `${star.y}%`,
-            width: star.size,
-            height: star.size,
-          }}
-          animate={{
-            opacity: [0.2, 0.6, 0.2],
-          }}
-          transition={{
-            duration: 4 + Math.random() * 3,
-            repeat: Infinity,
-            delay: star.delay,
-          }}
-        />
-      ))}
-    </div>
+    <motion.span
+      key={currentWordIndex}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5 }}
+      className="inline-block"
+    >
+      <AnimatedGradientText
+        colorFrom="#818cf8"
+        colorTo="#e879f9"
+      >
+        {dynamicWords[currentWordIndex]}
+      </AnimatedGradientText>
+    </motion.span>
   );
 }
 
@@ -66,7 +110,7 @@ const faqItems = [
     answer: "Yes, you can set up your own configuration. Before generating, you can choose specific settings to match your style."
   },
   {
-    question: "Is skoowl ai free to use?",
+    question: "Is Skoowl AI free to use?",
     answer: "Yes! You can start studying for free with our basic plan, which gives you access to all core features."
   },
   {
@@ -134,208 +178,90 @@ function FAQAccordion() {
   );
 }
 
-// Feature card component (no dots)
-function FeatureCard({ icon, title, delay, className }: {
-  icon: React.ReactNode;
-  title: string;
-  delay: number;
-  className?: string;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, delay }}
-      className={`absolute ${className}`}
-    >
-      <div
-        className="bg-slate-900/80 backdrop-blur-xl border border-purple-500/40 rounded-2xl px-5 py-3.5 shadow-lg shadow-purple-500/20"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-600/40 to-indigo-600/40 border border-purple-400/30">
-            {icon}
-          </div>
-          <span className="text-white font-semibold">{title}</span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
-// Central document node (clean - no dots)
-function CenterNode() {
-  return (
-    <motion.div
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      transition={{ duration: 0.5, type: "spring" }}
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-    >
-      <div className="relative">
-        <div
-          className="w-32 h-32 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-purple-700 flex items-center justify-center border-2 border-purple-400/50 shadow-[0_0_50px_rgba(168,85,247,0.5),0_0_80px_rgba(99,102,241,0.3)]"
-        >
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/15 to-transparent" />
-          <div className="flex flex-col items-center gap-2 relative z-10">
-            <div className="flex gap-2">
-              <FileType className="w-7 h-7 text-white" />
-              <Youtube className="w-7 h-7 text-orange-400" />
-            </div>
-            <div className="flex gap-2">
-              <Headphones className="w-7 h-7 text-cyan-400" />
-              <FileText className="w-7 h-7 text-white" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// Connection lines from center to all 4 feature cards (wavy paths)
-function ConnectionLines() {
-  return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 500 400" fill="none">
-      <defs>
-        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#818cf8" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#c084fc" stopOpacity="0.7" />
-        </linearGradient>
-      </defs>
-
-      {/* Top-left: Center → Quizzes (wavy curve) */}
-      <motion.path
-        d="M218 168 C 200 140, 160 130, 140 100 C 120 75, 110 65, 95 55"
-        stroke="url(#lineGrad)"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 1, delay: 0.5 }}
-      />
-
-      {/* Top-right: Center → Smart Notes (wavy curve) */}
-      <motion.path
-        d="M282 168 C 300 140, 340 130, 360 100 C 380 75, 390 65, 405 55"
-        stroke="url(#lineGrad)"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 1, delay: 0.7 }}
-      />
-
-      {/* Bottom-left: Center → Mind Maps (wavy curve) */}
-      <motion.path
-        d="M218 232 C 200 260, 160 270, 140 300 C 120 325, 110 335, 95 345"
-        stroke="url(#lineGrad)"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 1, delay: 0.9 }}
-      />
-
-      {/* Bottom-right: Center → Flashcards (wavy curve) */}
-      <motion.path
-        d="M282 232 C 300 260, 340 270, 360 300 C 380 325, 390 335, 405 345"
-        stroke="url(#lineGrad)"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 1, delay: 1.1 }}
-      />
-    </svg>
-  );
-}
-
-// Hero visual diagram matching reference layout
+// Hero visual - empty placeholder
 function HeroVisual() {
-  return (
-    <div className="relative w-full h-[420px] lg:h-[450px]">
-      <ConnectionLines />
-      <CenterNode />
-
-      {/* Quizzes - top left */}
-      <FeatureCard
-        icon={<HelpCircle className="w-5 h-5 text-yellow-400" />}
-        title="Quizzes"
-        delay={1.5}
-        className="top-[5%] left-[5%] lg:left-[10%]"
-      />
-
-      {/* Smart Notes - top right */}
-      <FeatureCard
-        icon={<FileText className="w-5 h-5 text-blue-400" />}
-        title="Smart Notes"
-        delay={1.7}
-        className="top-[5%] right-[5%] lg:right-[10%]"
-      />
-
-      {/* Mind Maps - bottom left */}
-      <FeatureCard
-        icon={<Network className="w-5 h-5 text-pink-400" />}
-        title="Mind Maps"
-        delay={1.9}
-        className="bottom-[5%] left-[5%] lg:left-[10%]"
-      />
-
-      {/* Flashcards - bottom right */}
-      <FeatureCard
-        icon={<Layers className="w-5 h-5 text-emerald-400" />}
-        title="Flashcards"
-        delay={2.1}
-        className="bottom-[5%] right-[5%] lg:right-[10%]"
-      />
-    </div>
-  );
+  return null;
 }
 
 export default function LandingPage() {
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
+
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden"
-      style={{
-        background: 'radial-gradient(ellipse at center, #0f0c29 0%, #020024 70%, #000000 100%)',
-      }}
-    >
-      {/* Animated star field background */}
-      <StarField />
+    <div className="relative min-h-screen overflow-hidden bg-black">
+      {/* ShaderGradient Background */}
+      <div className="absolute inset-0 z-0 w-full h-full">
+        <ShaderGradientCanvas
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+          }}
+        >
+          <ShaderGradient
+            animate="on"
+            brightness={0.5}
+            cAzimuthAngle={180}
+            cDistance={10}
+            cPolarAngle={70}
+            cameraZoom={1}
+            color1="#020024"
+            color2="#0f172a"
+            color3="#8b5cf6"
+            envPreset="city"
+            grain="off"
+            lightType="3d"
+            positionX={0}
+            positionY={-1}
+            positionZ={0}
+            reflection={0.1}
+            rotationX={0}
+            rotationY={0}
+            rotationZ={0}
+            type="waterPlane"
+            uDensity={2}
+            uFrequency={5}
+            uSpeed={0.1}
+            uStrength={3}
+            uTime={0.2}
+          />
+        </ShaderGradientCanvas>
+      </div>
 
       {/* Ambient glow effects */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/15 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Glassmorphic Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50">
-        <div className="mx-4 mt-4">
-          <div className="max-w-7xl mx-auto px-6 py-4 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-lg">
-            <div className="flex items-center justify-between">
-              {/* Logo */}
-              <Link href="/" className="flex items-center gap-2">
-                <img src="/skoowl-logo.png" alt="skoowl" className="w-9 h-9" />
-                <span className="text-xl font-bold text-white">skoowl ai</span>
-              </Link>
+      <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-7xl px-4 sm:px-6">
+        <div className="w-full px-6 py-4 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-lg relative">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2">
+              <img src="/skoowl-logo.png" alt="skoowl" className="w-9 h-9" />
+              <span className="text-xl font-bold text-white">skoowl ai</span>
+            </Link>
 
-              {/* Nav Links */}
-              <div className="hidden md:flex items-center gap-8">
-                <a href="#features" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Features</a>
-                <a href="#how-it-works" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">How it Works</a>
-                {!IS_PRE_LAUNCH && (
-                  <button onClick={() => setIsPricingOpen(true)} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Pricing</button>
-                )}
-              </div>
+            {/* Desktop Navigation - Absolutely Centered */}
+            <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-8">
+              <a href="#features" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Features</a>
+              <a href="#how-it-works" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">How it Works</a>
+              {!IS_PRE_LAUNCH && (
+                <button onClick={() => setIsPricingOpen(true)} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Pricing</button>
+              )}
+              <a href="https://changelog.skoowlai.com" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Changelog</a>
+              <Link href="/careers" className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Careers</Link>
+            </div>
 
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-4">
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -346,7 +272,7 @@ export default function LandingPage() {
               </button>
 
               {/* Auth Buttons */}
-              <div className="hidden md:flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-3" suppressHydrationWarning>
                 <SignedOut>
                   <Link href="/sign-in" className="text-slate-300 hover:text-white transition-colors text-sm font-medium px-4 py-2">
                     Sign In
@@ -372,113 +298,254 @@ export default function LandingPage() {
                 </SignedIn>
               </div>
             </div>
-
-            {/* Mobile Menu Dropdown */}
-            <AnimatePresence>
-              {isMobileMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="md:hidden overflow-hidden"
-                >
-                  <div className="pt-4 pb-2 space-y-3 border-t border-white/10 mt-4">
-                    <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Features</a>
-                    <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">How it Works</a>
-                    {!IS_PRE_LAUNCH && (
-                      <button onClick={() => { setIsPricingOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Pricing</button>
-                    )}
-                    <div className="pt-3 border-t border-white/10 space-y-2">
-                      <SignedOut>
-                        <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">
-                          Sign In
-                        </Link>
-                        <Link href="/sign-up" onClick={() => setIsMobileMenuOpen(false)}>
-                          <button className="w-full px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25">
-                            Get Started
-                          </button>
-                        </Link>
-                      </SignedOut>
-                      <SignedIn>
-                        <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">
-                          Dashboard
-                        </Link>
-                      </SignedIn>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
+
+          {/* Mobile Menu Dropdown */}
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="md:hidden overflow-hidden"
+              >
+                <div className="pt-4 pb-2 space-y-3 border-t border-white/10 mt-4">
+                  <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Features</a>
+                  <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">How it Works</a>
+                  {!IS_PRE_LAUNCH && (
+                    <button onClick={() => { setIsPricingOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Pricing</button>
+                  )}
+                  <a href="https://changelog.skoowlai.com" target="_blank" rel="noopener noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Changelog</a>
+                  <Link href="/careers" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-400 hover:text-white transition-colors text-sm font-medium py-2">Careers</Link>
+                  <div className="pt-3 border-t border-white/10 space-y-2" suppressHydrationWarning>
+                    <SignedOut>
+                      <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">
+                        Sign In
+                      </Link>
+                      <Link href="/sign-up" onClick={() => setIsMobileMenuOpen(false)}>
+                        <button className="w-full px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25">
+                          Get Started
+                        </button>
+                      </Link>
+                    </SignedOut>
+                    <SignedIn>
+                      <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2">
+                        Dashboard
+                      </Link>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-slate-400 text-sm">Account</span>
+                        <UserButton
+                          afterSignOutUrl="/"
+                          appearance={{
+                            elements: {
+                              avatarBox: "w-8 h-8",
+                            },
+                          }}
+                        />
+                      </div>
+                    </SignedIn>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <main className="relative pt-32 lg:pt-40 pb-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left - Text Content */}
+      <main className="relative pt-24 lg:pt-28 pb-12">
+        <div className="max-w-4xl mx-auto px-6">
+          {/* Centered Content */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center"
+          >
+            {/* Badge with Animated Gradient Border */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex mb-5"
             >
-              {/* Badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6"
-              >
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span className="text-purple-300 text-sm font-medium">AI-Powered Study Assistant</span>
-              </motion.div>
-
-              {/* Headline */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6">
-                Unlock Your Study Potential with{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-                  skoowl ai
-                </span>
-              </h1>
-
-              {/* Subheadline */}
-              <p className="text-lg md:text-xl text-slate-400 max-w-xl mx-auto lg:mx-0 mb-8">
-                Instantly turn any document into Smart Notes, Quizzes, Flashcards, and Mind Maps. Your Personal AI Study Buddy.
-              </p>
-
-              {/* CTA Button */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                <Link href="/dashboard">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-[length:200%_100%] text-white font-semibold text-lg shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all group overflow-hidden"
-                  >
-                    <span className="relative z-10">Get Started for Free</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </motion.button>
-                </Link>
+              <div className="group relative mx-auto flex items-center justify-center rounded-full px-4 py-1.5 shadow-[inset_0_-8px_10px_#8fdfff1f] transition-shadow duration-500 ease-out hover:shadow-[inset_0_-5px_10px_#8fdfff3f] bg-slate-900/50 backdrop-blur-sm">
+                <span
+                  className="animate-gradient absolute inset-0 block h-full w-full rounded-[inherit] bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:300%_100%] p-[1px]"
+                  style={{
+                    WebkitMask:
+                      "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                    WebkitMaskComposite: "destination-out",
+                    mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                    maskComposite: "subtract",
+                  }}
+                />
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <hr className="mx-2 h-4 w-px shrink-0 bg-neutral-500" />
+                <span className="text-neutral-200 text-sm font-medium">AI-Powered Study Assistant</span>
               </div>
             </motion.div>
 
-            {/* Right - Hero Visual (Hidden on mobile for cleaner experience) */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="relative hidden lg:block"
-            >
-              <HeroVisual />
-            </motion.div>
-          </div>
+            {/* Headline with Text Loop Effect */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-5">
+              Turn Your Materials into
+              <br />
+              <AnimatePresence mode="wait">
+                <TextLoop />
+              </AnimatePresence>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-6">
+              Upload your PDFs, PPTs, DOCXs, TXT, record lectures, or paste YouTube links — let AI do the rest.
+            </p>
+
+            {/* CTA Button */}
+            <div className="flex flex-col items-center gap-4">
+              <Link href="/dashboard">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-[length:200%_100%] text-white font-semibold text-lg shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all group overflow-hidden"
+                >
+                  <span className="relative z-10">Get Started for Free</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </motion.button>
+              </Link>
+
+              {/* Avatar Circles - Social Proof */}
+              <div className="flex items-center gap-3">
+                <AvatarCircles avatarUrls={avatarUrls} />
+                <span className="text-slate-400 text-sm">Join 100+ students</span>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </main>
 
+      {/* Statistics Section */}
+      <section className="relative py-16">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.1 }
+            }
+          }}
+          className="max-w-4xl mx-auto px-6"
+        >
+          {/* Section Title */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: false }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+              Trusted by Students{' '}
+              <AnimatedGradientText colorFrom="#c084fc" colorTo="#f472b6">
+                Everywhere
+              </AnimatedGradientText>
+            </h2>
+            <p className="text-lg text-slate-400 max-w-xl mx-auto">
+              Numbers that speak for themselves
+            </p>
+          </motion.div>
+
+          {/* Students - Main Stat (Bigger) */}
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+            }}
+            className="text-center mb-10"
+          >
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="p-3 rounded-2xl bg-violet-500/20 border border-violet-500/30">
+                <Users className="w-8 h-8 text-violet-400" />
+              </div>
+            </div>
+            <CountUpNumber value={100} duration={2.5} className="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+            <p className="text-slate-400 text-lg mt-2">Students Learning</p>
+          </motion.div>
+
+          {/* Other 4 Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+              }}
+              className="text-center"
+            >
+              <div className="flex justify-center mb-2">
+                <div className="p-2 rounded-xl bg-blue-500/20 border border-blue-500/30">
+                  <FileText className="w-5 h-5 text-blue-400" />
+                </div>
+              </div>
+              <CountUpNumber value={300} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <p className="text-slate-400 text-sm mt-1">Notes Created</p>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+              }}
+              className="text-center"
+            >
+              <div className="flex justify-center mb-2">
+                <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30">
+                  <Layers className="w-5 h-5 text-emerald-400" />
+                </div>
+              </div>
+              <CountUpNumber value={200} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <p className="text-slate-400 text-sm mt-1">Flashcards Made</p>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+              }}
+              className="text-center"
+            >
+              <div className="flex justify-center mb-2">
+                <div className="p-2 rounded-xl bg-yellow-500/20 border border-yellow-500/30">
+                  <HelpCircle className="w-5 h-5 text-yellow-400" />
+                </div>
+              </div>
+              <CountUpNumber value={500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <p className="text-slate-400 text-sm mt-1">Quizzes Created</p>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+              }}
+              className="text-center"
+            >
+              <div className="flex justify-center mb-2">
+                <div className="p-2 rounded-xl bg-pink-500/20 border border-pink-500/30">
+                  <Network className="w-5 h-5 text-pink-400" />
+                </div>
+              </div>
+              <CountUpNumber value={100} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <p className="text-slate-400 text-sm mt-1">Mind Maps</p>
+            </motion.div>
+          </div>
+        </motion.div>
+      </section>
+
       {/* How It Works Section */}
-      <section id="how-it-works" className="relative py-24 overflow-hidden">
+      <section id="how-it-works" className="relative py-16 overflow-hidden">
         {/* Background glow effects */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
 
@@ -488,14 +555,14 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             className="text-center mb-20"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
               From Chaos to{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+              <AnimatedGradientText colorFrom="#c084fc" colorTo="#f472b6">
                 Clarity
-              </span>
+              </AnimatedGradientText>
               {' '}in 3 Steps
             </h2>
             <p className="text-lg text-slate-400 max-w-2xl mx-auto">
@@ -667,7 +734,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section - Zig-Zag Layout */}
-      <section id="features" className="relative py-24 overflow-hidden">
+      <section id="features" className="relative py-16 overflow-hidden">
         {/* Glowing Thread Connector - Simplified */}
         <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 hidden lg:block">
           <div className="h-full w-full bg-gradient-to-b from-transparent via-purple-500/20 to-transparent" />
@@ -679,14 +746,14 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             className="text-center mb-24"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
               Everything You Need to{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+              <AnimatedGradientText colorFrom="#c084fc" colorTo="#f472b6">
                 Excel
-              </span>
+              </AnimatedGradientText>
             </h2>
             <p className="text-lg text-slate-400 max-w-2xl mx-auto">
               Transform how you study with AI-powered tools designed for maximum retention.
@@ -712,7 +779,7 @@ export default function LandingPage() {
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
                 Stop drowning in text. Upload PDFs or record lectures, and let AI extract key concepts, definitions, and action items in seconds.
               </p>
-              <Link href="/sign-up" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
+              <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
                 See an example →
               </Link>
             </motion.div>
@@ -823,7 +890,7 @@ export default function LandingPage() {
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
                 Forget rote memorization. Our Spaced Repetition System (SRS) predicts exactly when you're about to forget a card and surfaces it.
               </p>
-              <Link href="/sign-up" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
+              <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
                 Try flashcards →
               </Link>
             </motion.div>
@@ -848,7 +915,7 @@ export default function LandingPage() {
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
                 Turn passive reading into active testing. Generate multiple-choice and short-answer quizzes instantly from your class materials.
               </p>
-              <Link href="/sign-up" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
+              <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
                 Start a quiz →
               </Link>
             </motion.div>
@@ -1014,7 +1081,7 @@ export default function LandingPage() {
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
                 Don't just read linearly. See how concepts connect. Switch layouts from Radial to Tree to Fishbone instantly to fit your mental model.
               </p>
-              <Link href="/sign-up" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
+              <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
                 Explore mind maps →
               </Link>
             </motion.div>
@@ -1022,15 +1089,18 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <Testimonials />
+
       {/* FAQ Section */}
-      <section id="faq" className="relative py-24">
+      <section id="faq" className="relative py-16">
         <div className="max-w-2xl mx-auto px-6">
           {/* Section Header */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -1047,8 +1117,8 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative border-t border-white/10 bg-[#020024]">
-        <div className="max-w-7xl mx-auto px-6 py-16">
+      <footer className="relative">
+        <div className="max-w-7xl mx-auto px-6 py-12">
           {/* Main Footer Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
 
@@ -1153,11 +1223,11 @@ export default function LandingPage() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/10">
+        <div>
           <div className="max-w-7xl mx-auto px-6 py-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
               <p className="text-slate-500 text-sm order-2 md:order-1">
-                © {new Date().getFullYear()} skoowl ai. All rights reserved.
+                © {new Date().getFullYear()} Skoowl AI. All rights reserved.
               </p>
               <p className="text-slate-500 text-sm order-1 md:order-2">
                 Built with <span className="text-purple-400">💜</span> by Fais Wibowo

@@ -2,6 +2,7 @@
 
 import { Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
 import { deleteDeck } from '@/actions/deleteDeck';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,23 +15,26 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 export default function DeleteDeckButton({ deckId }: { deckId: string }) {
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const router = useRouter();
 
-    const handleDelete = async (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent bubbling to parent elements
-        // Do NOT call preventDefault(), as it stops the AlertDialogAction from closing the dialog
+    const handleOpenDialog = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOpen(true);
+    };
 
+    const handleDelete = async () => {
         setIsDeleting(true);
         try {
             const result = await deleteDeck(deckId);
             if (result.success) {
+                setIsOpen(false);
                 router.refresh();
-                // Optional: Keep loading state true until component unmounts/refreshes
             } else {
                 console.error('Failed to delete deck:', result.error);
                 setIsDeleting(false);
@@ -44,13 +48,13 @@ export default function DeleteDeckButton({ deckId }: { deckId: string }) {
     };
 
     return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
+        <>
+            <AnimatedDockButton>
                 <Button
                     variant="ghost"
                     size="icon"
                     className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    onClick={(e: React.MouseEvent) => e.stopPropagation()} // Prevent triggering parent Link
+                    onClick={handleOpenDialog}
                 >
                     {isDeleting ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -58,24 +62,28 @@ export default function DeleteDeckButton({ deckId }: { deckId: string }) {
                         <Trash2 className="w-4 h-4" />
                     )}
                 </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete this study set and all its notes, flashcards, and quizzes.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={(e: React.MouseEvent) => e.stopPropagation()}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                        onClick={handleDelete}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                        Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            </AnimatedDockButton>
+
+            <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete this study set and all its notes, flashcards, and quizzes.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

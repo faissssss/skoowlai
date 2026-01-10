@@ -22,7 +22,7 @@ export default async function StudyLayout({
         clerkUser = null;
     }
 
-    // Get deck
+    // Get deck with workspace info
     const deck = await db.deck.findUnique({
         where: { id: deckId },
         select: {
@@ -31,6 +31,13 @@ export default async function StudyLayout({
             summary: true,
             userId: true,
             isPublic: true,
+            workspace: {
+                select: {
+                    id: true,
+                    name: true,
+                    color: true,
+                }
+            }
         },
     });
 

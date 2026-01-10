@@ -4,6 +4,7 @@ import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { verifyUsageLimits, USAGE_LIMITS } from '@/lib/usageVerifier';
+import { requireAuth } from '@/lib/auth';
 
 export const maxDuration = 120; // Allow longer processing time for audio
 
@@ -78,6 +79,10 @@ const NOTE_GENERATION_PROMPT = `**Role:** Senior Academic Researcher & Note Take
 Output ONLY the Markdown notes, nothing else.`;
 
 export async function POST(req: NextRequest) {
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     // Rate limit check (uses User ID for authenticated users)
     const rateLimitResponse = await checkRateLimitFromRequest(req);
     if (rateLimitResponse) return rateLimitResponse;

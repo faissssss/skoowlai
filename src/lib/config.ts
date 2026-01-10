@@ -8,4 +8,4 @@
  * 
  * Set to false when ready to launch with paid plans
  */
-export const IS_PRE_LAUNCH = true;
+export const IS_PRE_LAUNCH = false;

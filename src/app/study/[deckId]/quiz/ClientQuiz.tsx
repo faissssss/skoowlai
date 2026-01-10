@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { saveAllQuizzes } from '../actions';
 import { toast } from 'sonner';
+import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
 
 interface Quiz {
     id: string;
@@ -363,19 +364,23 @@ export default function ClientQuiz({
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={handleStartEdit}
-                                className="gap-2"
-                            >
-                                <Edit3 className="w-4 h-4" strokeWidth={1.5} /> Edit
-                            </Button>
-                            <Button
-                                onClick={handleStartPlay}
-                                className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25"
-                            >
-                                <PlayCircle className="w-4 h-4" strokeWidth={1.5} /> Play
-                            </Button>
+                            <AnimatedDockButton>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleStartEdit}
+                                    className="gap-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                                >
+                                    <Edit3 className="w-4 h-4" strokeWidth={1.5} /> Edit
+                                </Button>
+                            </AnimatedDockButton>
+                            <AnimatedDockButton>
+                                <Button
+                                    onClick={handleStartPlay}
+                                    className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25 border border-transparent hover:border-violet-400 active:border-violet-300 transition-colors"
+                                >
+                                    <PlayCircle className="w-4 h-4" strokeWidth={1.5} /> Play
+                                </Button>
+                            </AnimatedDockButton>
                         </div>
                     </div>
 
@@ -440,25 +445,30 @@ export default function ClientQuiz({
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancelEdit}
-                            disabled={isSaving}
-                        >
-                            <X className="w-4 h-4 mr-2" /> Cancel
-                        </Button>
-                        <Button
-                            onClick={handleSaveEdit}
-                            disabled={isSaving}
-                            className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white"
-                        >
-                            {isSaving ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <Save className="w-4 h-4" />
-                            )}
-                            Save
-                        </Button>
+                        <AnimatedDockButton>
+                            <Button
+                                variant="outline"
+                                onClick={handleCancelEdit}
+                                disabled={isSaving}
+                                className="border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                            >
+                                <X className="w-4 h-4 mr-2" /> Cancel
+                            </Button>
+                        </AnimatedDockButton>
+                        <AnimatedDockButton>
+                            <Button
+                                onClick={handleSaveEdit}
+                                disabled={isSaving}
+                                className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-transparent hover:border-emerald-400 active:border-emerald-300 transition-colors"
+                            >
+                                {isSaving ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Save className="w-4 h-4" />
+                                )}
+                                Save
+                            </Button>
+                        </AnimatedDockButton>
                     </div>
                 </div>
 
@@ -644,46 +654,57 @@ export default function ClientQuiz({
         }
 
         return (
-            <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
-                {timeExpired ? (
-                    <>
-                        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertTriangle className="w-10 h-10 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Time's Up!</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mb-6">You answered {results.length} of {quizzes.length} questions</p>
-                    </>
-                ) : (
-                    <>
-                        <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Trophy className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Quiz Completed!</h3>
-                    </>
-                )}
+            <>
+                {configModal}
+                <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
+                    {timeExpired ? (
+                        <>
+                            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertTriangle className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Time's Up!</h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-6">You answered {results.length} of {quizzes.length} questions</p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trophy className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Quiz Completed!</h3>
+                        </>
+                    )}
 
-                <div className="mb-6">
-                    <div className={`text-5xl font-bold ${getScoreColor()} mb-2`}>
-                        {score}/{quizzes.length}
+                    <div className="mb-6">
+                        <div className={`text-5xl font-bold ${getScoreColor()} mb-2`}>
+                            {score}/{quizzes.length}
+                        </div>
+                        <p className="text-lg text-slate-600 dark:text-slate-300">
+                            {Math.round((score / quizzes.length) * 100)}% correct
+                        </p>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2">{getScoreMessage()}</p>
                     </div>
-                    <p className="text-lg text-slate-600 dark:text-slate-300">
-                        {Math.round((score / quizzes.length) * 100)}% correct
-                    </p>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2">{getScoreMessage()}</p>
-                </div>
 
-                <div className="flex flex-col gap-3 px-8">
-                    <Button onClick={() => setShowReview(true)} variant="outline" className="w-full">
-                        Review Answers
-                    </Button>
-                    <Button onClick={handleRestart} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                        <RotateCcw className="w-4 h-4 mr-2" /> Restart Quiz
-                    </Button>
-                    <Button variant="ghost" onClick={handleBackToView} className="w-full text-slate-500">
-                        <List className="w-4 h-4 mr-2" /> View All Questions
-                    </Button>
+                    <div className="flex flex-col gap-3 px-8">
+                        <Button onClick={() => setShowReview(true)} variant="outline" className="w-full">
+                            Review Answers
+                        </Button>
+                        <Button onClick={handleRestart} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                            <RotateCcw className="w-4 h-4 mr-2" /> Restart Quiz
+                        </Button>
+                        <Button variant="ghost" onClick={handleBackToView} className="w-full text-slate-500">
+                            <List className="w-4 h-4 mr-2" /> View All Questions
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={handleRegenerate}
+                            className="w-full text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                        >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Regenerate with different settings
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -703,13 +724,15 @@ export default function ClientQuiz({
                         </p>
                     </div>
                 </div>
-                <Button
-                    variant="outline"
-                    onClick={handleBackToView}
-                    className="gap-2"
-                >
-                    <List className="w-4 h-4" /> View All
-                </Button>
+                <AnimatedDockButton>
+                    <Button
+                        variant="outline"
+                        onClick={handleBackToView}
+                        className="gap-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                    >
+                        <List className="w-4 h-4" /> View All
+                    </Button>
+                </AnimatedDockButton>
             </div>
 
             {/* Timer Display */}
@@ -742,16 +765,7 @@ export default function ClientQuiz({
                 totalCount={quizzes.length}
             />
 
-            <div className="mt-6 flex justify-center">
-                <Button
-                    variant="ghost"
-                    onClick={handleRegenerate}
-                    className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-                >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Regenerate with different settings
-                </Button>
-            </div>
+
         </div>
     );
 }

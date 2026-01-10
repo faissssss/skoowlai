@@ -1,26 +1,31 @@
 import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import { redis } from './redis';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 
-// Create Redis client (optional - only if env vars are set)
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-    : null;
+// Rate limiter map to store limiters with different configurations
+const limiters = new Map<string, Ratelimit>();
 
-// Rate limiter: 30 requests per 60 seconds (sliding window)
-// More generous for public usage while still preventing abuse
-export const ratelimit = redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(30, '60 s'),
-        analytics: true,
-        prefix: '@upstash/ratelimit',
-    })
-    : null;
+const cache = new Map(); // Local in-memory cache for fallback
+
+/**
+ * Get or create a rate limiter with specific configuration
+ */
+function getRatelimit(requests: number, duration: string): Ratelimit | null {
+    if (!redis) return null;
+
+    const key = `${requests}_${duration}`;
+    if (!limiters.has(key)) {
+        limiters.set(key, new Ratelimit({
+            redis,
+            limiter: Ratelimit.slidingWindow(requests, duration as any),
+            analytics: true,
+            prefix: `@upstash/ratelimit/${key}`,
+            ephemeralCache: cache,
+        }));
+    }
+    return limiters.get(key)!;
+}
 
 /**
  * Get rate limit identifier - prefers User ID over IP for authenticated users
@@ -46,14 +51,24 @@ export async function getRateLimitIdentifier(req: Request): Promise<string> {
  * Check rate limit for a given identifier (user ID or IP address)
  * Returns null if rate limiting is not configured or if under limit.
  * Returns a NextResponse with 429 status if rate limited.
+ * 
+ * @param identifier Unique identifier for the user/IP
+ * @param requests Number of requests allowed (default: 30)
+ * @param duration Duration string e.g. "60 s" (default: "60 s")
  */
-export async function checkRateLimit(identifier: string): Promise<NextResponse | null> {
-    if (!ratelimit) {
+export async function checkRateLimit(
+    identifier: string,
+    requests: number = 30,
+    duration: string = '60 s'
+): Promise<NextResponse | null> {
+    const limiter = getRatelimit(requests, duration);
+
+    if (!limiter) {
         // Rate limiting not configured, allow request
         return null;
     }
 
-    const { success, limit, reset, remaining } = await ratelimit.limit(identifier);
+    const { success, limit, reset, remaining } = await limiter.limit(identifier);
 
     if (!success) {
         return NextResponse.json(
@@ -79,8 +94,16 @@ export async function checkRateLimit(identifier: string): Promise<NextResponse |
 
 /**
  * Convenience function that gets identifier from request and checks rate limit
+ * 
+ * @param req The NextRequest object
+ * @param requests Number of requests allowed (default: 30)
+ * @param duration Duration string e.g. "60 s" (default: "60 s")
  */
-export async function checkRateLimitFromRequest(req: Request): Promise<NextResponse | null> {
+export async function checkRateLimitFromRequest(
+    req: Request,
+    requests: number = 30,
+    duration: string = '60 s'
+): Promise<NextResponse | null> {
     const identifier = await getRateLimitIdentifier(req);
-    return checkRateLimit(identifier);
+    return checkRateLimit(identifier, requests, duration);
 }

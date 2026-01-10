@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 
 // Configuration types
 type QuizTimer = 'none' | '5' | '10' | '15';
@@ -77,20 +79,51 @@ ${content.slice(0, 25000)}
 Generate ${count} UNIQUE quiz questions with helpful hints now.`;
 }
 
+// ... imports ...
+
 export async function POST(req: NextRequest) {
-    // Rate limit check (uses User ID for authenticated users)
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
+    // Rate limit check
     const rateLimitResponse = await checkRateLimitFromRequest(req);
     if (rateLimitResponse) return rateLimitResponse;
 
+    // Check feature usage limit
+    const limitCheck = await checkFeatureLimit('quiz');
+    if (!limitCheck.allowed) {
+        return limitCheck.errorResponse;
+    }
+
     try {
         const body = await req.json();
-        const { deckId, timer, type, difficulty, count } = body;
+
+        // Strict input validation
+        const generateQuizSchema = z.object({
+            deckId: z.string().uuid(),
+            count: z.number().int().min(1).max(50).default(10),
+            type: z.enum(['multiple-choice', 'true-false', 'fill-in', 'mixed']).default('multiple-choice'),
+            difficulty: z.enum(['basic', 'intermediate', 'advanced', 'expert']).default('basic'),
+            timer: z.enum(['none', '5', '10', '15']).default('none')
+        }).strict();
+
+        const payload = generateQuizSchema.safeParse(body);
+
+        if (!payload.success) {
+            return NextResponse.json({
+                error: 'Invalid request body',
+                details: payload.error.flatten()
+            }, { status: 400 });
+        }
+
+        const { deckId, timer, type, difficulty, count } = payload.data;
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
         }
 
-        // Get deck content
+        // Verify deck ownership (Authorization)
         const deck = await db.deck.findUnique({
             where: { id: deckId },
         });
@@ -99,9 +132,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
         }
 
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
+        }
+
         // Use summary or content for generation
         const sourceContent = deck.summary || deck.content;
 
+        // ... rest of generation logic ...
         // Build prompt with configuration
         const finalCount = Math.min(Math.max(count || 10, 1), 50); // Clamp between 1-50
         const prompt = buildQuizPrompt(
@@ -164,6 +202,11 @@ export async function POST(req: NextRequest) {
             hint: q.hint || undefined, // Include hint in response
         }));
 
+        // Increment usage count after successful generation
+        if (limitCheck.user) {
+            await incrementFeatureUsage(limitCheck.user.id, 'quiz');
+        }
+
         return NextResponse.json({
             success: true,
             count: quizzes.length,
@@ -173,21 +216,40 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Quiz generation error:', error);
+        // Generic error message for client, detailed log for server
         return NextResponse.json({
-            error: 'Failed to generate quiz',
-            details: error instanceof Error ? error.message : String(error)
+            error: 'Internal Server Error',
+            details: 'Failed to generate quiz. Please try again later.'
         }, { status: 500 });
     }
 }
 
 // GET endpoint to fetch existing quizzes
 export async function GET(req: NextRequest) {
+    // Authenticate user
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { searchParams } = new URL(req.url);
         const deckId = searchParams.get('deckId');
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
+        }
+
+        // Verify deck ownership before fetching quizzes
+        const deck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!deck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         const quizzes = await db.quiz.findMany({
@@ -213,12 +275,30 @@ export async function GET(req: NextRequest) {
 
 // DELETE endpoint to clear quizzes
 export async function DELETE(req: NextRequest) {
+    // Authenticate user
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { searchParams } = new URL(req.url);
         const deckId = searchParams.get('deckId');
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
+        }
+
+        // Verify deck ownership before deleting
+        const deck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!deck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         await db.quiz.deleteMany({

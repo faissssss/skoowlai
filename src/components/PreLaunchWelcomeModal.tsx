@@ -2,29 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, BookOpen, Brain, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@clerk/nextjs';
-import { IS_PRE_LAUNCH } from '@/lib/config';
 
+// Use localStorage so it persists permanently (only shows once ever)
 const WELCOME_KEY = 'skoowl_hasSeenWelcome';
 
-export default function PreLaunchWelcomeModal() {
+export default function WelcomeModal() {
     const [isOpen, setIsOpen] = useState(false);
     const { isSignedIn, isLoaded } = useAuth();
 
     useEffect(() => {
-        // Only show if pre-launch mode is enabled
-        if (!IS_PRE_LAUNCH) return;
-
         // Wait for auth to load
         if (!isLoaded) return;
 
         // Only show to signed-in users
         if (!isSignedIn) return;
 
-        // Check if already seen this session
-        const hasSeenWelcome = sessionStorage.getItem(WELCOME_KEY);
+        // Check if already seen (using localStorage - permanent storage)
+        const hasSeenWelcome = localStorage.getItem(WELCOME_KEY);
         if (!hasSeenWelcome) {
             // Small delay for smoother experience after sign-in
             const timer = setTimeout(() => {
@@ -36,11 +33,9 @@ export default function PreLaunchWelcomeModal() {
 
     const handleClose = () => {
         setIsOpen(false);
-        sessionStorage.setItem(WELCOME_KEY, 'true');
+        // Store permanently in localStorage (not sessionStorage)
+        localStorage.setItem(WELCOME_KEY, 'true');
     };
-
-    // Don't render anything if not in pre-launch mode
-    if (!IS_PRE_LAUNCH) return null;
 
     return (
         <AnimatePresence>
@@ -96,36 +91,53 @@ export default function PreLaunchWelcomeModal() {
                                 </div>
                             </div>
 
-                            {/* VIP Badge */}
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-full mb-4">
-                                <Sparkles className="w-4 h-4 text-amber-400" />
-                                <span className="text-xs font-semibold text-amber-300">VIP Early Access</span>
-                            </div>
-
                             {/* Header */}
                             <h2 className="text-2xl font-bold text-white mb-4">
-                                Welcome to skoowl ai! 🚀
+                                Welcome to Skoowl AI!
                             </h2>
 
                             {/* Body */}
                             <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                                We're currently in <span className="text-purple-400 font-medium">pre-launch mode</span>.
-                                That means you get <span className="text-amber-400 font-medium">VIP access for free</span> for a limited time!
-                                Enjoy unlimited access to all features while we polish up the tech.
-                                No credit card required.
+                                Your AI-powered study companion is ready! Upload documents, paste YouTube links, or record audio to instantly generate <span className="text-purple-400 font-medium">smart notes</span>,{' '}
+                                <span className="text-purple-400 font-medium">flashcards</span>,{' '}
+                                <span className="text-purple-400 font-medium">quizzes</span>, and{' '}
+                                <span className="text-purple-400 font-medium">mind maps</span>.
                             </p>
 
-                            <p className="text-slate-400 text-xs mb-6">
-                                We really appreciate your feedback so we can improve this platform further.
-                                Please navigate to <span className="text-slate-300">Settings → Preferences</span> to share your thoughts!
-                            </p>
+                            {/* Quick Tips */}
+                            <div className="flex justify-center gap-4 mb-6">
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                        <BookOpen className="w-5 h-5 text-purple-400" />
+                                    </div>
+                                    <span className="text-xs text-slate-400">Notes</span>
+                                </div>
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                        <Zap className="w-5 h-5 text-purple-400" />
+                                    </div>
+                                    <span className="text-xs text-slate-400">Flashcards</span>
+                                </div>
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                        <Brain className="w-5 h-5 text-purple-400" />
+                                    </div>
+                                    <span className="text-xs text-slate-400">Quizzes</span>
+                                </div>
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                        <Sparkles className="w-5 h-5 text-purple-400" />
+                                    </div>
+                                    <span className="text-xs text-slate-400">Mind Maps</span>
+                                </div>
+                            </div>
 
                             {/* Action Button */}
                             <button
                                 onClick={handleClose}
                                 className="w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
                             >
-                                Start Exploring
+                                Let's Get Started! ✨
                             </button>
                         </div>
                     </motion.div>
@@ -134,3 +146,4 @@ export default function PreLaunchWelcomeModal() {
         </AnimatePresence>
     );
 }
+

@@ -79,16 +79,16 @@ export default function NoteConfigModal({
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
                     >
-                        <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto">
+                        <div className="w-full max-w-[90vw] sm:max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto max-h-[90vh] sm:max-h-none flex flex-col">
                             {/* Header */}
-                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                                        <Sparkles className="w-5 h-5 text-white" />
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Generate Notes</h2>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Customize your note preferences</p>
+                                        <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Generate Notes</h2>
+                                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">Customize your note preferences</p>
                                     </div>
                                 </div>
                                 <button
@@ -99,11 +99,11 @@ export default function NoteConfigModal({
                                 </button>
                             </div>
 
-                            {/* Content */}
-                            <div className="p-6 space-y-6">
+                            {/* Content - scrollable on mobile */}
+                            <div className="px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
                                 {/* Note Style */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                         Note Style
                                     </label>
                                     <div className="grid grid-cols-2 gap-2">
@@ -115,17 +115,16 @@ export default function NoteConfigModal({
                                                     key={option.value}
                                                     onClick={() => updateConfig('style', option.value)}
                                                     className={`
-                                                        flex items-center gap-3 p-3 rounded-xl text-left transition-all
+                                                        flex items-center gap-2 p-2.5 rounded-xl text-left transition-all
                                                         ${isSelected
                                                             ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 ring-1 ring-violet-500'
                                                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                         }
                                                     `}
                                                 >
-                                                    <Icon className="w-5 h-5 shrink-0" />
+                                                    <Icon className="w-4 h-4 shrink-0" />
                                                     <div>
                                                         <div className="font-medium text-sm">{option.label}</div>
-                                                        <div className="text-xs opacity-70">{option.description}</div>
                                                     </div>
                                                 </button>
                                             );
@@ -135,7 +134,7 @@ export default function NoteConfigModal({
 
                                 {/* Tone */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                         Writing Tone
                                     </label>
                                     <div className="flex flex-wrap gap-2">
@@ -147,7 +146,7 @@ export default function NoteConfigModal({
                                                     key={option.value}
                                                     onClick={() => updateConfig('tone', option.value)}
                                                     className={`
-                                                        flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all
+                                                        flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all
                                                         ${isSelected
                                                             ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 ring-1 ring-violet-500'
                                                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -164,7 +163,7 @@ export default function NoteConfigModal({
 
                                 {/* Depth */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                         Detail Level
                                     </label>
                                     <div className="flex gap-2">
@@ -176,14 +175,14 @@ export default function NoteConfigModal({
                                                     key={option.value}
                                                     onClick={() => updateConfig('depth', option.value)}
                                                     className={`
-                                                        flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all
+                                                        flex-1 flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all
                                                         ${isSelected
                                                             ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 ring-1 ring-violet-500'
                                                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                         }
                                                     `}
                                                 >
-                                                    <Icon className="w-5 h-5" />
+                                                    <Icon className="w-4 h-4" />
                                                     <span className="font-medium text-sm">{option.label}</span>
                                                 </button>
                                             );
@@ -193,11 +192,11 @@ export default function NoteConfigModal({
                             </div>
 
                             {/* Footer */}
-                            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
                                 <Button
                                     onClick={handleGenerate}
                                     disabled={isLoading}
-                                    className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium text-base rounded-xl shadow-lg shadow-violet-500/25 transition-all"
+                                    className="w-full h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-violet-500/25 transition-all"
                                 >
                                     {isLoading ? (
                                         <>

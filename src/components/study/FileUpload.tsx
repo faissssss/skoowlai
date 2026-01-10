@@ -10,6 +10,7 @@ import { useGlobalLoader } from '@/contexts/LoaderContext';
 import { toast } from 'sonner';
 import NoteConfigModal from '@/components/NoteConfigModal';
 import { NoteConfig } from '@/lib/noteConfig/types';
+import UsageLimitModal from '@/components/UsageLimitModal';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes (Free Beta limit)
 
@@ -18,6 +19,8 @@ export default function FileUpload() {
     const [isUploading, setIsUploading] = useState(false);
     const [sizeError, setSizeError] = useState(false);
     const [showConfigModal, setShowConfigModal] = useState(false);
+    const [showLimitModal, setShowLimitModal] = useState(false);
+    const [limitInfo, setLimitInfo] = useState({ used: 0, limit: 3 });
     const router = useRouter();
     const { startLoading, stopLoading } = useGlobalLoader();
 
@@ -90,6 +93,17 @@ export default function FileUpload() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+
+                // Handle 429 limit reached - show upgrade modal
+                if (response.status === 429 && errorData.upgradeRequired) {
+                    setLimitInfo({
+                        used: errorData.currentUsage || errorData.used || 3,
+                        limit: errorData.limit || 3
+                    });
+                    setShowLimitModal(true);
+                    return;
+                }
+
                 throw new Error(errorData.error || errorData.details || 'Upload failed');
             }
 
@@ -99,8 +113,7 @@ export default function FileUpload() {
         } catch (error) {
             console.error('Error uploading file:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to process file. Please try again.';
-            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
-            toast.error(isLimitError ? 'Usage Limit Reached' : 'Upload Failed', {
+            toast.error('Upload Failed', {
                 description: errorMessage,
                 duration: 5000,
             });
@@ -239,6 +252,15 @@ export default function FileUpload() {
                 onClose={() => setShowConfigModal(false)}
                 onGenerate={handleUpload}
                 isLoading={isUploading}
+            />
+
+            {/* Usage Limit Modal - shows when deck limit reached */}
+            <UsageLimitModal
+                isOpen={showLimitModal}
+                onClose={() => setShowLimitModal(false)}
+                feature="study deck"
+                limit={limitInfo.limit}
+                used={limitInfo.used}
             />
         </div>
     );

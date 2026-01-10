@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 
 export const maxDuration = 120;
 
@@ -494,25 +496,57 @@ function convertToReactFlowFormat(
 
 // POST - Generate mind map from deck content
 export async function POST(req: NextRequest) {
-    // Rate limit check (uses User ID for authenticated users)
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
+    // Rate limit check
     const rateLimitResponse = await checkRateLimitFromRequest(req);
     if (rateLimitResponse) return rateLimitResponse;
 
+    // Check feature usage limit
+    const limitCheck = await checkFeatureLimit('mindmap');
+    if (!limitCheck.allowed) {
+        return limitCheck.errorResponse;
+    }
+
     try {
         const body = await req.json();
-        const { deckId, depth = 'medium', style = 'mindmap', colorTheme = 'indigo' } = body;
+
+        // Strict input validation
+        const generateMindMapSchema = z.object({
+            deckId: z.string().uuid(),
+            depth: z.enum(['shallow', 'medium', 'deep']).default('medium'),
+            style: z.enum(['mindmap', 'tree', 'logic', 'timeline', 'fishbone', 'grid']).default('mindmap'),
+            colorTheme: z.enum(['indigo', 'emerald', 'amber', 'rose', 'cyan', 'violet']).default('indigo')
+        }).strict();
+
+        const payload = generateMindMapSchema.safeParse(body);
+
+        if (!payload.success) {
+            return NextResponse.json({
+                error: 'Invalid request body',
+                details: payload.error.flatten()
+            }, { status: 400 });
+        }
+
+        const { deckId, depth, style, colorTheme } = payload.data;
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
         }
 
-        // Get deck content
+        // Verify deck ownership (Authorization)
         const deck = await db.deck.findUnique({
             where: { id: deckId },
         });
 
         if (!deck) {
             return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         const sourceContent = deck.summary || deck.content;
@@ -542,6 +576,11 @@ export async function POST(req: NextRequest) {
             },
         });
 
+        // Increment usage count after successful generation
+        if (limitCheck.user) {
+            await incrementFeatureUsage(limitCheck.user.id, 'mindmap');
+        }
+
         return NextResponse.json({
             success: true,
             nodes,
@@ -551,21 +590,41 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Mind map generation error:', error);
+        // Generic error message for client, detailed log for server
         return NextResponse.json({
-            error: 'Failed to generate mind map',
-            details: error instanceof Error ? error.message : String(error)
+            error: 'Internal Server Error',
+            details: 'Failed to generate mind map. Please try again later.'
         }, { status: 500 });
     }
 }
 
 // GET - Fetch existing mind map
 export async function GET(req: NextRequest) {
+    // Authenticate user
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { searchParams } = new URL(req.url);
         const deckId = searchParams.get('deckId');
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
+        }
+
+        // Verify deck ownership via deck lookup
+        // MindMap table might not have userId, but deck does, and relation is one-to-one
+        const deck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!deck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         const mindMap = await db.mindMap.findUnique({
@@ -589,12 +648,30 @@ export async function GET(req: NextRequest) {
 
 // PUT - Update/save mind map
 export async function PUT(req: NextRequest) {
+    // Authenticate user
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const body = await req.json();
         const { deckId, nodes, edges } = body;
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
+        }
+
+        // Verify deck ownership
+        const deck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!deck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         await db.mindMap.upsert({

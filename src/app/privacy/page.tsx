@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-    title: "Privacy Policy - skoowl ai",
-    description: "Learn how skoowl ai collects, uses, and protects your personal information.",
+    title: "Privacy Policy - Skoowl AI",
+    description: "Learn how Skoowl AI collects, uses, and protects your personal information.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
         <div className="min-h-screen bg-gradient-to-b from-[#020024] via-[#090979] to-[#020024]">
             {/* Header */}
             <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/30 border-b border-white/10">
-                <div className="max-w-4xl mx-auto px-6 py-4">
+                <div className="w-full px-6 py-4">
                     <Link
                         href="/"
                         className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
 
             {/* Content */}
             <main className="pt-24 pb-16">
-                <div className="max-w-4xl mx-auto px-6">
+                <div className="w-full px-6">
                     <article className="prose prose-invert prose-slate max-w-none">
                         {/* Title */}
                         <div className="mb-12">
@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
                                 Introduction
                             </h2>
                             <p className="text-slate-300 leading-relaxed">
-                                Welcome to skoowl ai (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, and safeguard your data when you use our website and AI study tools.
+                                Welcome to Skoowl AI (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, and safeguard your data when you use our website and AI study tools.
                             </p>
                         </section>
 
@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage() {
                             <ul className="space-y-3 text-slate-300">
                                 <li className="flex items-start gap-3">
                                     <span className="text-purple-400 mt-1">•</span>
-                                    <span>Provide and maintain the skoowl ai service.</span>
+                                    <span>Provide and maintain the Skoowl AI service.</span>
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="text-purple-400 mt-1">•</span>
@@ -113,7 +113,7 @@ export default function PrivacyPolicyPage() {
                                 Data Sharing and Third Parties
                             </h2>
                             <p className="text-slate-300 leading-relaxed mb-4">
-                                We rely on trusted third-party services to run skoowl ai:
+                                We rely on trusted third-party services to run Skoowl AI:
                             </p>
                             <div className="grid gap-3 mb-4">
                                 <div className="p-4 rounded-xl bg-slate-800/50 border border-white/10 flex items-center gap-4">
@@ -213,10 +213,10 @@ export default function PrivacyPolicyPage() {
 
             {/* Footer */}
             <footer className="border-t border-white/10 bg-black/20">
-                <div className="max-w-4xl mx-auto px-6 py-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
+                <div className="w-full px-6 py-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
                         <p className="text-slate-500 text-sm order-2 md:order-1">
-                            © {new Date().getFullYear()} skoowl ai. All rights reserved.
+                            © {new Date().getFullYear()} Skoowl AI. All rights reserved.
                         </p>
                         <p className="text-slate-500 text-sm order-1 md:order-2">
                             Built with <span className="text-purple-400">💜</span> by Fais Wibowo

@@ -252,12 +252,29 @@ export default function MindMapEditor({
         }
     }, [nodes, edges, onSave]);
 
+    // Handle initialNodes/Edges updates (e.g. from regeneration)
+    const [rfInstance, setRfInstance] = useState<any>(null);
+
+    useEffect(() => {
+        if (initialNodes && initialNodes.length > 0) {
+            setNodes(initialNodes);
+            setEdges(initialEdges);
+
+            // Fit view after a brief delay to allow rendering
+            if (rfInstance) {
+                setTimeout(() => {
+                    rfInstance.fitView({ padding: 0.2, duration: 800 });
+                }, 100);
+            }
+        }
+    }, [initialNodes, initialEdges, setNodes, setEdges, rfInstance]);
+
     return (
         <div
             ref={containerRef}
             className={cn(
                 "w-full bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800",
-                isFullscreen ? "h-screen rounded-none" : "h-[600px]"
+                isFullscreen ? "h-screen rounded-none" : "h-[calc(100dvh-220px)] min-h-[400px]"
             )}
         >
             {/* Custom styles for React Flow controls and attribution */}
@@ -279,6 +296,7 @@ export default function MindMapEditor({
                 }
                 .react-flow__controls-button:hover {
                     background: #f1f5f9 !important;
+                    position: relative;
                 }
                 .react-flow__controls-button svg {
                     fill: #475569 !important;
@@ -308,8 +326,10 @@ export default function MindMapEditor({
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onInit={setRfInstance}
                 nodeTypes={nodeTypes}
                 fitView
+                fitViewOptions={{ padding: 0.2 }}
                 panOnScroll
                 panOnDrag
                 zoomOnScroll

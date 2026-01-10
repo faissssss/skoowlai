@@ -107,7 +107,14 @@ export async function verifyUsageLimits(options: VerifyOptions): Promise<VerifyR
         console.log('🔄 Daily usage counter reset for user:', user.id);
     }
 
-    // Step 2: Check daily rate limit
+    // Step 2: Check if user is a subscriber (bypass daily limit)
+    const isSubscriber = user.subscriptionStatus === 'active';
+    if (isSubscriber) {
+        console.log('✅ Subscriber detected, bypassing daily limit');
+        return { success: true, user };
+    }
+
+    // Step 3: Check daily rate limit for free users
     if (currentCount >= USAGE_LIMITS.DAILY_LIMIT) {
         console.log('⛔ Daily limit reached for user:', user.id, 'Count:', currentCount);
         return {
@@ -115,9 +122,11 @@ export async function verifyUsageLimits(options: VerifyOptions): Promise<VerifyR
             errorResponse: NextResponse.json(
                 {
                     error: 'Daily limit reached',
-                    details: `You've used all ${USAGE_LIMITS.DAILY_LIMIT} of your daily study sets. Your limit resets at midnight. Come back tomorrow to create more!`,
+                    details: `You've used all ${USAGE_LIMITS.DAILY_LIMIT} of your daily study sets. Upgrade to Student plan for unlimited access!`,
                     limit: USAGE_LIMITS.DAILY_LIMIT,
                     used: currentCount,
+                    currentUsage: currentCount,
+                    upgradeRequired: true,
                     resetTime: 'midnight',
                 },
                 { status: 429 }

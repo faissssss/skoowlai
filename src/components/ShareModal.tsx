@@ -151,16 +151,16 @@ export default function ShareModal({
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-lg transform rounded-2xl bg-slate-900 border border-white/10 p-6 text-left align-middle shadow-xl transition-all">
+                            <Dialog.Panel className="w-full max-w-[95vw] sm:max-w-lg transform rounded-2xl bg-slate-900 border border-white/10 p-4 sm:p-6 text-left align-middle shadow-xl transition-all">
                                 {/* Header */}
-                                <div className="flex items-center justify-between mb-6">
-                                    <Dialog.Title className="text-lg font-semibold text-white flex items-center gap-2">
-                                        Share "{deckTitle.length > 25 ? deckTitle.slice(0, 25) + '...' : deckTitle}"
+                                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                                    <Dialog.Title className="text-base sm:text-lg font-semibold text-white flex items-center gap-2 truncate pr-2">
+                                        Share "{deckTitle.length > 20 ? deckTitle.slice(0, 20) + '...' : deckTitle}"
                                     </Dialog.Title>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             onClick={onClose}
-                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors"
                                         >
                                             <X className="w-5 h-5 text-slate-400" />
                                         </button>
@@ -174,21 +174,21 @@ export default function ShareModal({
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="Add people by email..."
-                                            className="flex-1 px-4 py-3 bg-transparent text-white placeholder-slate-500 focus:outline-none rounded-l-xl"
+                                            placeholder="Add by email..."
+                                            className="flex-1 px-3 py-2 sm:px-4 sm:py-3 bg-transparent text-white text-sm placeholder-slate-500 focus:outline-none rounded-l-xl min-w-0"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') handleInvite();
                                             }}
                                         />
 
                                         {/* Role Selector */}
-                                        <div className="relative border-l border-white/10">
+                                        <div className="relative border-l border-white/10 shrink-0">
                                             <button
                                                 onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                                                className="flex items-center gap-1 px-3 py-3 text-sm text-slate-400 hover:text-white transition-colors"
+                                                className="flex items-center gap-1 px-2 py-2 sm:px-3 sm:py-3 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
                                             >
                                                 {selectedRole === 'EDITOR' ? 'Editor' : 'Viewer'}
-                                                <ChevronDown className="w-4 h-4" />
+                                                <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
                                             </button>
 
                                             {showRoleDropdown && (
@@ -216,14 +216,14 @@ export default function ShareModal({
                                         </div>
 
                                         {/* Send Button */}
-                                        <div className="p-1">
+                                        <div className="p-1 shrink-0">
                                             <Button
                                                 onClick={handleInvite}
                                                 disabled={!email.trim() || isInviting}
-                                                className="bg-blue-600 hover:bg-blue-500 text-white px-4 h-[42px] rounded-lg"
+                                                className="bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-4 h-[34px] sm:h-[42px] rounded-lg text-xs sm:text-sm"
                                             >
                                                 {isInviting ? (
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                                                 ) : (
                                                     'Send'
                                                 )}

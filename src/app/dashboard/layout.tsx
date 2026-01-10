@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Settings, Menu, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PricingModal from '@/components/PricingModal';
 import { IS_PRE_LAUNCH } from '@/lib/config';
-import PreLaunchWelcomeModal from '@/components/PreLaunchWelcomeModal';
+import WelcomeModal from '@/components/PreLaunchWelcomeModal';
+import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
 
 export default function DashboardLayout({
     children,
@@ -32,13 +34,10 @@ export default function DashboardLayout({
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
     ];
 
-    const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
+    const SidebarContent = ({ mobile = false, onItemClick }: { mobile?: boolean; onItemClick?: () => void }) => (
         <div className="flex flex-col h-full">
             {/* Sidebar Header with Toggle */}
-            <div className={cn(
-                "p-4 border-b border-slate-200 dark:border-slate-800 flex items-center",
-                isCollapsed && !mobile ? "justify-center" : "justify-start"
-            )}>
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-start">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -55,31 +54,32 @@ export default function DashboardLayout({
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
                     return (
-                        <Link key={item.href} href={item.href}>
-                            <Button
-                                variant={isActive ? "secondary" : "ghost"}
-                                className={cn(
-                                    "w-full gap-3 transition-all duration-300",
-                                    isActive && "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400",
-                                    isCollapsed && !mobile ? "justify-center px-2" : "justify-start"
-                                )}
-                                title={isCollapsed && !mobile ? item.label : undefined}
-                            >
-                                <Icon className="w-5 h-5 shrink-0" />
-                                <AnimatePresence mode="wait">
-                                    {(!isCollapsed || mobile) && (
-                                        <motion.span
-                                            initial={{ opacity: 0, width: 0 }}
-                                            animate={{ opacity: 1, width: "auto" }}
-                                            exit={{ opacity: 0, width: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="whitespace-nowrap overflow-hidden"
-                                        >
-                                            {item.label}
-                                        </motion.span>
+                        <Link key={item.href} href={item.href} onClick={onItemClick}>
+                            <AnimatedDockButton className="w-full">
+                                <Button
+                                    variant={isActive ? "secondary" : "ghost"}
+                                    className={cn(
+                                        "w-full gap-3 transition-all duration-300 justify-start",
+                                        isActive && "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400"
                                     )}
-                                </AnimatePresence>
-                            </Button>
+                                    title={isCollapsed && !mobile ? item.label : undefined}
+                                >
+                                    <Icon className="w-5 h-5 shrink-0" />
+                                    <AnimatePresence mode="wait">
+                                        {(!isCollapsed || mobile) && (
+                                            <motion.span
+                                                initial={{ opacity: 0, width: 0 }}
+                                                animate={{ opacity: 1, width: "auto" }}
+                                                exit={{ opacity: 0, width: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="whitespace-nowrap overflow-hidden"
+                                            >
+                                                {item.label}
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </Button>
+                            </AnimatedDockButton>
                         </Link>
                     );
                 })}
@@ -88,32 +88,35 @@ export default function DashboardLayout({
             {/* Upgrade Plan Button - Hidden during pre-launch */}
             {!IS_PRE_LAUNCH && (
                 <div className={cn(
-                    "p-4 border-t border-slate-200 dark:border-slate-800",
-                    isCollapsed && !mobile ? "flex justify-center" : ""
+                    "p-4 border-t border-slate-200 dark:border-slate-800"
                 )}>
-                    <Button
-                        onClick={() => setIsPricingOpen(true)}
-                        className={cn(
-                            "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25",
-                            isCollapsed && !mobile ? "px-2" : ""
-                        )}
-                        title={isCollapsed && !mobile ? "Upgrade Plan" : undefined}
-                    >
-                        <Crown className="w-4 h-4 shrink-0" />
-                        <AnimatePresence mode="wait">
-                            {(!isCollapsed || mobile) && (
-                                <motion.span
-                                    initial={{ opacity: 0, width: 0 }}
-                                    animate={{ opacity: 1, width: "auto" }}
-                                    exit={{ opacity: 0, width: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="whitespace-nowrap overflow-hidden"
-                                >
-                                    Upgrade Plan
-                                </motion.span>
+                    <AnimatedDockButton className="w-full">
+                        <Button
+                            onClick={() => {
+                                setIsPricingOpen(true);
+                                if (mobile && onItemClick) onItemClick();
+                            }}
+                            className={cn(
+                                "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25 justify-center"
                             )}
-                        </AnimatePresence>
-                    </Button>
+                            title={isCollapsed && !mobile ? "Upgrade Plan" : undefined}
+                        >
+                            <Crown className="w-4 h-4 shrink-0" />
+                            <AnimatePresence mode="wait">
+                                {(!isCollapsed || mobile) && (
+                                    <motion.span
+                                        initial={{ opacity: 0, width: 0 }}
+                                        animate={{ opacity: 1, width: "auto" }}
+                                        exit={{ opacity: 0, width: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="whitespace-nowrap overflow-hidden"
+                                    >
+                                        Upgrade Plan
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                        </Button>
+                    </AnimatedDockButton>
                 </div>
             )}
         </div>
@@ -141,7 +144,8 @@ export default function DashboardLayout({
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" className="p-0 w-64">
-                            <SidebarContent mobile />
+                            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                            <SidebarContent mobile onItemClick={() => setIsMobileOpen(false)} />
                         </SheetContent>
                     </Sheet>
                 )}
@@ -154,20 +158,17 @@ export default function DashboardLayout({
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="flex-1 min-h-screen hidden md:block relative"
             >
-                {/* Top Right Logo */}
-                <div className="absolute top-4 right-8 z-10 flex items-center gap-2">
-                    <img src="/skoowl-logo.png" alt="skoowl ai" className="w-8 h-8" />
-                    <span className="font-bold text-xl text-slate-900 dark:text-white">skoowl ai</span>
+                {/* Top Right Theme Toggle */}
+                <div className="absolute top-4 right-8 z-10">
+                    <AnimatedThemeToggler className="inline-flex items-center justify-center size-9 rounded-md text-slate-500 dark:text-slate-400 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 transition-all" />
                 </div>
                 {children}
             </motion.main>
 
-            {/* Mobile Main Content */}
             <main className="flex-1 min-h-screen md:hidden relative">
-                {/* Top Right Logo for Mobile */}
-                <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-                    <img src="/skoowl-logo.png" alt="skoowl ai" className="w-8 h-8" />
-                    <span className="font-bold text-xl text-slate-900 dark:text-white">skoowl ai</span>
+                {/* Top Right Theme Toggle for Mobile */}
+                <div className="absolute top-4 right-4 z-10">
+                    <AnimatedThemeToggler className="inline-flex items-center justify-center size-9 rounded-md text-slate-500 dark:text-slate-400 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 transition-all" />
                 </div>
                 {children}
             </main>
@@ -176,7 +177,7 @@ export default function DashboardLayout({
             <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
 
             {/* Pre-Launch Welcome Modal */}
-            <PreLaunchWelcomeModal />
+            <WelcomeModal />
         </div>
     );
 }

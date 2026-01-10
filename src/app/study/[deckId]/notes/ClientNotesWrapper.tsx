@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NoteEditor from '@/components/study/NoteEditor';
+import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
 
 interface ClientNotesWrapperProps {
     deckId: string;
@@ -61,27 +62,31 @@ export default function ClientNotesWrapper({ deckId, initialContent }: ClientNot
                             transition={{ duration: 0.3, ease: 'easeInOut' }}
                             className="flex gap-2 overflow-hidden"
                         >
-                            <Button
-                                variant="outline"
-                                onClick={handleCancel}
-                                disabled={isSaving}
-                                className="shrink-0"
-                            >
-                                <X className="w-4 h-4 mr-2" />
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
-                            >
-                                {isSaving ? (
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                    <Save className="w-4 h-4 mr-2" />
-                                )}
-                                Save
-                            </Button>
+                            <AnimatedDockButton>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleCancel}
+                                    disabled={isSaving}
+                                    className="shrink-0 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                                >
+                                    <X className="w-4 h-4 mr-2" />
+                                    Cancel
+                                </Button>
+                            </AnimatedDockButton>
+                            <AnimatedDockButton>
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white shrink-0 border border-transparent hover:border-indigo-400 active:border-indigo-300 transition-colors"
+                                >
+                                    {isSaving ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Save className="w-4 h-4 mr-2" />
+                                    )}
+                                    Save
+                                </Button>
+                            </AnimatedDockButton>
                         </motion.div>
                     ) : (
                         <motion.div
@@ -91,14 +96,16 @@ export default function ClientNotesWrapper({ deckId, initialContent }: ClientNot
                             exit={{ width: 48, opacity: 0 }}
                             transition={{ duration: 0.3, ease: 'easeInOut' }}
                         >
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsEditing(true)}
-                                className="gap-2"
-                            >
-                                <Edit2 className="w-4 h-4" />
-                                Edit Notes
-                            </Button>
+                            <AnimatedDockButton>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    className="gap-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                    Edit Notes
+                                </Button>
+                            </AnimatedDockButton>
                         </motion.div>
                     )}
                 </AnimatePresence>

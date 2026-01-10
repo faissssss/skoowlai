@@ -1,7 +1,9 @@
 import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
+import { z } from 'zod';
 import { NextRequest } from 'next/server';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { requireAuth } from '@/lib/auth';
 
 export const maxDuration = 60;
 
@@ -14,30 +16,44 @@ const REWRITE_PROMPTS: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     // Rate limit check (uses User ID for authenticated users)
     const rateLimitResponse = await checkRateLimitFromRequest(req);
     if (rateLimitResponse) return rateLimitResponse;
 
-    const { text, action } = await req.json();
+    try {
+        const body = await req.json();
 
-    if (!text || !action || !REWRITE_PROMPTS[action]) {
-        return new Response(JSON.stringify({ error: 'Invalid request' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
+        const rewriteSchema = z.object({
+            text: z.string().min(1).max(5000), // Prevent massive payloads
+            action: z.enum(['improve', 'shorten', 'paraphrase', 'simplify', 'detailed'])
+        }).strict();
 
-    const instruction = REWRITE_PROMPTS[action];
+        const payload = rewriteSchema.safeParse(body);
 
-    const result = streamText({
-        model: google('gemini-2.5-flash'),
-        messages: [
-            {
-                role: 'user',
-                content: text,
-            },
-        ],
-        system: `**Role:** Professional Multi-lingual Editor
+        if (!payload.success) {
+            return new Response(JSON.stringify({ error: 'Invalid request', details: payload.error.flatten() }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        const { text, action } = payload.data;
+
+        const instruction = REWRITE_PROMPTS[action];
+
+        const result = streamText({
+            model: google('gemini-2.5-flash'),
+            messages: [
+                {
+                    role: 'user',
+                    content: text,
+                },
+            ],
+            system: `**Role:** Professional Multi-lingual Editor
 **Task:** Rewrite the user's input text based on the selected action: "${action}" (${instruction}).
 
 **CRITICAL RULES (MUST FOLLOW):**
@@ -58,7 +74,18 @@ export async function POST(req: NextRequest) {
    * Return ONLY the rewritten text - nothing else
    * Preserve paragraph structure if present
    * Output the transformed text directly with no decorations`,
-    });
+        });
 
-    return result.toTextStreamResponse();
+        return result.toTextStreamResponse();
+
+    } catch (error) {
+        console.error('Rewrite API Error:', error);
+        return new Response(JSON.stringify({
+            error: 'Internal Server Error',
+            details: 'An error occurred while processing your request.'
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
 }

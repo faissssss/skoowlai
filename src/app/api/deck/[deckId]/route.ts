@@ -1,21 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { z } from 'zod';
+import { requireAuth } from '@/lib/auth';
 
 // PATCH - Update deck title
 export async function PATCH(
     req: NextRequest,
     { params }: { params: Promise<{ deckId: string }> }
 ) {
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { deckId } = await params;
         const body = await req.json();
-        const { title } = body;
 
-        if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        const updateDeckSchema = z.object({
+            title: z.string().min(1).max(100)
+        }).strict();
+
+        const payload = updateDeckSchema.safeParse(body);
+
+        if (!payload.success) {
             return NextResponse.json(
-                { error: 'Title is required' },
+                { error: 'Invalid request', details: payload.error.flatten() },
                 { status: 400 }
             );
+        }
+
+        const { title } = payload.data;
+
+        // Verify ownership before update
+        const existingDeck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!existingDeck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (existingDeck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         const deck = await db.deck.update({
@@ -30,7 +57,7 @@ export async function PATCH(
     } catch (error) {
         console.error('Error updating deck title:', error);
         return NextResponse.json(
-            { error: 'Failed to update title' },
+            { error: 'Internal Server Error' },
             { status: 500 }
         );
     }
@@ -41,9 +68,14 @@ export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ deckId: string }> }
 ) {
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { deckId } = await params;
 
+        // Fetch deck and check ownership
         const deck = await db.deck.findUnique({
             where: { id: deckId },
             select: {
@@ -51,6 +83,7 @@ export async function GET(
                 title: true,
                 sourceType: true,
                 createdAt: true,
+                userId: true, // Need this for ownership check
             },
         });
 
@@ -61,11 +94,20 @@ export async function GET(
             );
         }
 
+        if (deck.userId !== user.id) {
+            return NextResponse.json(
+                { error: 'Unauthorized access to deck' },
+                { status: 403 }
+            );
+        }
+
+        // Remove userId from response if strict privacy needed, 
+        // but it's the user's own id so it's fine.
         return NextResponse.json(deck);
     } catch (error) {
         console.error('Error fetching deck:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch deck' },
+            { error: 'Internal Server Error' },
             { status: 500 }
         );
     }

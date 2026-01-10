@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 
 interface BugReportPayload {
     title: string;
@@ -80,6 +81,10 @@ function parseUserAgent(ua: string): string {
 }
 
 export async function POST(request: NextRequest) {
+    // Rate limit check: Very strict for bug report spam prevention (5 req / 60s)
+    const rateLimitResponse = await checkRateLimitFromRequest(request, 5, '60 s');
+    if (rateLimitResponse) return rateLimitResponse;
+
     try {
         const body: BugReportPayload = await request.json();
         const { title, description, severity, screenshot, pageUrl, userAgent, user } = body;

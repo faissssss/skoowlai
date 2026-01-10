@@ -8,16 +8,46 @@ datasource db {
 }
 
 model User {
-  id              String         @id @default(cuid())
-  clerkId         String         @unique
-  email           String         @unique
-  createdAt       DateTime       @default(now())
-  isDeleted       Boolean        @default(false)
-  deletedAt       DateTime?
-  dailyUsageCount Int            @default(0)
-  lastUsageDate   DateTime?
-  collaborators   Collaborator[]
-  decks           Deck[]
+  id                  String         @id @default(cuid())
+  clerkId             String         @unique
+  email               String         @unique
+  createdAt           DateTime       @default(now())
+  isDeleted           Boolean        @default(false)
+  deletedAt           DateTime?
+  dailyUsageCount     Int            @default(0)
+  lastUsageDate       DateTime?
+  // Feature usage tracking
+  flashcardUsageCount Int            @default(0)
+  quizUsageCount      Int            @default(0)
+  mindmapUsageCount   Int            @default(0)
+  chatUsageCount      Int            @default(0)
+  lastChatUsageDate   DateTime?
+  // Subscription fields (Dodo Payments)
+  subscriptionStatus  String         @default("free") // free, active, cancelled, expired
+  subscriptionPlan    String? // monthly, yearly
+  subscriptionId      String? // Dodo subscription ID
+  customerId          String? // Dodo customer ID
+  subscriptionEndsAt  DateTime?
+  collaborators       Collaborator[]
+  decks               Deck[]
+  workspaces          Workspace[]
+  AuditLog            AuditLog[]
+}
+
+model Workspace {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  color       String    @default("#6366f1")
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  decks       Deck[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+
+  @@index([userId])
 }
 
 model Deck {
@@ -30,7 +60,8 @@ model Deck {
   fileUrl       String?
   fileType      String?
   isPublic      Boolean        @default(false)
-  noteConfig    Json?          // Stores { depth, style, tone } preferences after generation
+  noteConfig    Json? // Stores { depth, style, tone } preferences after generation
+  workspaceId   String?
   createdAt     DateTime       @default(now())
   isDeleted     Boolean        @default(false)
   deletedAt     DateTime?
@@ -38,8 +69,12 @@ model Deck {
   messages      ChatMessage[]
   collaborators Collaborator[]
   user          User           @relation(fields: [userId], references: [id])
+  workspace     Workspace?     @relation(fields: [workspaceId], references: [id])
   mindmap       MindMap?
   quizzes       Quiz[]
+
+  @@index([userId])
+  @@index([workspaceId])
 }
 
 model Card {
@@ -50,6 +85,8 @@ model Card {
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
   deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
 }
 
 model Quiz {
@@ -62,6 +99,8 @@ model Quiz {
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
   deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
 }
 
 model ChatMessage {
@@ -74,6 +113,8 @@ model ChatMessage {
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
   deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
 }
 
 model MindMap {
@@ -86,6 +127,8 @@ model MindMap {
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
   deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
 }
 
 model Collaborator {
@@ -100,4 +143,20 @@ model Collaborator {
   user      User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, deckId])
+  @@index([deckId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // e.g. "GENERATE_DECK", "DELETE_DECK"
+  resourceId String?
+  details    String? // JSON string or text summary
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
 }

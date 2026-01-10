@@ -4,6 +4,8 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
+import { requireAuth } from '@/lib/auth';
 
 // Schema for flashcards
 const flashcardsSchema = z.object({
@@ -71,25 +73,58 @@ Generate ${count} UNIQUE flashcards now.`;
 }
 
 export async function POST(req: NextRequest) {
-    // Rate limit check (uses User ID for authenticated users)
+    // 1. Authenticate user first
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
+    // Rate limit check
     const rateLimitResponse = await checkRateLimitFromRequest(req);
     if (rateLimitResponse) return rateLimitResponse;
 
+    // Check feature usage limit
+    const limitCheck = await checkFeatureLimit('flashcard');
+    if (!limitCheck.allowed) {
+        return limitCheck.errorResponse;
+    }
+
     try {
         const body = await req.json();
-        const { deckId, focus, format, detail, count } = body;
+
+        // Strict input validation
+        const generateFlashcardsSchema = z.object({
+            deckId: z.string().uuid(),
+            count: z.number().int().min(1).max(50).default(10),
+            focus: z.enum(['terms', 'concepts', 'data', 'mix']).default('mix'),
+            format: z.enum(['classic', 'qa', 'practical']).default('classic'),
+            detail: z.enum(['brief', 'standard', 'detailed']).default('standard')
+        }).strict();
+
+        const payload = generateFlashcardsSchema.safeParse(body);
+
+        if (!payload.success) {
+            return NextResponse.json({
+                error: 'Invalid request body',
+                details: payload.error.flatten()
+            }, { status: 400 });
+        }
+
+        const { deckId, focus, format, detail, count } = payload.data;
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
         }
 
-        // Get deck content
+        // Verify deck ownership (Authorization)
         const deck = await db.deck.findUnique({
             where: { id: deckId },
         });
 
         if (!deck) {
             return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         // Use summary or content for generation
@@ -131,6 +166,11 @@ export async function POST(req: NextRequest) {
             where: { deckId },
         });
 
+        // Increment usage count after successful generation
+        if (limitCheck.user) {
+            await incrementFeatureUsage(limitCheck.user.id, 'flashcard');
+        }
+
         return NextResponse.json({
             success: true,
             count: cards.length,
@@ -139,21 +179,40 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Flashcard generation error:', error);
+        // Generic error message for client, detailed log for server
         return NextResponse.json({
-            error: 'Failed to generate flashcards',
-            details: error instanceof Error ? error.message : String(error)
+            error: 'Internal Server Error',
+            details: 'Failed to generate flashcards. Please try again later.'
         }, { status: 500 });
     }
 }
 
 // GET endpoint to fetch existing flashcards
 export async function GET(req: NextRequest) {
+    // Authenticate user
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { searchParams } = new URL(req.url);
         const deckId = searchParams.get('deckId');
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
+        }
+
+        // Verify deck ownership before fetching cards
+        const deck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!deck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         const cards = await db.card.findMany({
@@ -170,12 +229,30 @@ export async function GET(req: NextRequest) {
 
 // DELETE endpoint to clear flashcards
 export async function DELETE(req: NextRequest) {
+    // Authenticate user
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { searchParams } = new URL(req.url);
         const deckId = searchParams.get('deckId');
 
         if (!deckId) {
             return NextResponse.json({ error: 'deckId is required' }, { status: 400 });
+        }
+
+        // Verify deck ownership before deleting
+        const deck = await db.deck.findUnique({
+            where: { id: deckId },
+            select: { userId: true }
+        });
+
+        if (!deck) {
+            return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
+        }
+
+        if (deck.userId !== user.id) {
+            return NextResponse.json({ error: 'Unauthorized access to deck' }, { status: 403 });
         }
 
         await db.card.deleteMany({
