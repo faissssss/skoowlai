@@ -60,9 +60,9 @@ export async function POST(req: Request) {
         try {
             // Send welcome email
             await resend.emails.send({
-                from: 'Skoowl AI <noreply@skoowlai.com>',
+                from: 'skoowl ai <yourskoowlai@gmail.com>',
                 to: email,
-                subject: 'Welcome to skoowl ai! 🎓',
+                subject: 'Welcome to Skoowl AI!',
                 html: `
 <!DOCTYPE html>
 <html>
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
             </p>
             
             <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
-                Thanks for joining <strong style="color: #c084fc;">skoowl ai</strong> – your personal AI study buddy! We're excited to help you study smarter.
+                Thanks for joining <strong style="color: #c084fc;">Skoowl AI</strong> – your personal AI study buddy! We're excited to help you study smarter.
             </p>
             
             <p style="color: #e2e8f0; font-size: 16px; margin: 0 0 16px 0;">
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
                 Questions? Just reply to this email!
             </p>
             <p style="color: #475569; font-size: 12px; margin: 16px 0 0 0;">
-                © ${new Date().getFullYear()} skoowl ai. All rights reserved.
+                © ${new Date().getFullYear()} Skoowl AI. All rights reserved.
             </p>
         </div>
     </div>
