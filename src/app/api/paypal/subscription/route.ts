@@ -18,13 +18,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Calculate subscription end date based on plan
+        const subscriptionEndsAt = new Date();
+        const planType = plan || 'monthly';
+        if (planType === 'yearly') {
+            subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
+        } else {
+            subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
+        }
+
         // Update authenticated user's subscription
         await db.user.update({
             where: { id: user.id },
             data: {
                 subscriptionStatus: 'active',
                 subscriptionId: subscriptionId,
-                subscriptionPlan: plan || 'monthly',
+                subscriptionPlan: planType,
+                subscriptionEndsAt: subscriptionEndsAt,
                 // PayPal doesn't give us a customer ID in the same way, use subscription ID as fallback
                 customerId: user.customerId || `paypal_${subscriptionId}`,
             }

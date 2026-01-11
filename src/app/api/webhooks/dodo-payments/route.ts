@@ -39,6 +39,14 @@ export const POST = Webhooks({
             }
 
             if (customerEmail) {
+                // Calculate subscription end date based on plan
+                const subscriptionEndsAt = new Date();
+                if (plan === 'yearly') {
+                    subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
+                } else {
+                    subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
+                }
+
                 await db.user.updateMany({
                     where: { email: customerEmail },
                     data: {
@@ -46,9 +54,10 @@ export const POST = Webhooks({
                         subscriptionId: subscriptionId,
                         customerId: customerId,
                         subscriptionPlan: plan,
+                        subscriptionEndsAt: subscriptionEndsAt,
                     }
                 });
-                console.log(`Subscription activated for ${customerEmail}`);
+                console.log(`Subscription activated for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
 
                 // Send welcome and receipt emails
                 await sendSubscriptionEmails({
