@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         try {
             // Send welcome email
             await resend.emails.send({
-                from: 'skoowl ai <yourskoowlai@gmail.com>',
+                from: 'Skoowl AI <noreply@skoowlai.com>',
                 to: email,
                 subject: 'Welcome to skoowl ai! 🎓',
                 html: `
