@@ -7,7 +7,8 @@ import Image from 'next/image';
 import { useAuth } from '@clerk/nextjs';
 
 // Use localStorage so it persists permanently (only shows once ever)
-const WELCOME_KEY = 'skoowl_hasSeenWelcome';
+// Bump version to show welcome again to existing users
+const WELCOME_KEY = 'skoowl_hasSeenWelcome_v2';
 
 export default function WelcomeModal() {
     const [isOpen, setIsOpen] = useState(false);
