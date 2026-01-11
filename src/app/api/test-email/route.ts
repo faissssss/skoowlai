@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
         }
 
-        console.log(`🧪 Testing subscription emails to: ${testEmail}`);
+        console.log(`🧪 Testing subscription emails to: ${testEmail} (${body.plan || 'monthly'})`);
 
         // Send test emails
         const result = await sendSubscriptionEmails({
             email: testEmail,
             name: 'Test User',
-            plan: 'monthly',
+            plan: body.plan || 'monthly',
             subscriptionId: 'test_sub_' + Date.now(),
         });
 
