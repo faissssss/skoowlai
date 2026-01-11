@@ -263,19 +263,17 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
                                     <div className="mb-3 h-[52px] flex flex-col justify-center">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-3xl font-bold text-white">${currentPrice.toFixed(2)}</span>
-                                            <span className="text-slate-400 text-xs">/month</span>
+                                            <span className="text-3xl font-bold text-white">$0</span>
+                                            <span className="text-slate-400 text-xs">today</span>
                                             {billingPeriod === 'yearly' && (
                                                 <span className="px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-[10px] font-bold rounded-full">
                                                     🎉 33% OFF
                                                 </span>
                                             )}
                                         </div>
-                                        <p className={cn(
-                                            "text-[10px] mt-0.5 h-4",
-                                            billingPeriod === 'yearly' ? "text-purple-400" : "text-transparent"
-                                        )}>
-                                            {billingPeriod === 'yearly' ? `Billed $${pricing.yearly.price}/year` : 'placeholder'}
+                                        <p className="text-[10px] text-slate-400 mt-0.5 h-4">
+                                            Then ${currentPrice.toFixed(2)}/mo
+                                            {billingPeriod === 'yearly' && ` ($${pricing.yearly.price}/year)`}
                                         </p>
                                     </div>
 
@@ -283,7 +281,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                                         onClick={handleProceedToPayment}
                                         className="w-full py-2 px-3 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition-all shadow-lg shadow-purple-600/25 mb-3 text-xs h-9 flex items-center justify-center gap-2"
                                     >
-                                        Upgrade to Pro
+                                        Try Pro Free • 7-Day Trial
                                     </button>
 
                                     <ul className="space-y-1.5 flex-1">
@@ -332,7 +330,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                             <div className="text-center mb-4 sm:mb-6 mt-2">
                                 <h2 className="text-base sm:text-lg font-bold text-white">Select Payment Method</h2>
                                 <p className="text-slate-400 text-[10px] sm:text-xs mt-1">
-                                    Secure checkout with Dodo Payments
+                                    Trusted by students worldwide
                                 </p>
                             </div>
 

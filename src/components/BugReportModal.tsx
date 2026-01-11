@@ -159,16 +159,16 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-slate-900 border border-violet-500/30 shadow-2xl shadow-violet-500/10 transition-all">
+                            <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-slate-900 border border-violet-500/30 shadow-2xl shadow-violet-500/10 transition-all flex flex-col">
                                 {/* Header */}
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
                                     <Dialog.Title className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
                                             <Bug className="w-5 h-5 text-violet-400" />
                                         </div>
                                         <div>
                                             <h2 className="text-lg font-semibold text-white">Report a Bug</h2>
-                                            <p className="text-sm text-slate-400">Help us improve skoowl ai</p>
+                                            <p className="text-sm text-slate-400">Help us improve Skoowl AI</p>
                                         </div>
                                     </Dialog.Title>
                                     <button
@@ -180,171 +180,166 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                 </div>
 
                                 {/* Form */}
-                                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                                    {/* Error Message */}
-                                    {error && (
-                                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                                            {error}
+                                <div className="p-6">
+                                    <form onSubmit={handleSubmit} className="space-y-5">
+                                        {/* Error Message */}
+                                        {error && (
+                                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                                                {error}
+                                            </div>
+                                        )}
+
+                                        {/* Title */}
+                                        <div>
+                                            <label htmlFor="bug-title" className="block text-sm font-medium text-slate-300 mb-2">
+                                                Title <span className="text-red-400">*</span>
+                                            </label>
+                                            <input
+                                                id="bug-title"
+                                                type="text"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                                placeholder="Short summary of the issue"
+                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-colors"
+                                            />
                                         </div>
-                                    )}
 
-                                    {/* Title */}
-                                    <div>
-                                        <label htmlFor="bug-title" className="block text-sm font-medium text-slate-300 mb-2">
-                                            Title <span className="text-red-400">*</span>
-                                        </label>
-                                        <input
-                                            id="bug-title"
-                                            type="text"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            placeholder="Short summary of the issue"
-                                            className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-colors"
-                                        />
-                                    </div>
+                                        {/* Description */}
+                                        <div>
+                                            <label htmlFor="bug-description" className="block text-sm font-medium text-slate-300 mb-2">
+                                                Description <span className="text-red-400">*</span>
+                                            </label>
+                                            <textarea
+                                                id="bug-description"
+                                                value={description}
+                                                onChange={(e) => setDescription(e.target.value)}
+                                                placeholder="What happened? Steps to reproduce..."
+                                                rows={3}
+                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-colors resize-none"
+                                            />
+                                        </div>
 
-                                    {/* Description */}
-                                    <div>
-                                        <label htmlFor="bug-description" className="block text-sm font-medium text-slate-300 mb-2">
-                                            Description <span className="text-red-400">*</span>
-                                        </label>
-                                        <textarea
-                                            id="bug-description"
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            placeholder="What happened? Steps to reproduce..."
-                                            rows={4}
-                                            className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-colors resize-none"
-                                        />
-                                    </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {/* Severity */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                    Severity
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    {(Object.keys(severityConfig) as Severity[]).map((level) => {
+                                                        const config = severityConfig[level];
+                                                        const Icon = config.icon;
+                                                        const isActive = severity === level;
+                                                        return (
+                                                            <button
+                                                                key={level}
+                                                                type="button"
+                                                                onClick={() => setSeverity(level)}
+                                                                className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl border transition-all ${isActive
+                                                                    ? `${config.bg} ${config.border} ${config.color}`
+                                                                    : "bg-slate-800/50 border-white/10 text-slate-400 hover:border-white/20"
+                                                                    }`}
+                                                            >
+                                                                <Icon className="w-4 h-4" />
+                                                                <span className="text-xs font-medium">{config.label}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                    {/* Severity */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                                            Severity
-                                        </label>
-                                        <div className="flex gap-2">
-                                            {(Object.keys(severityConfig) as Severity[]).map((level) => {
-                                                const config = severityConfig[level];
-                                                const Icon = config.icon;
-                                                const isActive = severity === level;
-                                                return (
-                                                    <button
-                                                        key={level}
-                                                        type="button"
-                                                        onClick={() => setSeverity(level)}
-                                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all ${isActive
-                                                            ? `${config.bg} ${config.border} ${config.color}`
-                                                            : "bg-slate-800/50 border-white/10 text-slate-400 hover:border-white/20"
+                                            {/* Screenshot Upload */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                    Screenshot <span className="text-slate-500">(Optional)</span>
+                                                </label>
+
+                                                {!screenshotPreview ? (
+                                                    <div
+                                                        onDragOver={(e) => {
+                                                            e.preventDefault();
+                                                            setIsDragging(true);
+                                                        }}
+                                                        onDragLeave={() => setIsDragging(false)}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            setIsDragging(false);
+                                                            const file = e.dataTransfer.files[0];
+                                                            if (file && file.type.startsWith("image/")) {
+                                                                setScreenshot(file);
+                                                                setScreenshotPreview(URL.createObjectURL(file));
+                                                            }
+                                                        }}
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className={`w-full p-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all ${isDragging
+                                                            ? "border-violet-500 bg-violet-500/10"
+                                                            : "border-white/10 hover:border-white/20 bg-slate-800/30"
                                                             }`}
                                                     >
-                                                        <Icon className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">{config.label}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Screenshot Upload */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                                            Screenshot <span className="text-slate-500">(Optional)</span>
-                                        </label>
-
-                                        {!screenshotPreview ? (
-                                            <div
-                                                onDragOver={(e) => {
-                                                    e.preventDefault();
-                                                    setIsDragging(true);
-                                                }}
-                                                onDragLeave={() => setIsDragging(false)}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    setIsDragging(false);
-                                                    const file = e.dataTransfer.files[0];
-                                                    if (file && file.type.startsWith("image/")) {
-                                                        setScreenshot(file);
-                                                        setScreenshotPreview(URL.createObjectURL(file));
-                                                    }
-                                                }}
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className={`w-full p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all ${isDragging
-                                                        ? "border-violet-500 bg-violet-500/10"
-                                                        : "border-white/10 hover:border-white/20 bg-slate-800/30"
-                                                    }`}
-                                            >
-                                                <div className="flex flex-col items-center gap-2 text-center">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDragging ? "bg-violet-500/20" : "bg-slate-700/50"
-                                                        }`}>
-                                                        <Upload className={`w-5 h-5 ${isDragging ? "text-violet-400" : "text-slate-400"}`} />
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDragging ? "bg-violet-500/20" : "bg-slate-700/50"
+                                                                }`}>
+                                                                <Upload className={`w-4 h-4 ${isDragging ? "text-violet-400" : "text-slate-400"}`} />
+                                                            </div>
+                                                            <span className="text-xs text-slate-400 font-medium">Upload</span>
+                                                        </div>
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    setScreenshot(file);
+                                                                    setScreenshotPreview(URL.createObjectURL(file));
+                                                                }
+                                                            }}
+                                                        />
                                                     </div>
-                                                    <p className="text-sm text-slate-400">
-                                                        <span className="text-violet-400 font-medium">Click to upload</span> or drag and drop
-                                                    </p>
-                                                    <p className="text-xs text-slate-500">PNG, JPG, GIF up to 5MB</p>
-                                                </div>
-                                                <input
-                                                    ref={fileInputRef}
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    onChange={(e) => {
-                                                        const file = e.target.files?.[0];
-                                                        if (file) {
-                                                            setScreenshot(file);
-                                                            setScreenshotPreview(URL.createObjectURL(file));
-                                                        }
-                                                    }}
-                                                />
+                                                ) : (
+                                                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-slate-800/30 h-[54px]">
+                                                        <img
+                                                            src={screenshotPreview}
+                                                            alt="Screenshot preview"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setScreenshot(null);
+                                                                setScreenshotPreview(null);
+                                                            }}
+                                                            className="absolute top-1.5 right-1.5 p-1 rounded-md bg-red-500/80 hover:bg-red-500 text-white transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <div className="relative rounded-xl overflow-hidden border border-white/10 bg-slate-800/30">
-                                                <img
-                                                    src={screenshotPreview}
-                                                    alt="Screenshot preview"
-                                                    className="w-full h-32 object-cover"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                                <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                                                    <ImageIcon className="w-4 h-4 text-white/80" />
-                                                    <span className="text-sm text-white/80 truncate max-w-[200px]">
-                                                        {screenshot?.name}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setScreenshot(null);
-                                                        setScreenshotPreview(null);
-                                                    }}
-                                                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                                        </div>
 
-                                    {/* Submit Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Submitting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Bug className="w-5 h-5" />
-                                                Submit Bug Report
-                                            </>
-                                        )}
-                                    </button>
-                                </form>
+                                        {/* Submit Button */}
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                                    Submitting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Bug className="w-5 h-5" />
+                                                    Submit Bug Report
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
+                                </div>
                             </Dialog.Panel>
                         </Transition.Child>
                     </div>

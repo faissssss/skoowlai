@@ -169,134 +169,136 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-slate-900 border border-emerald-500/30 shadow-2xl shadow-emerald-500/10 transition-all">
+                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-slate-900 border border-emerald-500/30 shadow-2xl shadow-emerald-500/10 transition-all max-h-[85vh] flex flex-col">
                                 {/* Header */}
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
                                     <Dialog.Title className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                                            <Lightbulb className="w-5 h-5 text-emerald-400" />
+                                        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                                            <Lightbulb className="w-4 h-4 text-emerald-400" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-semibold text-white">Share Your Ideas</h2>
-                                            <p className="text-sm text-slate-400">Help us build skoowl ai</p>
+                                            <h2 className="text-base font-semibold text-white">Share Your Ideas</h2>
+                                            <p className="text-xs text-slate-400">Help us build Skoowl AI</p>
                                         </div>
                                     </Dialog.Title>
                                     <button
                                         onClick={handleClose}
-                                        className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                                        className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
 
-                                {/* Form */}
-                                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                                    {/* Error Message */}
-                                    {error && (
-                                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                                            {error}
-                                        </div>
-                                    )}
+                                {/* Form - Scrollable */}
+                                <div className="overflow-y-auto p-5">
+                                    <form onSubmit={handleSubmit} className="space-y-4">
+                                        {/* Error Message */}
+                                        {error && (
+                                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                                                {error}
+                                            </div>
+                                        )}
 
-                                    {/* Feedback Type */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                                            What kind of feedback?
-                                        </label>
-                                        <div className="flex gap-2">
-                                            {(Object.keys(feedbackTypes) as FeedbackType[]).map((feedbackType) => {
-                                                const config = feedbackTypes[feedbackType];
-                                                const Icon = config.icon;
-                                                const isActive = type === feedbackType;
-                                                return (
-                                                    <button
-                                                        key={feedbackType}
-                                                        type="button"
-                                                        onClick={() => setType(feedbackType)}
-                                                        className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border transition-all ${isActive
+                                        {/* Feedback Type */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                                                What kind of feedback?
+                                            </label>
+                                            <div className="flex gap-2">
+                                                {(Object.keys(feedbackTypes) as FeedbackType[]).map((feedbackType) => {
+                                                    const config = feedbackTypes[feedbackType];
+                                                    const Icon = config.icon;
+                                                    const isActive = type === feedbackType;
+                                                    return (
+                                                        <button
+                                                            key={feedbackType}
+                                                            type="button"
+                                                            onClick={() => setType(feedbackType)}
+                                                            className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl border transition-all ${isActive
                                                                 ? `${config.bg} ${config.border} ${config.color}`
                                                                 : "bg-slate-800/50 border-white/10 text-slate-400 hover:border-white/20"
-                                                            }`}
-                                                    >
-                                                        <Icon className="w-5 h-5" />
-                                                        <span className="text-xs font-medium">{config.label}</span>
-                                                    </button>
-                                                );
-                                            })}
+                                                                }`}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            <span className="text-xs font-medium">{config.label}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Category */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                                            Related to
-                                        </label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {categoryOptions.map((option) => (
-                                                <button
-                                                    key={option.value}
-                                                    type="button"
-                                                    onClick={() => setCategory(option.value)}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${category === option.value
+                                        {/* Category */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                                                Related to
+                                            </label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {categoryOptions.map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        type="button"
+                                                        onClick={() => setCategory(option.value)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${category === option.value
                                                             ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
                                                             : "bg-slate-800/50 border border-white/10 text-slate-400 hover:border-white/20"
-                                                        }`}
-                                                >
-                                                    {option.label}
-                                                </button>
-                                            ))}
+                                                            }`}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Summary */}
-                                    <div>
-                                        <label htmlFor="feedback-summary" className="block text-sm font-medium text-slate-300 mb-2">
-                                            Summary <span className="text-red-400">*</span>
-                                        </label>
-                                        <input
-                                            id="feedback-summary"
-                                            type="text"
-                                            value={summary}
-                                            onChange={(e) => setSummary(e.target.value)}
-                                            placeholder="e.g., Add Dark Mode support for PDFs"
-                                            className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-colors"
-                                        />
-                                    </div>
+                                        {/* Summary */}
+                                        <div>
+                                            <label htmlFor="feedback-summary" className="block text-sm font-medium text-slate-300 mb-1.5">
+                                                Summary <span className="text-red-400">*</span>
+                                            </label>
+                                            <input
+                                                id="feedback-summary"
+                                                type="text"
+                                                value={summary}
+                                                onChange={(e) => setSummary(e.target.value)}
+                                                placeholder="e.g., Add Dark Mode support for PDFs"
+                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-colors text-sm"
+                                            />
+                                        </div>
 
-                                    {/* Details */}
-                                    <div>
-                                        <label htmlFor="feedback-details" className="block text-sm font-medium text-slate-300 mb-2">
-                                            Details <span className="text-slate-500">(Optional)</span>
-                                        </label>
-                                        <textarea
-                                            id="feedback-details"
-                                            value={details}
-                                            onChange={(e) => setDetails(e.target.value)}
-                                            placeholder="Tell us more about how this would help you..."
-                                            rows={3}
-                                            className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-colors resize-none"
-                                        />
-                                    </div>
+                                        {/* Details */}
+                                        <div>
+                                            <label htmlFor="feedback-details" className="block text-sm font-medium text-slate-300 mb-1.5">
+                                                Details <span className="text-slate-500">(Optional)</span>
+                                            </label>
+                                            <textarea
+                                                id="feedback-details"
+                                                value={details}
+                                                onChange={(e) => setDetails(e.target.value)}
+                                                placeholder="Tell us more about how this would help you..."
+                                                rows={3}
+                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-colors resize-none text-sm"
+                                            />
+                                        </div>
 
-                                    {/* Submit Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold shadow-lg shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Sending...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Send className="w-5 h-5" />
-                                                Send Feedback
-                                            </>
-                                        )}
-                                    </button>
-                                </form>
+                                        {/* Submit Button */}
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="w-full flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold shadow-lg shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm mt-2"
+                                        >
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Sending...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="w-4 h-4" />
+                                                    Send Feedback
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
+                                </div>
                             </Dialog.Panel>
                         </Transition.Child>
                     </div>
