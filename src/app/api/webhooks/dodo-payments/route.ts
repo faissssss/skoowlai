@@ -168,7 +168,7 @@ export const POST = Webhooks({
         console.log(`Payment succeeded: ${data.payment_id}`);
     },
 
-    // Called when payment fails
+    // Called when payment fails (works for both first-time and renewal attempts)
     onPaymentFailed: async (payload) => {
         try {
             const data = payload.data as any;
@@ -182,18 +182,23 @@ export const POST = Webhooks({
                     select: { subscriptionPlan: true }
                 });
 
-                if (user?.subscriptionPlan) {
-                    await sendPaymentFailedEmail({
-                        email: customerEmail,
-                        name: data.customer?.name,
-                        plan: user.subscriptionPlan as 'monthly' | 'yearly',
-                        reason: data.failure_reason || 'Payment was declined',
-                    });
-                }
+                // Determine plan from existing user or from payment data
+                const billingInterval = data.recurring_pre_tax_amount?.interval ||
+                    data.subscription?.billing?.interval ||
+                    'month';
+                const plan = user?.subscriptionPlan ||
+                    (billingInterval === 'year' ? 'yearly' : 'monthly');
+
+                // Send payment failed email (for both first-time and renewal failures)
+                await sendPaymentFailedEmail({
+                    email: customerEmail,
+                    name: data.customer?.name,
+                    plan: plan as 'monthly' | 'yearly',
+                    reason: data.failure_reason || 'Payment was declined',
+                });
             }
         } catch (error) {
             console.error('Error processing payment failed webhook:', error);
         }
     },
 });
-
