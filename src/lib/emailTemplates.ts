@@ -437,3 +437,157 @@ export function cancellationEmailTemplate({
 
     return emailWrapper(content);
 }
+
+/**
+ * Subscription renewal confirmation email
+ */
+export function renewalEmailTemplate({
+    name,
+    plan,
+    nextRenewalDate
+}: {
+    name: string;
+    plan: 'monthly' | 'yearly';
+    nextRenewalDate: Date;
+}) {
+    const planName = plan === 'yearly' ? 'Yearly' : 'Monthly';
+    const userName = name || 'there';
+    const price = plan === 'yearly' ? '$39.99' : '$4.99';
+    const nextDateFormatted = nextRenewalDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    const content = `
+        ${emailHeader()}
+        
+        <tr>
+            <td style="padding: 40px;">
+                <!-- Header -->
+                <h1 style="color: ${COLORS.text}; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Subscription Renewed! 🎉
+                </h1>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; margin: 0 0 32px; text-align: center; line-height: 1.5;">
+                    Thanks for staying with Skoowl AI
+                </p>
+
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                    Hey ${userName}! 👋
+                </p>
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
+                    Your <strong style="color: ${COLORS.primary};">Pro (${planName})</strong> subscription has been renewed successfully!
+                </p>
+
+                <!-- Payment Details -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #f5f3ff, #eef2ff); border-radius: 12px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 20px 24px;">
+                            ${detailRow('Amount charged', `<strong>${price}</strong>`)}
+                            ${detailRow('Next renewal', `<strong>${nextDateFormatted}</strong>`)}
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Thank You Box -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #ecfdf5; border-left: 4px solid ${COLORS.success}; border-radius: 8px; margin-bottom: 32px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: #065f46; font-size: 14px; margin: 0; line-height: 1.5;">
+                                ✅ Your Pro access continues uninterrupted. Keep crushing your studies!
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Go to Dashboard →', 'https://skoowlai.com/dashboard')}
+
+                <p style="color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    Thank you for being a valued Skoowl AI student! 📚
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}
+
+/**
+ * Payment failed email
+ */
+export function paymentFailedEmailTemplate({
+    name,
+    plan,
+    reason
+}: {
+    name: string;
+    plan: 'monthly' | 'yearly';
+    reason?: string;
+}) {
+    const planName = plan === 'yearly' ? 'Yearly' : 'Monthly';
+    const userName = name || 'there';
+    const failureReason = reason || 'Your payment method was declined';
+
+    const content = `
+        ${emailHeader()}
+        
+        <tr>
+            <td style="padding: 40px;">
+                <!-- Header -->
+                <h1 style="color: ${COLORS.text}; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Payment Failed ⚠️
+                </h1>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; margin: 0 0 32px; text-align: center; line-height: 1.5;">
+                    We couldn't process your subscription renewal
+                </p>
+
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                    Hey ${userName}! 👋
+                </p>
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
+                    We tried to renew your <strong style="color: ${COLORS.primary};">Pro (${planName})</strong> subscription, but the payment didn't go through.
+                </p>
+
+                <!-- Error Box -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: #991b1b; font-size: 14px; margin: 0 0 8px; line-height: 1.5; font-weight: 600;">
+                                ❌ ${failureReason}
+                            </p>
+                            <p style="color: #b91c1c; font-size: 14px; margin: 0; line-height: 1.5;">
+                                Common causes: insufficient funds, expired card, or bank restrictions.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- What happens next -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: ${COLORS.background}; border-radius: 8px; margin-bottom: 32px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: ${COLORS.text}; font-size: 14px; margin: 0 0 8px; line-height: 1.5; font-weight: 600;">
+                                What happens next?
+                            </p>
+                            <p style="color: ${COLORS.textLight}; font-size: 14px; margin: 0; line-height: 1.5;">
+                                We'll retry the payment in a few days. To avoid losing Pro access, please update your payment method or ensure sufficient funds.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Update Payment Method →', 'https://skoowlai.com/dashboard/settings')}
+
+                <p style="color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    Need help? Reply to this email and we'll assist you.
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}

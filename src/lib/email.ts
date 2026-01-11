@@ -3,7 +3,9 @@ import {
     welcomeEmailTemplate,
     receiptEmailTemplate,
     reminderEmailTemplate,
-    cancellationEmailTemplate
+    cancellationEmailTemplate,
+    renewalEmailTemplate,
+    paymentFailedEmailTemplate
 } from './emailTemplates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -130,3 +132,68 @@ export async function sendSubscriptionEmails(data: SubscriptionEmailData) {
     return welcomeResult && receiptResult;
 }
 
+/**
+ * Send renewal confirmation email when subscription auto-renews
+ */
+export async function sendRenewalEmail({
+    email,
+    name,
+    plan,
+    nextRenewalDate
+}: {
+    email: string;
+    name?: string;
+    plan: 'monthly' | 'yearly';
+    nextRenewalDate: Date;
+}) {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '🎉 Your Skoowl AI subscription has been renewed!',
+            html: renewalEmailTemplate({
+                name: name || 'there',
+                plan,
+                nextRenewalDate
+            }),
+        });
+        console.log(`✅ Renewal email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send renewal email:', error);
+        return false;
+    }
+}
+
+/**
+ * Send payment failed email when renewal payment fails
+ */
+export async function sendPaymentFailedEmail({
+    email,
+    name,
+    plan,
+    reason
+}: {
+    email: string;
+    name?: string;
+    plan: 'monthly' | 'yearly';
+    reason?: string;
+}) {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '⚠️ Payment failed for your Skoowl AI subscription',
+            html: paymentFailedEmailTemplate({
+                name: name || 'there',
+                plan,
+                reason
+            }),
+        });
+        console.log(`✅ Payment failed email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send payment failed email:', error);
+        return false;
+    }
+}

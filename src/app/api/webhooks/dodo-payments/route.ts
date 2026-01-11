@@ -1,6 +1,6 @@
 import { Webhooks } from "@dodopayments/nextjs";
 import { db } from "@/lib/db";
-import { sendSubscriptionEmails } from "@/lib/email";
+import { sendSubscriptionEmails, sendRenewalEmail, sendPaymentFailedEmail } from "@/lib/email";
 
 export const POST = Webhooks({
     webhookKey: process.env.NEXT_PUBLIC_DODO_PAYMENTS_WEBHOOK_KEY || 'dummy_webhook_key_for_build',
@@ -20,21 +20,25 @@ export const POST = Webhooks({
                 'month';
             const plan = billingInterval === 'year' ? 'yearly' : 'monthly';
 
-            // Logic Audit: Ensure one subscription per user (prevent reuse/stealing)
+            // Check if this is a new subscription or renewal
+            let isRenewal = false;
             if (subscriptionId) {
                 const existingUser = await db.user.findFirst({
                     where: { subscriptionId: subscriptionId }
                 });
 
-                if (existingUser && existingUser.email !== customerEmail) {
-                    console.warn(`⚠️ Security Alert: Subscription ${subscriptionId} is being reused! Moved from ${existingUser.email} to ${customerEmail}.`);
-                    // Optional: Revoke from old user or block. For now, we allow the move but log it carefully.
-                    // To be strict, we could return here, but typically payment processors are source of truth.
-                    // We will clear the old user's subscription to prevent double-access.
-                    await db.user.update({
-                        where: { id: existingUser.id },
-                        data: { subscriptionId: null, subscriptionStatus: 'free', subscriptionPlan: null }
-                    });
+                if (existingUser) {
+                    if (existingUser.email === customerEmail) {
+                        // Same user, same subscription - this is a renewal
+                        isRenewal = true;
+                    } else {
+                        // Different user trying to use same subscription (security issue)
+                        console.warn(`⚠️ Security Alert: Subscription ${subscriptionId} is being reused! Moved from ${existingUser.email} to ${customerEmail}.`);
+                        await db.user.update({
+                            where: { id: existingUser.id },
+                            data: { subscriptionId: null, subscriptionStatus: 'free', subscriptionPlan: null }
+                        });
+                    }
                 }
             }
 
@@ -57,15 +61,24 @@ export const POST = Webhooks({
                         subscriptionEndsAt: subscriptionEndsAt,
                     }
                 });
-                console.log(`Subscription activated for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
+                console.log(`Subscription ${isRenewal ? 'renewed' : 'activated'} for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
 
-                // Send welcome and receipt emails
-                await sendSubscriptionEmails({
-                    email: customerEmail,
-                    name: customerName || undefined,
-                    plan: plan as 'monthly' | 'yearly',
-                    subscriptionId: subscriptionId || 'unknown',
-                });
+                // Send appropriate email based on new vs renewal
+                if (isRenewal) {
+                    await sendRenewalEmail({
+                        email: customerEmail,
+                        name: customerName || undefined,
+                        plan: plan as 'monthly' | 'yearly',
+                        nextRenewalDate: subscriptionEndsAt,
+                    });
+                } else {
+                    await sendSubscriptionEmails({
+                        email: customerEmail,
+                        name: customerName || undefined,
+                        plan: plan as 'monthly' | 'yearly',
+                        subscriptionId: subscriptionId || 'unknown',
+                    });
+                }
             }
         } catch (error) {
             console.error('Error processing subscription active webhook:', error);
@@ -121,6 +134,12 @@ export const POST = Webhooks({
             const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
 
             if (subscriptionId) {
+                // Find user with this subscription
+                const user = await db.user.findFirst({
+                    where: { subscriptionId: subscriptionId },
+                    select: { email: true, subscriptionPlan: true }
+                });
+
                 await db.user.updateMany({
                     where: { subscriptionId: subscriptionId },
                     data: {
@@ -128,6 +147,15 @@ export const POST = Webhooks({
                     }
                 });
                 console.log(`Subscription on hold: ${subscriptionId}`);
+
+                // Send payment failed email
+                if (user?.email) {
+                    await sendPaymentFailedEmail({
+                        email: user.email,
+                        plan: (user.subscriptionPlan as 'monthly' | 'yearly') || 'monthly',
+                        reason: 'Payment could not be processed',
+                    });
+                }
             }
         } catch (error) {
             console.error('Error processing subscription on hold webhook:', error);
@@ -142,7 +170,30 @@ export const POST = Webhooks({
 
     // Called when payment fails
     onPaymentFailed: async (payload) => {
-        const data = payload.data as any;
-        console.log(`Payment failed: ${data.payment_id}`);
+        try {
+            const data = payload.data as any;
+            console.log(`Payment failed: ${data.payment_id}`);
+
+            // Try to find user associated with this payment and send email
+            const customerEmail = data.customer?.email;
+            if (customerEmail) {
+                const user = await db.user.findFirst({
+                    where: { email: customerEmail },
+                    select: { subscriptionPlan: true }
+                });
+
+                if (user?.subscriptionPlan) {
+                    await sendPaymentFailedEmail({
+                        email: customerEmail,
+                        name: data.customer?.name,
+                        plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                        reason: data.failure_reason || 'Payment was declined',
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error processing payment failed webhook:', error);
+        }
     },
 });
+
