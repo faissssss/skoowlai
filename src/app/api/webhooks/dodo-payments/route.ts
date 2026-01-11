@@ -1,6 +1,6 @@
 import { Webhooks } from "@dodopayments/nextjs";
 import { db } from "@/lib/db";
-import { sendSubscriptionEmails, sendRenewalEmail, sendPaymentFailedEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendReceiptEmail, sendRenewalEmail, sendPaymentFailedEmail } from "@/lib/email";
 
 export const POST = Webhooks({
     webhookKey: process.env.NEXT_PUBLIC_DODO_PAYMENTS_WEBHOOK_KEY || 'dummy_webhook_key_for_build',
@@ -72,7 +72,7 @@ export const POST = Webhooks({
                         nextRenewalDate: subscriptionEndsAt,
                     });
                 } else {
-                    await sendSubscriptionEmails({
+                    await sendWelcomeEmail({
                         email: customerEmail,
                         name: customerName || undefined,
                         plan: plan as 'monthly' | 'yearly',
@@ -164,8 +164,29 @@ export const POST = Webhooks({
 
     // Called when payment succeeds
     onPaymentSucceeded: async (payload) => {
-        const data = payload.data as any;
-        console.log(`Payment succeeded: ${data.payment_id}`);
+        try {
+            const data = payload.data as any;
+            console.log(`Payment succeeded: ${data.payment_id}`);
+
+            // Send receipt email
+            const customerEmail = data.customer?.email;
+            const billingInterval = data.recurring_pre_tax_amount?.interval ||
+                data.subscription?.billing?.interval ||
+                'month';
+            const plan = billingInterval === 'year' ? 'yearly' : 'monthly';
+            const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
+
+            if (customerEmail) {
+                await sendReceiptEmail({
+                    email: customerEmail,
+                    name: data.customer?.name,
+                    plan: plan,
+                    subscriptionId: subscriptionId || 'unknown'
+                });
+            }
+        } catch (error) {
+            console.error('Error processing payment succeeded webhook:', error);
+        }
     },
 
     // Called when payment fails (works for both first-time and renewal attempts)
