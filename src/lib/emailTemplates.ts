@@ -591,3 +591,74 @@ export function paymentFailedEmailTemplate({
 
     return emailWrapper(content);
 }
+
+/**
+ * Trial ending reminder email
+ */
+export function trialEndingEmailTemplate({
+    name,
+    daysRemaining
+}: {
+    name: string;
+    daysRemaining: number;
+}) {
+    const userName = name || 'there';
+
+    const content = `
+        ${emailHeader()}
+        
+        <tr>
+            <td style="padding: 40px;">
+                <!-- Header -->
+                <h1 style="color: ${COLORS.text}; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Your Free Trial is Ending Soon ⏳
+                </h1>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; margin: 0 0 32px; text-align: center; line-height: 1.5;">
+                    Just ${daysRemaining} days left in your trial
+                </p>
+
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                    Hey ${userName}! 👋
+                </p>
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
+                    We hope you've been enjoying the Pro features! Your free trial will end in <strong>${daysRemaining} days</strong>.
+                </p>
+
+                <!-- Info Box -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #f5f3ff, #eef2ff); border-radius: 12px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 20px 24px;">
+                            <p style="color: ${COLORS.text}; font-size: 14px; margin: 0 0 8px; line-height: 1.5;">
+                                💳 <strong>What happens next?</strong>
+                            </p>
+                            <p style="color: ${COLORS.textLight}; font-size: 14px; margin: 0; line-height: 1.5;">
+                                If you love Skoowl AI Pro, do nothing! You'll be automatically upgraded to the paid plan so you don't lose access.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Cancel Option -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: ${COLORS.background}; border-radius: 8px; margin-bottom: 32px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: ${COLORS.textLight}; font-size: 14px; margin: 0; line-height: 1.5;">
+                                Not for you? You can cancel anytime before the trial ends to avoid being charged.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Manage Subscription →', 'https://skoowlai.com/dashboard/settings')}
+
+                <p style="color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    Thank you for trying Skoowl AI! 📚
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}

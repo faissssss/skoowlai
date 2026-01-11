@@ -20,6 +20,30 @@ export const POST = Webhooks({
                 'month';
             const plan = billingInterval === 'year' ? 'yearly' : 'monthly';
 
+            // Check if this is a trial
+            // Dodo/PayPal trials usually have 0 amount charged initially OR status 'trialing'
+            const isTrial = data.status === 'trialing' ||
+                (data.payment_amount === 0) ||
+                (data.subscription?.status === 'trialing');
+
+            // Get next billing date / trial end date
+            // Prefer explicit next_billing_date from payload, fall back to calculation
+            let subscriptionEndsAt = data.next_billing_date ? new Date(data.next_billing_date) :
+                data.subscription?.next_billing_date ? new Date(data.subscription.next_billing_date) :
+                    null;
+
+            if (!subscriptionEndsAt) {
+                subscriptionEndsAt = new Date();
+                if (isTrial) {
+                    // Default trial length fallback (e.g. 7 days) if not provided
+                    subscriptionEndsAt.setDate(subscriptionEndsAt.getDate() + 7);
+                } else if (plan === 'yearly') {
+                    subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
+                } else {
+                    subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
+                }
+            }
+
             // Check if this is a new subscription or renewal
             let isRenewal = false;
             if (subscriptionId) {
@@ -43,25 +67,17 @@ export const POST = Webhooks({
             }
 
             if (customerEmail) {
-                // Calculate subscription end date based on plan
-                const subscriptionEndsAt = new Date();
-                if (plan === 'yearly') {
-                    subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
-                } else {
-                    subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
-                }
-
                 await db.user.updateMany({
                     where: { email: customerEmail },
                     data: {
-                        subscriptionStatus: 'active',
+                        subscriptionStatus: isTrial ? 'trialing' : 'active',
                         subscriptionId: subscriptionId,
                         customerId: customerId,
                         subscriptionPlan: plan,
                         subscriptionEndsAt: subscriptionEndsAt,
                     }
                 });
-                console.log(`Subscription ${isRenewal ? 'renewed' : 'activated'} for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
+                console.log(`Subscription ${isRenewal ? 'renewed' : (isTrial ? 'trial started' : 'activated')} for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
 
                 // Send appropriate email based on new vs renewal
                 if (isRenewal) {

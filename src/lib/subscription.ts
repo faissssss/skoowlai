@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 
-export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'on_hold' | 'expired';
+export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'on_hold' | 'expired' | 'trialing';
 export type SubscriptionPlan = 'monthly' | 'yearly' | null;
 
 export interface UserSubscription {
@@ -56,7 +56,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             };
         }
 
-        const isActive = user.subscriptionStatus === 'active';
+        const isActive = user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
 
         return {
             status: user.subscriptionStatus as SubscriptionStatus,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sendSubscriptionEmails } from '@/lib/email';
+import { sendSubscriptionEmails, sendWelcomeEmail, sendReceiptEmail } from '@/lib/email';
 import { requireAuth } from '@/lib/auth';
 
 /**
@@ -11,6 +11,8 @@ async function verifyPayPalSubscription(subscriptionId: string): Promise<{
     isValid: boolean;
     status?: string;
     planId?: string;
+    isTrial?: boolean;
+    nextBillingDate?: Date;
     error?: string;
 }> {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
@@ -64,10 +66,31 @@ async function verifyPayPalSubscription(subscriptionId: string): Promise<{
         const validStatuses = ['ACTIVE', 'APPROVED']; // APPROVED = just created, ACTIVE = recurring
         const isValid = validStatuses.includes(subData.status);
 
+        // Detect Trial
+        // Heuristic: If next_billing_time is significantly closer than the plan interval
+        // E.g. 7 days vs 1 month
+        let isTrial = false;
+        let nextBillingDate: Date | undefined;
+
+        if (subData.billing_info?.next_billing_time && subData.start_time) {
+            const startTime = new Date(subData.start_time);
+            nextBillingDate = new Date(subData.billing_info.next_billing_time);
+
+            const diffTime = Math.abs(nextBillingDate.getTime() - startTime.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            // If duration is le 14 days, assume it's a trial (since monthly is ~30)
+            if (diffDays <= 15) {
+                isTrial = true;
+            }
+        }
+
         return {
             isValid,
             status: subData.status,
             planId: subData.plan_id,
+            isTrial,
+            nextBillingDate,
             error: isValid ? undefined : `Subscription status is ${subData.status}, not ACTIVE`,
         };
     } catch (error) {
@@ -102,22 +125,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log(`✅ PayPal subscription verified: ${subscriptionId} (status: ${verification.status})`);
+        console.log(`✅ PayPal subscription verified: ${subscriptionId} (status: ${verification.status}, trial: ${verification.isTrial})`);
 
         // 3. Calculate subscription end date based on plan
-        const subscriptionEndsAt = new Date();
+        // Use nextBillingDate from PayPal if available, otherwise calculate
+        let subscriptionEndsAt = verification.nextBillingDate;
+
         const planType = plan || 'monthly';
-        if (planType === 'yearly') {
-            subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
-        } else {
-            subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
+        if (!subscriptionEndsAt) {
+            subscriptionEndsAt = new Date();
+            if (verification.isTrial) {
+                subscriptionEndsAt.setDate(subscriptionEndsAt.getDate() + 7); // Default fallback
+            } else if (planType === 'yearly') {
+                subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
+            } else {
+                subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
+            }
         }
 
         // 4. Update authenticated user's subscription
         await db.user.update({
             where: { id: user.id },
             data: {
-                subscriptionStatus: 'active',
+                subscriptionStatus: verification.isTrial ? 'trialing' : 'active',
                 subscriptionId: subscriptionId,
                 subscriptionPlan: planType,
                 subscriptionEndsAt: subscriptionEndsAt,
@@ -129,12 +159,23 @@ export async function POST(request: NextRequest) {
 
         // 5. Send welcome and receipt emails
         if (user.email) {
-            await sendSubscriptionEmails({
-                email: user.email,
-                name: name || undefined,
-                plan: planType,
-                subscriptionId,
-            });
+            if (verification.isTrial) {
+                // For trials, only send welcome email (no receipt for $0)
+                await sendWelcomeEmail({
+                    email: user.email,
+                    name: name || undefined,
+                    plan: planType,
+                    subscriptionId,
+                });
+            } else {
+                // For paid, send both
+                await sendSubscriptionEmails({
+                    email: user.email,
+                    name: name || undefined,
+                    plan: planType,
+                    subscriptionId,
+                });
+            }
         }
 
         return NextResponse.json({ success: true });

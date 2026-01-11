@@ -5,7 +5,8 @@ import {
     reminderEmailTemplate,
     cancellationEmailTemplate,
     renewalEmailTemplate,
-    paymentFailedEmailTemplate
+    paymentFailedEmailTemplate,
+    trialEndingEmailTemplate
 } from './emailTemplates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -63,26 +64,31 @@ export async function sendReceiptEmail({ email, name, plan, subscriptionId }: Su
 }
 
 /**
- * Send subscription renewal reminder (7 days and 3 days before)
+ * Send subscription reminder (renewal or trial ending)
  */
 export async function sendSubscriptionReminderEmail({
     email,
     name,
     plan,
-    daysRemaining
-}: SubscriptionEmailData & { daysRemaining: number }) {
+    daysRemaining,
+    isTrial = false
+}: SubscriptionEmailData & { daysRemaining: number; isTrial?: boolean }) {
     try {
+        const subject = isTrial
+            ? `Your Skoowl AI Free Trial ends in ${daysRemaining} days ⏳`
+            : `⏰ Your Skoowl AI subscription renews in ${daysRemaining} days`;
+
+        const html = isTrial
+            ? trialEndingEmailTemplate({ name: name || 'there', daysRemaining })
+            : reminderEmailTemplate({ name: name || 'there', plan, daysRemaining });
+
         await resend.emails.send({
             from: FROM_EMAIL,
             to: email,
-            subject: `⏰ Your Skoowl AI subscription renews in ${daysRemaining} days`,
-            html: reminderEmailTemplate({
-                name: name || 'there',
-                plan,
-                daysRemaining
-            }),
+            subject: subject,
+            html: html,
         });
-        console.log(`✅ Reminder email sent to ${email}`);
+        console.log(`✅ ${isTrial ? 'Trial ending' : 'Renewal'} reminder email sent to ${email}`);
         return true;
     } catch (error) {
         console.error('❌ Failed to send reminder email:', error);

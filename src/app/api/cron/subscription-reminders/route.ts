@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
             // Find users whose subscriptions end on target date
             const users = await db.user.findMany({
                 where: {
-                    subscriptionStatus: 'active',
+                    subscriptionStatus: { in: ['active', 'trialing'] },
                     subscriptionEndsAt: {
                         gte: targetDate,
                         lte: targetDateEnd,
@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
                 select: {
                     id: true,
                     email: true,
+                    subscriptionStatus: true,
                     subscriptionPlan: true,
                     subscriptionId: true,
                     subscriptionEndsAt: true,
@@ -51,12 +52,15 @@ export async function GET(req: NextRequest) {
             for (const user of users) {
                 if (!user.email || !user.subscriptionPlan) continue;
 
+                const isTrial = user.subscriptionStatus === 'trialing';
+
                 await sendSubscriptionReminderEmail({
                     email: user.email,
                     name: undefined,
                     plan: user.subscriptionPlan as 'monthly' | 'yearly',
                     subscriptionId: user.subscriptionId || 'unknown',
                     daysRemaining: days,
+                    isTrial: isTrial,
                 });
                 emailsSent++;
                 console.log(`Sent ${days}-day reminder to ${user.email}`);

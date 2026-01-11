@@ -134,10 +134,11 @@ function SubscriptionCard() {
         );
     }
 
-    const isActive = subscription?.status === 'active';
+    const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+    const isTrial = subscription?.status === 'trialing';
     const isCancelled = subscription?.status === 'cancelled';
     const features = isActive || isCancelled ? studentPlanFeatures : freePlanFeatures;
-    const planName = isActive ? 'Pro' : isCancelled ? 'Pro (Cancelled)' : 'Free Plan';
+    const planName = isActive ? (isTrial ? 'Pro (Free Trial)' : 'Pro') : isCancelled ? 'Pro (Cancelled)' : 'Free Plan';
     const endDate = subscription?.subscriptionEndsAt ? new Date(subscription.subscriptionEndsAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -166,7 +167,7 @@ function SubscriptionCard() {
                                 {planName}
                             </p>
                             <p className={`text-sm ${isActive ? 'text-violet-700 dark:text-violet-400' : isCancelled ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
-                                {isActive ? `${subscription.plan === 'yearly' ? 'Yearly' : 'Monthly'} subscription`
+                                {isActive ? (isTrial ? `Trial ends on ${endDate}` : `${subscription.plan === 'yearly' ? 'Yearly' : 'Monthly'} subscription`)
                                     : isCancelled ? `Access until ${endDate}`
                                         : 'Basic features with daily limits'}
                             </p>
@@ -177,7 +178,7 @@ function SubscriptionCard() {
                                 ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'
                                 : 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
                             }`}>
-                            {isActive ? 'Active' : isCancelled ? 'Cancelled' : 'Active'}
+                            {isActive ? (isTrial ? 'Free Trial' : 'Active') : isCancelled ? 'Cancelled' : 'Active'}
                         </span>
                     </div>
 
@@ -211,15 +212,15 @@ function SubscriptionCard() {
                             <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">
-                                        Cancel Subscription
+                                        {isTrial ? 'Cancel Trial' : 'Cancel Subscription'}
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
+                                        <AlertDialogTitle>{isTrial ? 'Cancel your free trial?' : 'Cancel your subscription?'}</AlertDialogTitle>
                                         <AlertDialogDescription className="space-y-2">
                                             <p>Your Pro features will remain active until <strong>{endDate || 'the end of your billing period'}</strong>.</p>
-                                            <p>After that, you'll be moved to the Free plan with limited daily usage.</p>
+                                            <p>{isTrial ? "You won't be charged if you cancel before the trial ends." : "After that, you'll be moved to the Free plan with limited daily usage."}</p>
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
