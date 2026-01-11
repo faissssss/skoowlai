@@ -11,6 +11,7 @@ export interface UserSubscription {
     isPro: boolean;
     customerId: string | null;
     subscriptionId: string | null;
+    subscriptionEndsAt: Date | null;
 }
 
 /**
@@ -27,6 +28,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             isPro: false,
             customerId: null,
             subscriptionId: null,
+            subscriptionEndsAt: null,
         };
     }
 
@@ -38,6 +40,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
                 subscriptionPlan: true,
                 subscriptionId: true,
                 customerId: true,
+                subscriptionEndsAt: true,
             }
         });
 
@@ -49,6 +52,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
                 isPro: false,
                 customerId: null,
                 subscriptionId: null,
+                subscriptionEndsAt: null,
             };
         }
 
@@ -61,6 +65,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             isPro: isActive,
             customerId: user.customerId,
             subscriptionId: user.subscriptionId,
+            subscriptionEndsAt: user.subscriptionEndsAt,
         };
     } catch (error) {
         console.error('Error fetching subscription:', error);
@@ -71,6 +76,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             isPro: false,
             customerId: null,
             subscriptionId: null,
+            subscriptionEndsAt: null,
         };
     }
 }

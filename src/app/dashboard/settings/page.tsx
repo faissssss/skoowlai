@@ -49,10 +49,11 @@ const studentPlanFeatures = [
 ];
 
 function SubscriptionCard() {
-    const [subscription, setSubscription] = useState<{ status: string; plan: string | null } | null>(null);
+    const [subscription, setSubscription] = useState<{ status: string; plan: string | null; subscriptionEndsAt?: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [showPricing, setShowPricing] = useState(false);
-
+    const [cancelling, setCancelling] = useState(false);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [error, setError] = useState(false);
 
     useEffect(() => {
@@ -83,6 +84,29 @@ function SubscriptionCard() {
         return () => controller.abort();
     }, []);
 
+    const handleCancelSubscription = async () => {
+        setCancelling(true);
+        try {
+            const res = await fetch('/api/subscription/cancel', { method: 'POST' });
+            if (res.ok) {
+                // Refresh subscription status
+                const subRes = await fetch('/api/subscription');
+                if (subRes.ok) {
+                    setSubscription(await subRes.json());
+                }
+                setShowCancelDialog(false);
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to cancel subscription');
+            }
+        } catch (err) {
+            console.error('Error cancelling:', err);
+            alert('Failed to cancel subscription. Please try again.');
+        } finally {
+            setCancelling(false);
+        }
+    };
+
     if (error) {
         return (
             <Card className="border-red-200 dark:border-red-900/50">
@@ -111,15 +135,21 @@ function SubscriptionCard() {
     }
 
     const isActive = subscription?.status === 'active';
-    const features = isActive ? studentPlanFeatures : freePlanFeatures;
-    const planName = isActive ? 'Pro' : 'Free Plan';
+    const isCancelled = subscription?.status === 'cancelled';
+    const features = isActive || isCancelled ? studentPlanFeatures : freePlanFeatures;
+    const planName = isActive ? 'Pro' : isCancelled ? 'Pro (Cancelled)' : 'Free Plan';
+    const endDate = subscription?.subscriptionEndsAt ? new Date(subscription.subscriptionEndsAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }) : null;
 
     return (
         <>
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        {isActive && <Crown className="w-5 h-5 text-yellow-500" />}
+                        {(isActive || isCancelled) && <Crown className="w-5 h-5 text-yellow-500" />}
                         Subscription Plan
                     </CardTitle>
                     <CardDescription>Manage your billing and subscription.</CardDescription>
@@ -127,21 +157,27 @@ function SubscriptionCard() {
                 <CardContent className="space-y-4">
                     <div className={`p-4 rounded-lg border flex items-center justify-between ${isActive
                         ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800'
-                        : 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800'
+                        : isCancelled
+                            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                            : 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800'
                         }`}>
                         <div>
-                            <p className={`font-medium ${isActive ? 'text-violet-900 dark:text-violet-300' : 'text-green-900 dark:text-green-300'}`}>
+                            <p className={`font-medium ${isActive ? 'text-violet-900 dark:text-violet-300' : isCancelled ? 'text-amber-900 dark:text-amber-300' : 'text-green-900 dark:text-green-300'}`}>
                                 {planName}
                             </p>
-                            <p className={`text-sm ${isActive ? 'text-violet-700 dark:text-violet-400' : 'text-green-700 dark:text-green-400'}`}>
-                                {isActive ? `${subscription.plan === 'yearly' ? 'Yearly' : 'Monthly'} subscription` : 'Basic features with daily limits'}
+                            <p className={`text-sm ${isActive ? 'text-violet-700 dark:text-violet-400' : isCancelled ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
+                                {isActive ? `${subscription.plan === 'yearly' ? 'Yearly' : 'Monthly'} subscription`
+                                    : isCancelled ? `Access until ${endDate}`
+                                        : 'Basic features with daily limits'}
                             </p>
                         </div>
                         <span className={`px-3 py-1 text-xs rounded-full font-medium ${isActive
                             ? 'bg-violet-200 dark:bg-violet-800 text-violet-800 dark:text-violet-200'
-                            : 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
+                            : isCancelled
+                                ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'
+                                : 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
                             }`}>
-                            Active
+                            {isActive ? 'Active' : isCancelled ? 'Cancelled' : 'Active'}
                         </span>
                     </div>
 
@@ -158,13 +194,58 @@ function SubscriptionCard() {
                         </ul>
                     </div>
 
-                    {!isActive && (
+                    {/* Upgrade button for free users */}
+                    {!isActive && !isCancelled && (
                         <Button
                             onClick={() => setShowPricing(true)}
                             className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
                         >
                             <Crown className="w-4 h-4 mr-2" />
                             Upgrade to Pro
+                        </Button>
+                    )}
+
+                    {/* Cancel button for active subscribers */}
+                    {isActive && (
+                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">
+                                        Cancel Subscription
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
+                                        <AlertDialogDescription className="space-y-2">
+                                            <p>Your Pro features will remain active until <strong>{endDate || 'the end of your billing period'}</strong>.</p>
+                                            <p>After that, you'll be moved to the Free plan with limited daily usage.</p>
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={handleCancelSubscription}
+                                            disabled={cancelling}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                        >
+                                            {cancelling ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                            Yes, Cancel
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    )}
+
+                    {/* Resubscribe button for cancelled users */}
+                    {isCancelled && (
+                        <Button
+                            onClick={() => setShowPricing(true)}
+                            className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                        >
+                            <Crown className="w-4 h-4 mr-2" />
+                            Resubscribe
                         </Button>
                     )}
                 </CardContent>

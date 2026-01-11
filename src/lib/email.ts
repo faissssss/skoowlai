@@ -2,7 +2,8 @@ import { Resend } from 'resend';
 import {
     welcomeEmailTemplate,
     receiptEmailTemplate,
-    reminderEmailTemplate
+    reminderEmailTemplate,
+    cancellationEmailTemplate
 } from './emailTemplates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -60,7 +61,7 @@ export async function sendReceiptEmail({ email, name, plan, subscriptionId }: Su
 }
 
 /**
- * Send subscription ending reminder
+ * Send subscription renewal reminder (7 days and 3 days before)
  */
 export async function sendSubscriptionReminderEmail({
     email,
@@ -72,7 +73,7 @@ export async function sendSubscriptionReminderEmail({
         await resend.emails.send({
             from: FROM_EMAIL,
             to: email,
-            subject: `⏰ Your Skoowl AI subscription ends in ${daysRemaining} days`,
+            subject: `⏰ Your Skoowl AI subscription renews in ${daysRemaining} days`,
             html: reminderEmailTemplate({
                 name: name || 'there',
                 plan,
@@ -88,6 +89,39 @@ export async function sendSubscriptionReminderEmail({
 }
 
 /**
+ * Send cancellation confirmation email
+ */
+export async function sendCancellationEmail({
+    email,
+    name,
+    plan,
+    accessEndsAt
+}: {
+    email: string;
+    name?: string;
+    plan: 'monthly' | 'yearly';
+    accessEndsAt: Date;
+}) {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '😢 Your Skoowl AI subscription has been cancelled',
+            html: cancellationEmailTemplate({
+                name: name || 'there',
+                plan,
+                accessEndsAt
+            }),
+        });
+        console.log(`✅ Cancellation email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send cancellation email:', error);
+        return false;
+    }
+}
+
+/**
  * Send both welcome and receipt emails after subscription
  */
 export async function sendSubscriptionEmails(data: SubscriptionEmailData) {
@@ -95,3 +129,4 @@ export async function sendSubscriptionEmails(data: SubscriptionEmailData) {
     const receiptResult = await sendReceiptEmail(data);
     return welcomeResult && receiptResult;
 }
+

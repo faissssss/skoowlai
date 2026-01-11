@@ -25,52 +25,41 @@ export async function GET(req: NextRequest) {
             const targetDate = new Date(today);
             targetDate.setDate(targetDate.getDate() + days);
 
-            // Format as date string for comparison (YYYY-MM-DD)
-            const targetDateStr = targetDate.toISOString().split('T')[0];
+            // Set to start of day for comparison
+            targetDate.setHours(0, 0, 0, 0);
+            const targetDateEnd = new Date(targetDate);
+            targetDateEnd.setHours(23, 59, 59, 999);
 
-            // Find users with subscriptions ending on target date
-            // This assumes you have a subscriptionEndDate field - if not, we'll need to calculate from subscription creation + plan duration
+            // Find users whose subscriptions end on target date
             const users = await db.user.findMany({
                 where: {
                     subscriptionStatus: 'active',
-                    // For now, we'll check yearly subscriptions that started approximately 1 year - X days ago
-                    // You may want to add a subscriptionEndDate field for accurate tracking
+                    subscriptionEndsAt: {
+                        gte: targetDate,
+                        lte: targetDateEnd,
+                    },
                 },
                 select: {
                     id: true,
                     email: true,
-                    // name: true, // Field does not exist in User model
                     subscriptionPlan: true,
                     subscriptionId: true,
-                    createdAt: true,
+                    subscriptionEndsAt: true,
                 }
             });
 
             for (const user of users) {
                 if (!user.email || !user.subscriptionPlan) continue;
 
-                // Calculate approximate end date based on subscription plan
-                const startDate = new Date(user.createdAt);
-                const endDate = new Date(startDate);
-                if (user.subscriptionPlan === 'yearly') {
-                    endDate.setFullYear(endDate.getFullYear() + 1);
-                } else {
-                    endDate.setMonth(endDate.getMonth() + 1);
-                }
-
-                // Check if subscription ends on target date
-                const endDateStr = endDate.toISOString().split('T')[0];
-                if (endDateStr === targetDateStr) {
-                    await sendSubscriptionReminderEmail({
-                        email: user.email,
-                        name: undefined, // name field not available in User model
-                        plan: user.subscriptionPlan as 'monthly' | 'yearly',
-                        subscriptionId: user.subscriptionId || 'unknown',
-                        daysRemaining: days,
-                    });
-                    emailsSent++;
-                    console.log(`Sent ${days}-day reminder to ${user.email}`);
-                }
+                await sendSubscriptionReminderEmail({
+                    email: user.email,
+                    name: undefined,
+                    plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                    subscriptionId: user.subscriptionId || 'unknown',
+                    daysRemaining: days,
+                });
+                emailsSent++;
+                console.log(`Sent ${days}-day reminder to ${user.email}`);
             }
         }
 

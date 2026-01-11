@@ -317,24 +317,117 @@ export function reminderEmailTemplate({
                 </p>
                 <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
                     Just a friendly reminder that your <strong style="color: ${COLORS.primary};">Pro (${planName})</strong> 
-                    subscription will end soon.
+                    subscription will renew automatically in ${daysRemaining} days.
                 </p>
+
+                <!-- Auto-renewal Notice -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #f5f3ff, #eef2ff); border-radius: 12px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 20px 24px;">
+                            <p style="color: ${COLORS.text}; font-size: 14px; margin: 0 0 8px; line-height: 1.5;">
+                                💳 <strong>Auto-renewal:</strong> Your payment method will be charged automatically on the renewal date.
+                            </p>
+                            <p style="color: ${COLORS.textLight}; font-size: 14px; margin: 0; line-height: 1.5;">
+                                If you wish to cancel, you can do so from your Settings page before the renewal date.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
 
                 <!-- Warning Box -->
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fef3c7; border-left: 4px solid ${COLORS.warning}; border-radius: 8px; margin-bottom: 32px;">
                     <tr>
                         <td style="padding: 18px 20px;">
                             <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.5;">
-                                ⚠️ After your subscription ends, you'll be moved to the Free plan with limited daily usage.
+                                ⚠️ If you cancel, you'll be moved to the Free plan with limited daily usage after your current period ends.
                             </p>
                         </td>
                     </tr>
                 </table>
 
-                ${ctaButton('Renew Subscription →', 'https://skoowlai.com/dashboard/settings#billing')}
+                ${ctaButton('Manage Subscription →', 'https://skoowlai.com/dashboard/settings')}
 
                 <p style="color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
                     Thank you for being a valued Skoowl AI student! 📚
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}
+
+/**
+ * Subscription cancellation confirmation email
+ */
+export function cancellationEmailTemplate({
+    name,
+    plan,
+    accessEndsAt
+}: {
+    name: string;
+    plan: 'monthly' | 'yearly';
+    accessEndsAt: Date;
+}) {
+    const planName = plan === 'yearly' ? 'Yearly' : 'Monthly';
+    const userName = name || 'there';
+    const endDateFormatted = accessEndsAt.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    const content = `
+        ${emailHeader()}
+        
+        <tr>
+            <td style="padding: 40px;">
+                <!-- Header -->
+                <h1 style="color: ${COLORS.text}; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Subscription Cancelled
+                </h1>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; margin: 0 0 32px; text-align: center; line-height: 1.5;">
+                    We're sorry to see you go 😢
+                </p>
+
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                    Hey ${userName}! 👋
+                </p>
+                <p style="color: ${COLORS.text}; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
+                    Your <strong style="color: ${COLORS.primary};">Pro (${planName})</strong> subscription has been cancelled.
+                </p>
+
+                <!-- Access Notice -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #f5f3ff, #eef2ff); border-radius: 12px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 20px 24px;">
+                            <p style="color: ${COLORS.text}; font-size: 14px; margin: 0 0 8px; line-height: 1.5;">
+                                ✨ <strong>Good news:</strong> You still have Pro access until:
+                            </p>
+                            <p style="color: ${COLORS.primary}; font-size: 20px; font-weight: 600; margin: 0;">
+                                ${endDateFormatted}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Info Box -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: ${COLORS.background}; border-radius: 8px; margin-bottom: 32px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: ${COLORS.textLight}; font-size: 14px; margin: 0; line-height: 1.5;">
+                                After this date, you'll be moved to the Free plan. You can resubscribe anytime to regain Pro access.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Resubscribe →', 'https://skoowlai.com/dashboard/settings')}
+
+                <p style="color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    Thank you for being part of Skoowl AI! 📚
                 </p>
             </td>
         </tr>
