@@ -14,12 +14,12 @@ async function verifyPayPalSubscription(subscriptionId: string): Promise<{
     error?: string;
 }> {
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-    const clientSecret = process.env.PAYPAL_SECRET;
+    const clientSecret = process.env.NEXT_PAYPAL_SECRET;
 
     // If no secret configured, log warning but allow (for dev/testing)
     // In production, you MUST set PAYPAL_SECRET
     if (!clientSecret) {
-        console.warn('⚠️ PAYPAL_SECRET not configured. Skipping subscription verification. THIS IS A SECURITY RISK IN PRODUCTION!');
+        console.warn('⚠️ NEXT_PAYPAL_SECRET not configured. Skipping subscription verification. THIS IS A SECURITY RISK IN PRODUCTION!');
         return { isValid: true, status: 'unverified' };
     }
 
