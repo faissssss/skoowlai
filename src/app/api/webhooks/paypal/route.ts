@@ -130,3 +130,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+/**
+ * Handle GET requests for verification (e.g. PayPal checking if URL exists)
+ */
+export async function GET() {
+    return NextResponse.json({ status: 'active', message: 'PayPal Webhook Listener is running' });
+}
