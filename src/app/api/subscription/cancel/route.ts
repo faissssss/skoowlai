@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { sendCancellationEmail } from '@/lib/email';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 /**
  * Cancel subscription API endpoint
  * Cancels the user's subscription via Dodo Payments or PayPal
  */
 export async function POST(request: NextRequest) {
+    // CSRF Protection: Check origin
+    const csrfError = checkCsrfOrigin(request);
+    if (csrfError) return csrfError;
+
     // Authenticate user
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;

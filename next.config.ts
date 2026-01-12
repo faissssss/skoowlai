@@ -2,13 +2,36 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
+    // React Compiler disabled due to Next.js 16 compatibility issues
+    // reactCompiler: true,
     serverActions: {
       bodySizeLimit: '50mb',
     },
     // Allow large file uploads through proxy (50MB)
     proxyClientMaxBodySize: '50mb',
   },
+
   serverExternalPackages: ['openai'],
+  // Enable Vercel Edge Image Optimization for external images
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com', // Common for Google Auth avatars
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // Common placeholder source
+        pathname: '/**',
+      }
+    ],
+  },
   async headers() {
     return [
       {

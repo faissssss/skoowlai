@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS='--no-deprecation' next dev",
+    "dev": "cross-env NODE_OPTIONS='--no-deprecation' next dev --turbo",
     "build": "prisma generate && prisma db push --accept-data-loss && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:email-placeholders": "npx tsx scripts/scan-email-placeholders.ts",
+    "test:pii-scanner": "npx tsx scripts/scan-pii.ts",
+    "test:security": "npm run test:email-placeholders && npm run test:pii-scanner"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.44",
@@ -92,6 +95,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.182.0",
+    "babel-plugin-react-compiler": "^1.0.0",
     "cross-env": "^10.1.0",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",

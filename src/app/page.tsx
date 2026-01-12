@@ -1,15 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Mic, Youtube, Brain, Layers, CheckCircle, Network, Sparkles, Menu, X, Upload, FileType, Headphones, Users, HelpCircle, Plus } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
-import BugReportModal from '@/components/BugReportModal';
-import FeedbackModal from '@/components/FeedbackModal';
-import PricingModal from '@/components/PricingModal';
 import Testimonials from '@/components/landing/Testimonials';
+import dynamic from 'next/dynamic';
+
+// Lazy load modals to improve initial render performance
+const PricingModal = dynamic(() => import('@/components/PricingModal'), { ssr: false });
+const BugReportModal = dynamic(() => import('@/components/BugReportModal'), { ssr: false });
+const FeedbackModal = dynamic(() => import('@/components/FeedbackModal'), { ssr: false });
 
 import { AnimatedGradientText } from '@/components/magicui/animated-gradient-text';
 import { AvatarCircles } from '@/components/magicui/avatar-circles';
@@ -204,6 +208,7 @@ export default function LandingPage() {
             height: '100%',
             pointerEvents: 'none',
           }}
+          pixelDensity={1} // Optimization: Cap at 1x to prevent 4x rendering on Retina screens
         >
           <ShaderGradient
             animate="on"
@@ -221,12 +226,12 @@ export default function LandingPage() {
             positionX={0}
             positionY={-1}
             positionZ={0}
-            reflection={0.1}
+            reflection={0} // Optimization: Disable reflections
             rotationX={0}
             rotationY={0}
             rotationZ={0}
             type="waterPlane"
-            uDensity={2}
+            uDensity={1.5} // Optimization: Slightly reduced density
             uFrequency={5}
             uSpeed={0.1}
             uStrength={3}
@@ -245,7 +250,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <img src="/skoowl-logo.png" alt="skoowl" className="w-9 h-9" />
+              <Image src="/skoowl-logo.png" alt="skoowl" width={36} height={36} className="w-9 h-9" priority />
               <span className="text-xl font-bold text-white">skoowl ai</span>
             </Link>
 
@@ -555,7 +560,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            viewport={{ once: false }}
+            viewport={{ once: true }}
             className="text-center mb-20"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
@@ -580,13 +585,6 @@ export default function LandingPage() {
                   <stop offset="50%" stopColor="#c084fc" stopOpacity="0.6" />
                   <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.3" />
                 </linearGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
               </defs>
               {/* Beam path from card 1 to card 2 */}
               <motion.path
@@ -594,7 +592,6 @@ export default function LandingPage() {
                 stroke="url(#beamGradient)"
                 strokeWidth="3"
                 fill="none"
-                filter="url(#glow)"
                 initial={{ pathLength: 0, opacity: 0 }}
                 whileInView={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 1.5, delay: 0.5 }}
@@ -606,7 +603,6 @@ export default function LandingPage() {
                 stroke="url(#beamGradient)"
                 strokeWidth="3"
                 fill="none"
-                filter="url(#glow)"
                 initial={{ pathLength: 0, opacity: 0 }}
                 whileInView={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 1.5, delay: 1 }}
@@ -746,7 +742,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            viewport={{ once: false }}
+            viewport={{ once: true }}
             className="text-center mb-24"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">

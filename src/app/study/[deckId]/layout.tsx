@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import StudyPageLayout from '@/components/study/StudyPageLayout';
-import { currentUser } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { getUserRole } from '@/lib/permissions';
 
 export default async function StudyLayout({
@@ -13,14 +13,9 @@ export default async function StudyLayout({
 }) {
     const { deckId } = await params;
 
-    // Get current Clerk user with error handling
-    let clerkUser;
-    try {
-        clerkUser = await currentUser();
-    } catch (error) {
-        console.error('Clerk authentication error:', error);
-        clerkUser = null;
-    }
+    // Get auth state (lighter than fetching full user)
+    const session = await auth();
+    const clerkId = session.userId;
 
     // Get deck with workspace info
     const deck = await db.deck.findUnique({
@@ -48,37 +43,60 @@ export default async function StudyLayout({
     // Get current user from our database
     let currentUserId: string | undefined;
     let userRole: 'OWNER' | 'EDITOR' | 'VIEWER' | null = null;
+    let dbUser = null;
 
-    if (clerkUser && clerkUser.emailAddresses.length > 0) {
-        const email = clerkUser.emailAddresses[0].emailAddress;
-
-        // Try to find user by email
-        let dbUser = await db.user.findUnique({
-            where: { email },
+    if (clerkId) {
+        // Fast path: Try finding by clerkId first
+        dbUser = await db.user.findUnique({
+            where: { clerkId },
         });
 
-        // If not found, check if there's a demo user to migrate
+        // Slow path: If not found, we might need to sync/migrate by email
         if (!dbUser) {
-            const demoUser = await db.user.findUnique({
-                where: { email: 'demo@sheesh.ai' },
-            });
+            try {
+                const clerkUser = await currentUser();
+                if (clerkUser && clerkUser.emailAddresses.length > 0) {
+                    const email = clerkUser.emailAddresses[0].emailAddress;
 
-            if (demoUser) {
-                // Migrate demo user to real user
-                console.log('Migrating demo user to', email);
-                dbUser = await db.user.update({
-                    where: { id: demoUser.id },
-                    data: { email },
-                });
-            } else {
-                // Create new user
-                console.log('Creating new user', email);
-                dbUser = await db.user.create({
-                    data: {
-                        email,
-                        clerkId: clerkUser.id,
-                    },
-                });
+                    // Check for existing user by email (migration case)
+                    const existingUserByEmail = await db.user.findUnique({
+                        where: { email },
+                    });
+
+                    if (existingUserByEmail) {
+                        // Link clerkId to existing email user
+                        console.log('Linking Clerk ID to existing user:', email);
+                        dbUser = await db.user.update({
+                            where: { id: existingUserByEmail.id },
+                            data: { clerkId },
+                        });
+                    } else {
+                        // Check for demo user
+                        const demoUser = await db.user.findUnique({
+                            where: { email: 'demo@sheesh.ai' },
+                        });
+
+                        if (demoUser) {
+                            // Migrate demo user
+                            console.log('Migrating demo user to', email);
+                            dbUser = await db.user.update({
+                                where: { id: demoUser.id },
+                                data: { email, clerkId },
+                            });
+                        } else {
+                            // Create new user
+                            console.log('Creating new user', email);
+                            dbUser = await db.user.create({
+                                data: {
+                                    email,
+                                    clerkId,
+                                },
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error during user sync/migration:', error);
             }
         }
 

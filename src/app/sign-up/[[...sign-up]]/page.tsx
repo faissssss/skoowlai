@@ -1,4 +1,10 @@
 import { SignUp } from "@clerk/nextjs";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Sign Up",
+    description: "Create your free Skoowl AI account today and start transforming your study materials into interactive notes and quizzes.",
+};
 
 export default function SignUpPage() {
     return (

@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+
+// Admin user IDs that can access this route (add your Clerk user ID here)
+const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS?.split(',') || [];
 
 export async function GET(req: NextRequest) {
-    // 1. Simple Security Check
-    // Use the CRON_SECRET or a temporary secret 'setup_2024'
+    // Security Layer 1: Clerk Authentication
+    const { userId } = await auth();
+    if (!userId) {
+        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    // Security Layer 2: Admin check (if ADMIN_USER_IDS is configured)
+    if (ADMIN_USER_IDS.length > 0 && !ADMIN_USER_IDS.includes(userId)) {
+        console.warn(`⚠️ Non-admin user ${userId} attempted to access admin route`);
+        return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
+
+    // Security Layer 3: CRON_SECRET (for automated/API access)
     const secret = req.nextUrl.searchParams.get('secret');
-    if (secret !== process.env.CRON_SECRET && secret !== 'setup_2024') {
-        return NextResponse.json({ error: 'Unauthorized. Provide ?secret=setup_2024' }, { status: 401 });
+    if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+        return NextResponse.json({ error: 'Invalid secret' }, { status: 401 });
     }
 
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;

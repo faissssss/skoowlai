@@ -160,3 +160,16 @@ model AuditLog {
   @@index([userId])
   @@index([action])
 }
+
+// Email idempotency tracking - prevents duplicate emails on webhook retries
+model SentEmail {
+  id               String   @id @default(cuid())
+  idempotencyKey   String   @unique // e.g. "welcome:sub_123" or "receipt:pay_456"
+  emailType        String   // welcome, receipt, renewal, cancellation, etc.
+  recipientEmail   String
+  createdAt        DateTime @default(now())
+
+  @@index([recipientEmail])
+  @@index([emailType])
+}
+

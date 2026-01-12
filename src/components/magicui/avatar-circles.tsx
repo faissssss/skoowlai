@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface Avatar {
     imageUrl: string;
@@ -28,13 +29,14 @@ export function AvatarCircles({
                     rel="noopener noreferrer"
                     className="relative"
                 >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        className="h-10 w-10 rounded-full border-2 border-slate-800 hover:scale-110 transition-transform"
+                    {/* Optimized by Vercel Edge */}
+                    <Image
+                        className="h-10 w-10 rounded-full border-2 border-slate-800 hover:scale-110 transition-transform object-cover"
                         src={avatar.imageUrl}
                         width={40}
                         height={40}
                         alt={`Avatar ${index + 1}`}
+                        unoptimized={avatar.imageUrl.startsWith('http')} // Only optimize if whitelisted
                     />
                 </a>
             ))}

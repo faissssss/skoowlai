@@ -83,7 +83,13 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  // Next.js auto-detects icon.ico in src/app/ - no manual config needed
+  icons: {
+    icon: [
+      { url: '/icon.png' },
+      { url: '/icon.ico', sizes: 'any' }
+    ],
+    apple: '/apple-icon.png',
+  },
 };
 
 import { ThemeProvider } from "@/components/theme-provider";

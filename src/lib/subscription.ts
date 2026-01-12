@@ -56,7 +56,15 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             };
         }
 
-        const isActive = user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
+        // Check if user has active access:
+        // 1. Active or trialing status = always active
+        // 2. Cancelled status = still active if within paid period (until subscriptionEndsAt)
+        const now = new Date();
+        const isWithinPaidPeriod = Boolean(user.subscriptionEndsAt && user.subscriptionEndsAt > now);
+        const isActive =
+            user.subscriptionStatus === 'active' ||
+            user.subscriptionStatus === 'trialing' ||
+            (user.subscriptionStatus === 'cancelled' && isWithinPaidPeriod);
 
         return {
             status: user.subscriptionStatus as SubscriptionStatus,

@@ -1,6 +1,9 @@
 import { Webhooks } from "@dodopayments/nextjs";
 import { db } from "@/lib/db";
 import { sendWelcomeEmail, sendReceiptEmail, sendRenewalEmail, sendPaymentFailedEmail } from "@/lib/email";
+import { logStateTransition, logSubscriptionChange } from "@/lib/subscriptionState";
+import { SubscriptionStatus } from "@/lib/subscription";
+import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from "@/lib/emailIdempotency";
 
 export const POST = Webhooks({
     webhookKey: process.env.NEXT_PUBLIC_DODO_PAYMENTS_WEBHOOK_KEY || 'dummy_webhook_key_for_build',
@@ -67,34 +70,93 @@ export const POST = Webhooks({
             }
 
             if (customerEmail) {
-                await db.user.updateMany({
-                    where: { email: customerEmail },
-                    data: {
-                        subscriptionStatus: isTrial ? 'trialing' : 'active',
-                        subscriptionId: subscriptionId,
-                        customerId: customerId,
-                        subscriptionPlan: plan,
-                        subscriptionEndsAt: subscriptionEndsAt,
+                // Use transaction to prevent race condition with concurrent cancel
+                await db.$transaction(async (tx) => {
+                    // Find the user to get their current state (within transaction)
+                    const user = await tx.user.findFirst({
+                        where: { email: customerEmail },
+                        select: { id: true, subscriptionStatus: true }
+                    });
+
+                    if (!user) {
+                        console.log(`No user found for email ${customerEmail}`);
+                        return;
+                    }
+
+                    const currentStatus = (user.subscriptionStatus || 'free') as SubscriptionStatus;
+                    const newStatus: SubscriptionStatus = isTrial ? 'trialing' : 'active';
+
+                    // Race condition check: If user just cancelled, don't reactivate (unless renewal)
+                    if (currentStatus === 'cancelled' && !isRenewal) {
+                        console.log(`⚠️ Skipping activation for ${customerEmail} - user has cancelled`);
+                        await logStateTransition(
+                            user.id,
+                            'cancelled',
+                            newStatus,
+                            subscriptionId || 'unknown',
+                            'dodo',
+                            { blocked: true, reason: 'User already cancelled' }
+                        );
+                        return;
+                    }
+
+                    // Validate and log the state transition
+                    const isValidTransition = await logStateTransition(
+                        user.id,
+                        currentStatus,
+                        newStatus,
+                        subscriptionId || 'unknown',
+                        'dodo',
+                        { customerEmail, plan, isRenewal, isTrial }
+                    );
+
+                    // Block invalid transitions (except for renewals which just extend the period)
+                    if (!isValidTransition && !isRenewal) {
+                        console.warn(`⚠️ Skipping state update for ${customerEmail}: invalid transition`);
+                        return;
+                    }
+
+                    await tx.user.update({
+                        where: { id: user.id },
+                        data: {
+                            subscriptionStatus: newStatus,
+                            subscriptionId: subscriptionId,
+                            customerId: customerId,
+                            subscriptionPlan: plan,
+                            subscriptionEndsAt: subscriptionEndsAt,
+                        }
+                    });
+                    console.log(`Subscription ${isRenewal ? 'renewed' : (isTrial ? 'trial started' : 'activated')} for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
+
+                    // Send appropriate email based on new vs renewal (with idempotency)
+                    const emailKey = subscriptionId || `${customerEmail}_${Date.now()}`;
+
+                    if (isRenewal) {
+                        await sendEmailWithIdempotency(
+                            generateEmailIdempotencyKey('renewal', emailKey),
+                            'renewal',
+                            customerEmail,
+                            () => sendRenewalEmail({
+                                email: customerEmail,
+                                name: customerName || undefined,
+                                plan: plan as 'monthly' | 'yearly',
+                                nextRenewalDate: subscriptionEndsAt,
+                            })
+                        );
+                    } else {
+                        await sendEmailWithIdempotency(
+                            generateEmailIdempotencyKey('welcome', emailKey),
+                            'welcome',
+                            customerEmail,
+                            () => sendWelcomeEmail({
+                                email: customerEmail,
+                                name: customerName || undefined,
+                                plan: plan as 'monthly' | 'yearly',
+                                subscriptionId: subscriptionId || 'unknown',
+                            })
+                        );
                     }
                 });
-                console.log(`Subscription ${isRenewal ? 'renewed' : (isTrial ? 'trial started' : 'activated')} for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
-
-                // Send appropriate email based on new vs renewal
-                if (isRenewal) {
-                    await sendRenewalEmail({
-                        email: customerEmail,
-                        name: customerName || undefined,
-                        plan: plan as 'monthly' | 'yearly',
-                        nextRenewalDate: subscriptionEndsAt,
-                    });
-                } else {
-                    await sendWelcomeEmail({
-                        email: customerEmail,
-                        name: customerName || undefined,
-                        plan: plan as 'monthly' | 'yearly',
-                        subscriptionId: subscriptionId || 'unknown',
-                    });
-                }
             }
         } catch (error) {
             console.error('Error processing subscription active webhook:', error);
@@ -108,6 +170,23 @@ export const POST = Webhooks({
             const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
 
             if (subscriptionId) {
+                // Find user to validate and log transition
+                const user = await db.user.findFirst({
+                    where: { subscriptionId: subscriptionId },
+                    select: { id: true, subscriptionStatus: true }
+                });
+
+                if (user) {
+                    await logStateTransition(
+                        user.id,
+                        user.subscriptionStatus as SubscriptionStatus,
+                        'cancelled',
+                        subscriptionId,
+                        'dodo',
+                        { event: 'SUBSCRIPTION_CANCELLED' }
+                    );
+                }
+
                 await db.user.updateMany({
                     where: { subscriptionId: subscriptionId },
                     data: {
@@ -128,6 +207,23 @@ export const POST = Webhooks({
             const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
 
             if (subscriptionId) {
+                // Find user to log transition
+                const user = await db.user.findFirst({
+                    where: { subscriptionId: subscriptionId },
+                    select: { id: true, subscriptionStatus: true }
+                });
+
+                if (user) {
+                    await logStateTransition(
+                        user.id,
+                        user.subscriptionStatus as SubscriptionStatus,
+                        'expired',
+                        subscriptionId,
+                        'dodo',
+                        { event: 'SUBSCRIPTION_EXPIRED' }
+                    );
+                }
+
                 await db.user.updateMany({
                     where: { subscriptionId: subscriptionId },
                     data: {
@@ -153,8 +249,19 @@ export const POST = Webhooks({
                 // Find user with this subscription
                 const user = await db.user.findFirst({
                     where: { subscriptionId: subscriptionId },
-                    select: { email: true, subscriptionPlan: true }
+                    select: { id: true, email: true, subscriptionStatus: true, subscriptionPlan: true }
                 });
+
+                if (user) {
+                    await logStateTransition(
+                        user.id,
+                        user.subscriptionStatus as SubscriptionStatus,
+                        'on_hold',
+                        subscriptionId,
+                        'dodo',
+                        { event: 'SUBSCRIPTION_ON_HOLD' }
+                    );
+                }
 
                 await db.user.updateMany({
                     where: { subscriptionId: subscriptionId },

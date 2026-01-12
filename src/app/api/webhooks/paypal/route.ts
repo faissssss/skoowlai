@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getPayPalAccessToken } from '@/lib/paypal';
+import { logStateTransition } from '@/lib/subscriptionState';
+import { SubscriptionStatus } from '@/lib/subscription';
 
 /**
  * Verify PayPal Webhook Signature
@@ -54,11 +56,13 @@ export async function POST(req: NextRequest) {
         const isValid = await verifyPayPalWebhookSignature(req, bodyText);
 
         if (!isValid) {
-            // If we are in strictly local dev without ability to verify (e.g. tunneling issues), 
-            // you might temporarily bypass this, but for production code we return 400.
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('⚠️ Webhook signature verification failed, but allowing in Development mode.');
+            // SECURITY: Only bypass if BOTH conditions are true:
+            // 1. Explicit opt-in via SKIP_WEBHOOK_VERIFICATION=true
+            // 2. Must be in development mode
+            if (process.env.SKIP_WEBHOOK_VERIFICATION === 'true' && process.env.NODE_ENV === 'development') {
+                console.warn('⚠️ Webhook signature verification failed, bypassing in DEV mode (SKIP_WEBHOOK_VERIFICATION=true)');
             } else {
+                console.error('PayPal webhook signature verification failed');
                 return NextResponse.json({ error: 'Invalid Signature' }, { status: 400 });
             }
         }
@@ -74,13 +78,43 @@ export async function POST(req: NextRequest) {
             const subscriptionId = resource.billing_agreement_id;
 
             if (subscriptionId) {
-                // Find user
-                const user = await db.user.findFirst({
-                    where: { subscriptionId: subscriptionId }
-                });
+                // Use transaction to prevent race condition with concurrent cancel
+                await db.$transaction(async (tx) => {
+                    // Find user with lock
+                    const user = await tx.user.findFirst({
+                        where: { subscriptionId: subscriptionId }
+                    });
 
-                if (user) {
-                    // Update subscription
+                    if (!user) {
+                        console.warn(`User not found for subscription ID: ${subscriptionId}`);
+                        return;
+                    }
+
+                    // Race condition check: If user just cancelled, don't reactivate
+                    if (user.subscriptionStatus === 'cancelled') {
+                        console.log(`⚠️ Skipping payment activation for ${user.id} - user has cancelled`);
+                        // Log the blocked transition
+                        await logStateTransition(
+                            user.id,
+                            'cancelled',
+                            'active',
+                            subscriptionId,
+                            'paypal',
+                            { event: 'PAYMENT.SALE.COMPLETED', blocked: true, reason: 'User already cancelled' }
+                        );
+                        return;
+                    }
+
+                    // Log state transition
+                    await logStateTransition(
+                        user.id,
+                        user.subscriptionStatus as SubscriptionStatus,
+                        'active',
+                        subscriptionId,
+                        'paypal',
+                        { event: 'PAYMENT.SALE.COMPLETED', plan: user.subscriptionPlan }
+                    );
+
                     // Determine duration based on plan
                     let newEndDate = new Date();
                     if (user.subscriptionPlan === 'yearly') {
@@ -89,21 +123,37 @@ export async function POST(req: NextRequest) {
                         newEndDate.setMonth(newEndDate.getMonth() + 1);
                     }
 
-                    await db.user.update({
+                    await tx.user.update({
                         where: { id: user.id },
                         data: {
-                            subscriptionStatus: 'active', // Ensure it's active (removes 'trialing' or 'cancelled')
+                            subscriptionStatus: 'active',
                             subscriptionEndsAt: newEndDate
                         }
                     });
                     console.log(`✅ Extended subscription for user ${user.id} until ${newEndDate.toISOString()}`);
-                } else {
-                    console.warn(`User not found for subscription ID: ${subscriptionId}`);
-                }
+                });
             }
         }
         else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
             const subscriptionId = resource.id;
+
+            // Log state transition
+            const user = await db.user.findFirst({
+                where: { subscriptionId: subscriptionId },
+                select: { id: true, subscriptionStatus: true }
+            });
+
+            if (user) {
+                await logStateTransition(
+                    user.id,
+                    user.subscriptionStatus as SubscriptionStatus,
+                    'cancelled',
+                    subscriptionId,
+                    'paypal',
+                    { event: 'BILLING.SUBSCRIPTION.CANCELLED' }
+                );
+            }
+
             // Update status to confirmed cancelled
             await db.user.updateMany({
                 where: { subscriptionId: subscriptionId },
@@ -113,12 +163,28 @@ export async function POST(req: NextRequest) {
         }
         else if (eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' || eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
             const subscriptionId = resource.id;
+
+            // Log state transition
+            const user = await db.user.findFirst({
+                where: { subscriptionId: subscriptionId },
+                select: { id: true, subscriptionStatus: true }
+            });
+
+            if (user) {
+                await logStateTransition(
+                    user.id,
+                    user.subscriptionStatus as SubscriptionStatus,
+                    'expired',
+                    subscriptionId,
+                    'paypal',
+                    { event: eventType }
+                );
+            }
+
             // Update status
             await db.user.updateMany({
                 where: { subscriptionId: subscriptionId },
-                data: { subscriptionStatus: 'expired' } // or 'cancelled' if 'expired' not valid in your logic? 
-                // User model is String, so 'expired' is fine, but check existing logic handling 'expired'.
-                // 'isActive' usually checks 'active' | 'trialing'. So 'expired' = no access. Correct.
+                data: { subscriptionStatus: 'expired' }
             });
             console.log(`Subscription ${eventType}: ${subscriptionId}`);
         }
@@ -126,8 +192,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true });
 
     } catch (error: any) {
+        // Log full error server-side for debugging
         console.error('Webhook processing error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        // Return generic message to client (error masking)
+        return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
     }
 }
 

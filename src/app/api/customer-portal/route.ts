@@ -1,6 +1,8 @@
 import { CustomerPortal } from "@dodopayments/nextjs";
 
+// SECURITY: Using server-side only API key (not NEXT_PUBLIC_)
 export const GET = CustomerPortal({
-    bearerToken: process.env.NEXT_PUBLIC_DODO_PAYMENTS_API_KEY || 'dummy_token_for_build',
-    environment: (process.env.NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT as "test_mode" | "live_mode") || 'test_mode',
+    bearerToken: process.env.DODO_PAYMENTS_API_KEY || '',
+    environment: (process.env.DODO_PAYMENTS_ENVIRONMENT as "test_mode" | "live_mode") || 'live_mode',
 });
+

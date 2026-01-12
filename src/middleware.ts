@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 // Define protected routes that require authentication
 const isProtectedRoute = createRouteMatcher([
@@ -19,6 +20,11 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+    // Force HTTPS in production
+    if (process.env.NODE_ENV === "production" && req.headers.get("x-forwarded-proto") === "http") {
+        return NextResponse.redirect(new URL(req.url.replace("http://", "https://"), req.url), 301);
+    }
+
     // Protect routes that require authentication
     if (isProtectedRoute(req)) {
         await auth.protect();

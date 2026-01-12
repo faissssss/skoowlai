@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
+import Image from 'next/image';
 
 interface PricingModalProps {
     isOpen: boolean;
@@ -362,7 +363,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-8 rounded bg-white/10 flex items-center justify-center">
                                             {/* PayPal Logo */}
-                                            <img src="/paypal-logo.png" alt="PayPal" className="h-6 w-6 object-contain" />
+                                            <Image src="/paypal-logo.png" alt="PayPal" width={24} height={24} className="h-6 w-6 object-contain" />
                                         </div>
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-semibold text-white">Pay with PayPal</div>
