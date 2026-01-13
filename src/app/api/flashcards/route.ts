@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
         // Strict input validation
         const generateFlashcardsSchema = z.object({
-            deckId: z.string().uuid(),
+            deckId: z.string(), // IDs are CUIDs, not UUIDs
             count: z.number().int().min(1).max(50).default(10),
             focus: z.enum(['terms', 'concepts', 'data', 'mix']).default('mix'),
             format: z.enum(['classic', 'qa', 'practical']).default('classic'),

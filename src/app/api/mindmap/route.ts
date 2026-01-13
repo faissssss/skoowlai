@@ -515,7 +515,7 @@ export async function POST(req: NextRequest) {
 
         // Strict input validation
         const generateMindMapSchema = z.object({
-            deckId: z.string().uuid(),
+            deckId: z.string(), // IDs are CUIDs from Prisma
             depth: z.enum(['shallow', 'medium', 'deep']).default('medium'),
             style: z.enum(['mindmap', 'tree', 'logic', 'timeline', 'fishbone', 'grid']).default('mindmap'),
             colorTheme: z.enum(['indigo', 'emerald', 'amber', 'rose', 'cyan', 'violet']).default('indigo')

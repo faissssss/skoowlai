@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
         // Strict input validation
         const generateQuizSchema = z.object({
-            deckId: z.string().uuid(),
+            deckId: z.string(), // IDs are CUIDs from Prisma
             count: z.number().int().min(1).max(50).default(10),
             type: z.enum(['multiple-choice', 'true-false', 'fill-in', 'mixed']).default('multiple-choice'),
             difficulty: z.enum(['basic', 'intermediate', 'advanced', 'expert']).default('basic'),
