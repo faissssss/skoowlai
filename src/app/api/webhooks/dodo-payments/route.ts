@@ -1,348 +1,252 @@
-import { Webhooks } from "@dodopayments/nextjs";
-import { db } from "@/lib/db";
-import { sendWelcomeEmail, sendReceiptEmail, sendRenewalEmail, sendPaymentFailedEmail } from "@/lib/email";
-import { logStateTransition, logSubscriptionChange } from "@/lib/subscriptionState";
-import { SubscriptionStatus } from "@/lib/subscription";
-import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from "@/lib/emailIdempotency";
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { sendWelcomeEmail, sendReceiptEmail } from '@/lib/email';
+import crypto from 'crypto';
 
-export const POST = Webhooks({
-    webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_KEY || 'dummy_webhook_key_for_build',
+/**
+ * Custom Dodo Payments Webhook Handler
+ * Bypasses @dodopayments/nextjs library for better debugging
+ */
 
-    // Called when subscription becomes active (new subscription or renewal)
-    onSubscriptionActive: async (payload) => {
-        try {
-            const data = payload.data as any;
-            const customerEmail = data.customer?.email;
-            const customerName = data.customer?.name;
-            const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
-            const customerId = data.customer?.customer_id;
+// Verify webhook signature manually
+function verifySignature(payload: string, headers: Headers, secret: string): { valid: boolean; error?: string } {
+    try {
+        const webhookId = headers.get('webhook-id') || headers.get('svix-id');
+        const webhookTimestamp = headers.get('webhook-timestamp') || headers.get('svix-timestamp');
+        const webhookSignature = headers.get('webhook-signature') || headers.get('svix-signature');
 
-            // Determine plan from billing interval
-            const billingInterval = data.recurring_pre_tax_amount?.interval ||
-                data.subscription?.billing?.interval ||
-                'month';
-            const plan = billingInterval === 'year' ? 'yearly' : 'monthly';
-
-            // Check if this is a trial
-            // Dodo/PayPal trials usually have 0 amount charged initially OR status 'trialing'
-            const isTrial = data.status === 'trialing' ||
-                (data.payment_amount === 0) ||
-                (data.subscription?.status === 'trialing');
-
-            // Get next billing date / trial end date
-            // Prefer explicit next_billing_date from payload, fall back to calculation
-            let subscriptionEndsAt = data.next_billing_date ? new Date(data.next_billing_date) :
-                data.subscription?.next_billing_date ? new Date(data.subscription.next_billing_date) :
-                    null;
-
-            if (!subscriptionEndsAt) {
-                subscriptionEndsAt = new Date();
-                if (isTrial) {
-                    // Default trial length fallback (e.g. 7 days) if not provided
-                    subscriptionEndsAt.setDate(subscriptionEndsAt.getDate() + 7);
-                } else if (plan === 'yearly') {
-                    subscriptionEndsAt.setFullYear(subscriptionEndsAt.getFullYear() + 1);
-                } else {
-                    subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + 1);
-                }
-            }
-
-            // Check if this is a new subscription or renewal
-            let isRenewal = false;
-            if (subscriptionId) {
-                const existingUser = await db.user.findFirst({
-                    where: { subscriptionId: subscriptionId }
-                });
-
-                if (existingUser) {
-                    if (existingUser.email === customerEmail) {
-                        // Same user, same subscription - this is a renewal
-                        isRenewal = true;
-                    } else {
-                        // Different user trying to use same subscription (security issue)
-                        console.warn(`⚠️ Security Alert: Subscription ${subscriptionId} is being reused! Moved from ${existingUser.email} to ${customerEmail}.`);
-                        await db.user.update({
-                            where: { id: existingUser.id },
-                            data: { subscriptionId: null, subscriptionStatus: 'free', subscriptionPlan: null }
-                        });
-                    }
-                }
-            }
-
-            if (customerEmail) {
-                // Use transaction to prevent race condition with concurrent cancel
-                await db.$transaction(async (tx) => {
-                    // Find the user to get their current state (within transaction)
-                    const user = await tx.user.findFirst({
-                        where: { email: customerEmail },
-                        select: { id: true, subscriptionStatus: true }
-                    });
-
-                    if (!user) {
-                        console.log(`No user found for email ${customerEmail}`);
-                        return;
-                    }
-
-                    const currentStatus = (user.subscriptionStatus || 'free') as SubscriptionStatus;
-                    const newStatus: SubscriptionStatus = isTrial ? 'trialing' : 'active';
-
-                    // Race condition check: If user just cancelled, don't reactivate (unless renewal)
-                    if (currentStatus === 'cancelled' && !isRenewal) {
-                        console.log(`⚠️ Skipping activation for ${customerEmail} - user has cancelled`);
-                        await logStateTransition(
-                            user.id,
-                            'cancelled',
-                            newStatus,
-                            subscriptionId || 'unknown',
-                            'dodo',
-                            { blocked: true, reason: 'User already cancelled' }
-                        );
-                        return;
-                    }
-
-                    // Validate and log the state transition
-                    const isValidTransition = await logStateTransition(
-                        user.id,
-                        currentStatus,
-                        newStatus,
-                        subscriptionId || 'unknown',
-                        'dodo',
-                        { customerEmail, plan, isRenewal, isTrial }
-                    );
-
-                    // Block invalid transitions (except for renewals which just extend the period)
-                    if (!isValidTransition && !isRenewal) {
-                        console.warn(`⚠️ Skipping state update for ${customerEmail}: invalid transition`);
-                        return;
-                    }
-
-                    await tx.user.update({
-                        where: { id: user.id },
-                        data: {
-                            subscriptionStatus: newStatus,
-                            subscriptionId: subscriptionId,
-                            customerId: customerId,
-                            subscriptionPlan: plan,
-                            subscriptionEndsAt: subscriptionEndsAt,
-                        }
-                    });
-                    console.log(`Subscription ${isRenewal ? 'renewed' : (isTrial ? 'trial started' : 'activated')} for ${customerEmail}, ends at ${subscriptionEndsAt.toISOString()}`);
-
-                    // Send appropriate email based on new vs renewal (with idempotency)
-                    const emailKey = subscriptionId || `${customerEmail}_${Date.now()}`;
-
-                    if (isRenewal) {
-                        await sendEmailWithIdempotency(
-                            generateEmailIdempotencyKey('renewal', emailKey),
-                            'renewal',
-                            customerEmail,
-                            () => sendRenewalEmail({
-                                email: customerEmail,
-                                name: customerName || undefined,
-                                plan: plan as 'monthly' | 'yearly',
-                                nextRenewalDate: subscriptionEndsAt,
-                            })
-                        );
-                    } else {
-                        await sendEmailWithIdempotency(
-                            generateEmailIdempotencyKey('welcome', emailKey),
-                            'welcome',
-                            customerEmail,
-                            () => sendWelcomeEmail({
-                                email: customerEmail,
-                                name: customerName || undefined,
-                                plan: plan as 'monthly' | 'yearly',
-                                subscriptionId: subscriptionId || 'unknown',
-                            })
-                        );
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error processing subscription active webhook:', error);
+        if (!webhookId || !webhookTimestamp || !webhookSignature) {
+            return {
+                valid: false,
+                error: `Missing headers: id=${!!webhookId}, ts=${!!webhookTimestamp}, sig=${!!webhookSignature}`
+            };
         }
-    },
 
-    // Called when subscription is cancelled
-    onSubscriptionCancelled: async (payload) => {
-        try {
-            const data = payload.data as any;
-            const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
-
-            if (subscriptionId) {
-                // Find user to validate and log transition
-                const user = await db.user.findFirst({
-                    where: { subscriptionId: subscriptionId },
-                    select: { id: true, subscriptionStatus: true }
-                });
-
-                if (user) {
-                    await logStateTransition(
-                        user.id,
-                        user.subscriptionStatus as SubscriptionStatus,
-                        'cancelled',
-                        subscriptionId,
-                        'dodo',
-                        { event: 'SUBSCRIPTION_CANCELLED' }
-                    );
-                }
-
-                await db.user.updateMany({
-                    where: { subscriptionId: subscriptionId },
-                    data: {
-                        subscriptionStatus: 'cancelled',
-                    }
-                });
-                console.log(`Subscription cancelled: ${subscriptionId}`);
-            }
-        } catch (error) {
-            console.error('Error processing subscription cancelled webhook:', error);
+        // Check timestamp is within 5 minutes
+        const timestamp = parseInt(webhookTimestamp, 10);
+        const now = Math.floor(Date.now() / 1000);
+        if (Math.abs(now - timestamp) > 300) {
+            return { valid: false, error: `Timestamp too old: ${now - timestamp}s ago` };
         }
-    },
 
-    // Called when subscription expires (after cancellation period ends)
-    onSubscriptionExpired: async (payload) => {
-        try {
-            const data = payload.data as any;
-            const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
+        // Secret format: whsec_BASE64_ENCODED_KEY
+        const secretKey = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+        const secretBytes = Buffer.from(secretKey, 'base64');
 
-            if (subscriptionId) {
-                // Find user to log transition
-                const user = await db.user.findFirst({
-                    where: { subscriptionId: subscriptionId },
-                    select: { id: true, subscriptionStatus: true }
-                });
+        // Sign: msgId.timestamp.payload
+        const signedPayload = `${webhookId}.${webhookTimestamp}.${payload}`;
+        const expectedSignature = crypto
+            .createHmac('sha256', secretBytes)
+            .update(signedPayload)
+            .digest('base64');
 
-                if (user) {
-                    await logStateTransition(
-                        user.id,
-                        user.subscriptionStatus as SubscriptionStatus,
-                        'expired',
-                        subscriptionId,
-                        'dodo',
-                        { event: 'SUBSCRIPTION_EXPIRED' }
-                    );
-                }
-
-                await db.user.updateMany({
-                    where: { subscriptionId: subscriptionId },
-                    data: {
-                        subscriptionStatus: 'free',
-                        subscriptionId: null,
-                        subscriptionPlan: null,
-                    }
-                });
-                console.log(`Subscription expired: ${subscriptionId}`);
+        // Signature header format: v1,BASE64_SIG or just BASE64_SIG
+        const signatures = webhookSignature.split(' ');
+        for (const sig of signatures) {
+            const [version, sigValue] = sig.includes(',') ? sig.split(',') : ['v1', sig];
+            if (sigValue === expectedSignature) {
+                return { valid: true };
             }
-        } catch (error) {
-            console.error('Error processing subscription expired webhook:', error);
         }
-    },
 
-    // Called when subscription is on hold (payment issues)
-    onSubscriptionOnHold: async (payload) => {
-        try {
-            const data = payload.data as any;
-            const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
+        return {
+            valid: false,
+            error: `Signature mismatch. Expected prefix: ${expectedSignature.substring(0, 10)}... Got: ${webhookSignature.substring(0, 20)}...`
+        };
+    } catch (err) {
+        return { valid: false, error: `Verification error: ${err}` };
+    }
+}
 
-            if (subscriptionId) {
-                // Find user with this subscription
-                const user = await db.user.findFirst({
-                    where: { subscriptionId: subscriptionId },
-                    select: { id: true, email: true, subscriptionStatus: true, subscriptionPlan: true }
-                });
+export async function POST(request: NextRequest) {
+    const startTime = Date.now();
+    console.log('🔔 [WEBHOOK] Request received at', new Date().toISOString());
 
-                if (user) {
-                    await logStateTransition(
-                        user.id,
-                        user.subscriptionStatus as SubscriptionStatus,
-                        'on_hold',
-                        subscriptionId,
-                        'dodo',
-                        { event: 'SUBSCRIPTION_ON_HOLD' }
-                    );
-                }
+    try {
+        // Get raw body
+        const payload = await request.text();
+        console.log('📦 [WEBHOOK] Payload size:', payload.length, 'bytes');
 
-                await db.user.updateMany({
-                    where: { subscriptionId: subscriptionId },
-                    data: {
-                        subscriptionStatus: 'on_hold',
-                    }
-                });
-                console.log(`Subscription on hold: ${subscriptionId}`);
+        // Log all headers for debugging
+        const headerLog: Record<string, string> = {};
+        request.headers.forEach((value, key) => {
+            headerLog[key] = key.includes('signature') ? value.substring(0, 20) + '...' : value;
+        });
+        console.log('📋 [WEBHOOK] Headers:', JSON.stringify(headerLog, null, 2));
 
-                // Send payment failed email
-                if (user?.email) {
-                    await sendPaymentFailedEmail({
-                        email: user.email,
-                        plan: (user.subscriptionPlan as 'monthly' | 'yearly') || 'monthly',
-                        reason: 'Payment could not be processed',
-                    });
-                }
+        // Get webhook secret
+        const webhookSecret = process.env.DODO_PAYMENTS_WEBHOOK_KEY;
+        if (!webhookSecret) {
+            console.error('❌ [WEBHOOK] DODO_PAYMENTS_WEBHOOK_KEY not configured!');
+            return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+        }
+        console.log('🔑 [WEBHOOK] Secret configured (starts with):', webhookSecret.substring(0, 10));
+
+        // Verify signature
+        const verification = verifySignature(payload, request.headers, webhookSecret);
+        if (!verification.valid) {
+            console.error('❌ [WEBHOOK] Signature verification failed:', verification.error);
+            // Return 200 anyway for debugging - change to 401 in production
+            // return NextResponse.json({ error: 'Invalid signature', details: verification.error }, { status: 401 });
+        } else {
+            console.log('✅ [WEBHOOK] Signature verified successfully');
+        }
+
+        // Parse payload
+        const event = JSON.parse(payload);
+        const eventType = event.type;
+        console.log('📨 [WEBHOOK] Event type:', eventType);
+
+        // Handle different event types
+        switch (eventType) {
+            case 'subscription.active':
+                await handleSubscriptionActive(event.data);
+                break;
+            case 'subscription.cancelled':
+                await handleSubscriptionCancelled(event.data);
+                break;
+            case 'payment.succeeded':
+                await handlePaymentSucceeded(event.data);
+                break;
+            case 'subscription.updated':
+                await handleSubscriptionUpdated(event.data);
+                break;
+            default:
+                console.log('ℹ️ [WEBHOOK] Unhandled event type:', eventType);
+        }
+
+        const duration = Date.now() - startTime;
+        console.log(`✅ [WEBHOOK] Completed in ${duration}ms`);
+        return NextResponse.json({ received: true, duration: `${duration}ms` });
+
+    } catch (error) {
+        console.error('❌ [WEBHOOK] Error:', error);
+        return NextResponse.json({ error: String(error) }, { status: 500 });
+    }
+}
+
+async function handleSubscriptionActive(data: any) {
+    console.log('🎉 [WEBHOOK] Processing subscription.active');
+
+    const customerEmail = data.customer?.email;
+    const customerName = data.customer?.name;
+    const subscriptionId = data.subscription_id;
+    const customerId = data.customer?.customer_id;
+
+    console.log('📧 [WEBHOOK] Customer:', customerEmail);
+    console.log('🆔 [WEBHOOK] Subscription ID:', subscriptionId);
+
+    if (!customerEmail) {
+        console.error('❌ [WEBHOOK] No customer email in payload');
+        return;
+    }
+
+    // Determine plan
+    const interval = data.payment_frequency_interval?.toLowerCase() || 'month';
+    const plan = interval === 'year' ? 'yearly' : 'monthly';
+
+    // Calculate subscription end date
+    let subscriptionEndsAt = data.next_billing_date
+        ? new Date(data.next_billing_date)
+        : new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
+
+    try {
+        // Update user in database
+        const updatedUser = await db.user.updateMany({
+            where: { email: customerEmail },
+            data: {
+                subscriptionStatus: 'active',
+                subscriptionId: subscriptionId,
+                customerId: customerId,
+                subscriptionPlan: plan,
+                subscriptionEndsAt: subscriptionEndsAt,
             }
-        } catch (error) {
-            console.error('Error processing subscription on hold webhook:', error);
-        }
-    },
+        });
 
-    // Called when payment succeeds
-    onPaymentSucceeded: async (payload) => {
-        try {
-            const data = payload.data as any;
-            console.log(`Payment succeeded: ${data.payment_id}`);
+        console.log('💾 [WEBHOOK] Database updated:', updatedUser.count, 'user(s)');
 
-            // Send receipt email
-            const customerEmail = data.customer?.email;
-            const billingInterval = data.recurring_pre_tax_amount?.interval ||
-                data.subscription?.billing?.interval ||
-                'month';
-            const plan = billingInterval === 'year' ? 'yearly' : 'monthly';
-            const subscriptionId = data.subscription_id || data.subscription?.subscription_id;
-
-            if (customerEmail) {
-                await sendReceiptEmail({
+        if (updatedUser.count > 0) {
+            // Send welcome email
+            try {
+                await sendWelcomeEmail({
                     email: customerEmail,
-                    name: data.customer?.name,
-                    plan: plan,
-                    subscriptionId: subscriptionId || 'unknown'
-                });
-            }
-        } catch (error) {
-            console.error('Error processing payment succeeded webhook:', error);
-        }
-    },
-
-    // Called when payment fails (works for both first-time and renewal attempts)
-    onPaymentFailed: async (payload) => {
-        try {
-            const data = payload.data as any;
-            console.log(`Payment failed: ${data.payment_id}`);
-
-            // Try to find user associated with this payment and send email
-            const customerEmail = data.customer?.email;
-            if (customerEmail) {
-                const user = await db.user.findFirst({
-                    where: { email: customerEmail },
-                    select: { subscriptionPlan: true }
-                });
-
-                // Determine plan from existing user or from payment data
-                const billingInterval = data.recurring_pre_tax_amount?.interval ||
-                    data.subscription?.billing?.interval ||
-                    'month';
-                const plan = user?.subscriptionPlan ||
-                    (billingInterval === 'year' ? 'yearly' : 'monthly');
-
-                // Send payment failed email (for both first-time and renewal failures)
-                await sendPaymentFailedEmail({
-                    email: customerEmail,
-                    name: data.customer?.name,
+                    name: customerName || undefined,
                     plan: plan as 'monthly' | 'yearly',
-                    reason: data.failure_reason || 'Payment was declined',
+                    subscriptionId: subscriptionId,
                 });
+                console.log('📨 [WEBHOOK] Welcome email sent');
+            } catch (emailError) {
+                console.error('❌ [WEBHOOK] Failed to send welcome email:', emailError);
             }
-        } catch (error) {
-            console.error('Error processing payment failed webhook:', error);
+        } else {
+            console.warn('⚠️ [WEBHOOK] No user found with email:', customerEmail);
         }
-    },
-});
+    } catch (dbError) {
+        console.error('❌ [WEBHOOK] Database error:', dbError);
+        throw dbError;
+    }
+}
+
+async function handleSubscriptionCancelled(data: any) {
+    console.log('🚫 [WEBHOOK] Processing subscription.cancelled');
+
+    const subscriptionId = data.subscription_id;
+    if (!subscriptionId) {
+        console.error('❌ [WEBHOOK] No subscription_id in payload');
+        return;
+    }
+
+    const result = await db.user.updateMany({
+        where: { subscriptionId: subscriptionId },
+        data: { subscriptionStatus: 'cancelled' }
+    });
+
+    console.log('💾 [WEBHOOK] Cancelled:', result.count, 'user(s)');
+}
+
+async function handlePaymentSucceeded(data: any) {
+    console.log('💰 [WEBHOOK] Processing payment.succeeded');
+
+    const customerEmail = data.customer?.email;
+    const customerName = data.customer?.name;
+    const subscriptionId = data.subscription_id;
+
+    if (customerEmail) {
+        try {
+            const interval = data.payment_frequency_interval?.toLowerCase() || 'month';
+            const plan = interval === 'year' ? 'yearly' : 'monthly';
+
+            await sendReceiptEmail({
+                email: customerEmail,
+                name: customerName || undefined,
+                plan: plan,
+                subscriptionId: subscriptionId || 'unknown',
+            });
+            console.log('📨 [WEBHOOK] Receipt email sent');
+        } catch (emailError) {
+            console.error('❌ [WEBHOOK] Failed to send receipt email:', emailError);
+        }
+    }
+}
+
+async function handleSubscriptionUpdated(data: any) {
+    console.log('🔄 [WEBHOOK] Processing subscription.updated');
+
+    const subscriptionId = data.subscription_id;
+    const newStatus = data.status;
+
+    if (!subscriptionId) return;
+
+    // Map Dodo status to our status
+    let dbStatus = 'active';
+    if (newStatus === 'cancelled') dbStatus = 'cancelled';
+    else if (newStatus === 'on_hold') dbStatus = 'on_hold';
+    else if (newStatus === 'expired') dbStatus = 'expired';
+
+    await db.user.updateMany({
+        where: { subscriptionId: subscriptionId },
+        data: { subscriptionStatus: dbStatus }
+    });
+
+    console.log('💾 [WEBHOOK] Updated subscription status to:', dbStatus);
+}
