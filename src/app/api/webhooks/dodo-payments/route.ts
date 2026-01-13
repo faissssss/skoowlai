@@ -56,22 +56,28 @@ export async function POST(req: Request) {
         console.log('Data:', JSON.stringify(data, null, 2));
 
         // Handle different event types
+        // Note: Dodo Payments uses 'subscription.active' NOT 'subscription.activated'
         switch (eventType) {
             case 'subscription.created':
+            case 'subscription.pending':
             case 'subscription.trial_started':
                 await handleSubscriptionCreated(data);
                 break;
 
-            case 'subscription.activated':
+            case 'subscription.active':  // Dodo uses 'subscription.active'
+            case 'subscription.activated':  // Fallback
             case 'payment.succeeded':
                 await handlePaymentSucceeded(data);
                 break;
 
             case 'subscription.cancelled':
+            case 'subscription.canceled':  // Handle both spellings
                 await handleSubscriptionCancelled(data);
                 break;
 
             case 'subscription.trial_ended':
+            case 'subscription.on_hold':
+            case 'subscription.paused':
                 await handleTrialEnded(data);
                 break;
 
@@ -89,6 +95,7 @@ export async function POST(req: Request) {
 
             default:
                 console.log(`⚠️ Unhandled event type: ${eventType}`);
+                // Don't fail for unhandled events
         }
 
         return NextResponse.json({ received: true, eventType });
