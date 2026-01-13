@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getPayPalAccessToken } from '@/lib/paypal';
 import { logStateTransition } from '@/lib/subscriptionState';
 import { SubscriptionStatus } from '@/lib/subscription';
+import { sendWelcomeEmail, sendReceiptEmail, sendCancellationEmail } from '@/lib/email';
 
 /**
  * Verify PayPal Webhook Signature
@@ -73,7 +74,41 @@ export async function POST(req: NextRequest) {
 
         console.log(`Received PayPal Webhook: ${eventType}`);
 
-        if (eventType === 'PAYMENT.SALE.COMPLETED') {
+        if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED') {
+            // Handle subscription activation (trial started or immediate payment)
+            const subscriptionId = resource.id;
+            
+            if (subscriptionId) {
+                const user = await db.user.findFirst({
+                    where: { subscriptionId: subscriptionId }
+                });
+
+                if (user) {
+                    // Send welcome email
+                    if (user.email && user.subscriptionPlan) {
+                        await sendWelcomeEmail({
+                            email: user.email,
+                            name: undefined,
+                            plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                            subscriptionId: subscriptionId
+                        });
+                    }
+
+                    // Log state transition
+                    await logStateTransition(
+                        user.id,
+                        user.subscriptionStatus as SubscriptionStatus,
+                        'active',
+                        subscriptionId,
+                        'paypal',
+                        { event: 'BILLING.SUBSCRIPTION.ACTIVATED' }
+                    );
+
+                    console.log(`✅ Sent welcome email for PayPal subscription ${subscriptionId}`);
+                }
+            }
+        }
+        else if (eventType === 'PAYMENT.SALE.COMPLETED') {
             // Handle successful payment (Renewal or Initial after trial)
             const subscriptionId = resource.billing_agreement_id;
 
@@ -130,6 +165,17 @@ export async function POST(req: NextRequest) {
                             subscriptionEndsAt: newEndDate
                         }
                     });
+                    
+                    // Send receipt email
+                    if (user.email && user.subscriptionPlan) {
+                        await sendReceiptEmail({
+                            email: user.email,
+                            name: undefined,
+                            plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                            subscriptionId: subscriptionId
+                        });
+                    }
+                    
                     console.log(`✅ Extended subscription for user ${user.id} until ${newEndDate.toISOString()}`);
                 });
             }
@@ -137,13 +183,13 @@ export async function POST(req: NextRequest) {
         else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
             const subscriptionId = resource.id;
 
-            // Log state transition
+            // Get full user data for email
             const user = await db.user.findFirst({
-                where: { subscriptionId: subscriptionId },
-                select: { id: true, subscriptionStatus: true }
+                where: { subscriptionId: subscriptionId }
             });
 
             if (user) {
+                // Log state transition
                 await logStateTransition(
                     user.id,
                     user.subscriptionStatus as SubscriptionStatus,
@@ -152,14 +198,46 @@ export async function POST(req: NextRequest) {
                     'paypal',
                     { event: 'BILLING.SUBSCRIPTION.CANCELLED' }
                 );
-            }
 
-            // Update status to confirmed cancelled
-            await db.user.updateMany({
-                where: { subscriptionId: subscriptionId },
-                data: { subscriptionStatus: 'cancelled' }
-            });
-            console.log(`Cancelled subscription ${subscriptionId}`);
+                // If in trial, revoke access immediately
+                if (user.subscriptionStatus === 'trialing') {
+                    await db.user.update({
+                        where: { id: user.id },
+                        data: {
+                            subscriptionStatus: 'cancelled',
+                            subscriptionEndsAt: new Date(), // Immediate
+                        }
+                    });
+                    console.log(`✅ Trial cancelled immediately for user ${user.id}`);
+                } else {
+                    // If paid, keep access until end of billing period
+                    await db.user.update({
+                        where: { id: user.id },
+                        data: {
+                            subscriptionStatus: 'cancelled',
+                            // Keep existing subscriptionEndsAt
+                        }
+                    });
+                    console.log(`✅ Subscription cancelled for user ${user.id}, access until ${user.subscriptionEndsAt?.toISOString()}`);
+                }
+
+                // Send cancellation email
+                if (user.email && user.subscriptionPlan && user.subscriptionEndsAt) {
+                    await sendCancellationEmail({
+                        email: user.email,
+                        name: undefined,
+                        plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                        accessEndsAt: user.subscriptionEndsAt
+                    });
+                }
+            } else {
+                // Fallback for user not found
+                await db.user.updateMany({
+                    where: { subscriptionId: subscriptionId },
+                    data: { subscriptionStatus: 'cancelled' }
+                });
+                console.log(`Cancelled subscription ${subscriptionId}`);
+            }
         }
         else if (eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' || eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
             const subscriptionId = resource.id;
