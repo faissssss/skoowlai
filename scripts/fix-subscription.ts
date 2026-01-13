@@ -19,8 +19,8 @@ const prisma = new PrismaClient();
 // UPDATE THESE VALUES FROM DODO DASHBOARD
 // ========================================
 const USER_EMAIL = 'faiswibowo14@gmail.com';
-const SUBSCRIPTION_ID = 'YOUR_SUBSCRIPTION_ID_HERE'; // e.g., sub_xxxxx
-const CUSTOMER_ID = 'YOUR_CUSTOMER_ID_HERE'; // e.g., cus_xxxxx
+const SUBSCRIPTION_ID = 'sub_0NWB7mbwknxctZunKQ2Ji';
+const CUSTOMER_ID = 'cus_0NWB7mblPbviqTETcSahi';
 const SUBSCRIPTION_PLAN = 'monthly'; // or 'yearly'
 const NEXT_BILLING_DATE = new Date('2026-01-20T05:39:00Z'); // Adjust timezone if needed
 
@@ -48,12 +48,6 @@ async function fixSubscription() {
             endsAt: user.subscriptionEndsAt,
         });
 
-        // Validation
-        if (SUBSCRIPTION_ID === 'YOUR_SUBSCRIPTION_ID_HERE' || CUSTOMER_ID === 'YOUR_CUSTOMER_ID_HERE') {
-            console.error('❌ Please update SUBSCRIPTION_ID and CUSTOMER_ID in the script first!');
-            return;
-        }
-
         // Update subscription
         console.log('🔄 Updating subscription...');
         const updated = await prisma.user.update({
@@ -80,7 +74,6 @@ async function fixSubscription() {
         try {
             await sendWelcomeEmail({
                 email: USER_EMAIL,
-                name: user.name || undefined,
                 plan: SUBSCRIPTION_PLAN as 'monthly' | 'yearly',
                 subscriptionId: SUBSCRIPTION_ID,
             });
