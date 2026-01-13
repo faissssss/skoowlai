@@ -2,13 +2,13 @@ import { db } from './db';
 import { NextResponse } from 'next/server';
 import { requireAuth } from './auth';
 
-// Usage limits for free users (TEMPORARILY INCREASED FOR TESTING)
+// Usage limits for free users
 export const FREE_LIMITS = {
-    STUDY_DECKS_DAILY: 50,  // Temp: was 3
-    FLASHCARDS_DAILY: 50,   // Temp: was 5
-    QUIZZES_DAILY: 50,      // Temp: was 5
-    MINDMAPS_DAILY: 50,     // Temp: was 5
-    CHAT_DAILY: 100,        // Temp: was 20
+    STUDY_DECKS_DAILY: 3,
+    FLASHCARDS_DAILY: 5,
+    QUIZZES_DAILY: 5,
+    MINDMAPS_DAILY: 5,
+    CHAT_DAILY: 20,
 };
 
 // Usage limits for student plan
