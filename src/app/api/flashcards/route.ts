@@ -178,11 +178,22 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error) {
+        // Enhanced error logging for debugging
         console.error('Flashcard generation error:', error);
+
+        // Log specific Google API error if available
+        if (error instanceof Error) {
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+        }
+
         // Generic error message for client, detailed log for server
         return NextResponse.json({
             error: 'Internal Server Error',
-            details: 'Failed to generate flashcards. Please try again later.'
+            details: 'Failed to generate flashcards. Please try again later.',
+            // Include error message in development for easier debugging
+            ...(process.env.NODE_ENV === 'development' && { debug: error instanceof Error ? error.message : String(error) })
         }, { status: 500 });
     }
 }
