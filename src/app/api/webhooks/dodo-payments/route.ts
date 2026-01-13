@@ -6,7 +6,7 @@ import { SubscriptionStatus } from "@/lib/subscription";
 import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from "@/lib/emailIdempotency";
 
 export const POST = Webhooks({
-    webhookKey: process.env.NEXT_PUBLIC_DODO_PAYMENTS_WEBHOOK_KEY || 'dummy_webhook_key_for_build',
+    webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_KEY || 'dummy_webhook_key_for_build',
 
     // Called when subscription becomes active (new subscription or renewal)
     onSubscriptionActive: async (payload) => {
