@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
+import { IS_PRE_LAUNCH } from "@/lib/config";
 
 export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'on_hold' | 'expired' | 'trialing';
 export type SubscriptionPlan = 'monthly' | 'yearly' | null;
@@ -19,6 +20,19 @@ export interface UserSubscription {
  */
 export async function getUserSubscription(): Promise<UserSubscription> {
     const { userId } = await auth();
+
+    // During pre-launch/migration, give everyone Pro access
+    if (IS_PRE_LAUNCH && userId) {
+        return {
+            status: 'active',
+            plan: 'monthly', // Mock plan
+            isActive: true,
+            isPro: true,
+            customerId: null,
+            subscriptionId: null,
+            subscriptionEndsAt: new Date('2026-12-31'), // Far future date
+        };
+    }
 
     if (!userId) {
         return {
