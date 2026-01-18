@@ -125,6 +125,8 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
             if (user?.emailAddresses?.[0]?.emailAddress) {
                 url.searchParams.set('customer_email', user.emailAddresses[0].emailAddress);
             }
+            // Add return URL so users are redirected back to dashboard after payment
+            url.searchParams.set('redirect_url', 'https://skoowlai.com/dashboard');
             window.location.href = url.toString();
         } catch {
             window.location.href = checkoutUrl;
