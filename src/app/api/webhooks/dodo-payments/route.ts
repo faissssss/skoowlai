@@ -21,32 +21,38 @@ export async function POST(req: Request) {
         }
 
         // 2. Get headers and body
+        // Dodo sends webhook-* headers, but Svix library expects svix-* format
         const headerPayload = await headers();
-        const svixId = headerPayload.get('svix-id');
-        const svixTimestamp = headerPayload.get('svix-timestamp');
-        const svixSignature = headerPayload.get('svix-signature');
 
-        if (!svixId || !svixTimestamp || !svixSignature) {
-            console.error('❌ Missing Svix headers');
+        // Accept both webhook-* (Dodo's current format) and svix-* (legacy format)
+        const webhookId = headerPayload.get('webhook-id') || headerPayload.get('svix-id');
+        const webhookTimestamp = headerPayload.get('webhook-timestamp') || headerPayload.get('svix-timestamp');
+        const webhookSignature = headerPayload.get('webhook-signature') || headerPayload.get('svix-signature');
+
+        if (!webhookId || !webhookTimestamp || !webhookSignature) {
+            console.error('❌ Missing webhook headers');
+            console.log('Available headers:', Array.from(headerPayload.keys()));
             return NextResponse.json({ error: 'Missing webhook headers' }, { status: 400 });
         }
 
         const payload = await req.text();
 
-        // 3. Verify webhook signature
+        // 3. Verify webhook signature using Svix library
+        // The Svix library expects the headers in svix-* format
         const wh = new Webhook(webhookSecret);
         let event: any;
 
         try {
             event = wh.verify(payload, {
-                'svix-id': svixId,
-                'svix-timestamp': svixTimestamp,
-                'svix-signature': svixSignature,
+                'svix-id': webhookId,
+                'svix-timestamp': webhookTimestamp,
+                'svix-signature': webhookSignature,
             });
         } catch (err) {
             console.error('❌ Webhook signature verification failed:', err);
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
+
 
         // 4. Process event
         const eventType = event.type;

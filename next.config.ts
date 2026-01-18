@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Prevent 307 redirects on API routes (fixes webhook issues)
+  skipTrailingSlashRedirect: true,
   experimental: {
     // React Compiler disabled due to Next.js 16 compatibility issues
     // reactCompiler: true,
