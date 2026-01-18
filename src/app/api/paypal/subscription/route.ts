@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Update authenticated user's subscription
+        // Track trial usage if this is a trial
         await db.user.update({
             where: { id: user.id },
             data: {
@@ -152,6 +153,8 @@ export async function POST(request: NextRequest) {
                 subscriptionPlan: planType,
                 subscriptionEndsAt: subscriptionEndsAt,
                 customerId: user.customerId || `paypal_${subscriptionId}`,
+                // Track trial usage - only set once to prevent re-trial abuse
+                ...(verification.isTrial && !user.trialUsedAt ? { trialUsedAt: new Date() } : {}),
             }
         });
 

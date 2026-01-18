@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED') {
             // Handle subscription activation (trial started or immediate payment)
             const subscriptionId = resource.id;
-            
+
             if (subscriptionId) {
                 const user = await db.user.findFirst({
                     where: { subscriptionId: subscriptionId }
@@ -109,36 +109,34 @@ export async function POST(req: NextRequest) {
             }
         }
         else if (eventType === 'PAYMENT.SALE.COMPLETED') {
-            // Handle successful payment (Renewal or Initial after trial)
+            // Handle successful payment (Renewal, Initial after trial, or Resubscription)
             const subscriptionId = resource.billing_agreement_id;
+            const payerEmail = resource.payer?.payer_info?.email;
 
             if (subscriptionId) {
-                // Use transaction to prevent race condition with concurrent cancel
+                // Use transaction to prevent race conditions
                 await db.$transaction(async (tx) => {
-                    // Find user with lock
-                    const user = await tx.user.findFirst({
+                    // Find user by subscription ID first
+                    let user = await tx.user.findFirst({
                         where: { subscriptionId: subscriptionId }
                     });
+
+                    // If not found, try by payer email (resubscription case with new subscription ID)
+                    if (!user && payerEmail) {
+                        user = await tx.user.findFirst({
+                            where: { email: payerEmail }
+                        });
+                    }
 
                     if (!user) {
                         console.warn(`User not found for subscription ID: ${subscriptionId}`);
                         return;
                     }
 
-                    // Race condition check: If user just cancelled, don't reactivate
-                    if (user.subscriptionStatus === 'cancelled') {
-                        console.log(`⚠️ Skipping payment activation for ${user.id} - user has cancelled`);
-                        // Log the blocked transition
-                        await logStateTransition(
-                            user.id,
-                            'cancelled',
-                            'active',
-                            subscriptionId,
-                            'paypal',
-                            { event: 'PAYMENT.SALE.COMPLETED', blocked: true, reason: 'User already cancelled' }
-                        );
-                        return;
-                    }
+                    // Determine if this is a resubscription or renewal
+                    const isNewSubscription = user.subscriptionId !== subscriptionId;
+                    const isResubscription = isNewSubscription && (user.subscriptionStatus === 'cancelled' || user.subscriptionStatus === 'expired' || user.subscriptionStatus === 'free');
+                    const wasActive = user.subscriptionStatus === 'active';
 
                     // Log state transition
                     await logStateTransition(
@@ -147,7 +145,7 @@ export async function POST(req: NextRequest) {
                         'active',
                         subscriptionId,
                         'paypal',
-                        { event: 'PAYMENT.SALE.COMPLETED', plan: user.subscriptionPlan }
+                        { event: 'PAYMENT.SALE.COMPLETED', plan: user.subscriptionPlan, isResubscription, isNewSubscription }
                     );
 
                     // Determine duration based on plan
@@ -162,12 +160,24 @@ export async function POST(req: NextRequest) {
                         where: { id: user.id },
                         data: {
                             subscriptionStatus: 'active',
-                            subscriptionEndsAt: newEndDate
+                            subscriptionEndsAt: newEndDate,
+                            subscriptionId: subscriptionId, // Update to new subscription ID
                         }
                     });
-                    
-                    // Send receipt email
+
+                    // Send emails
                     if (user.email && user.subscriptionPlan) {
+                        // Send welcome email for new subscriptions and resubscriptions
+                        if (isNewSubscription || isResubscription) {
+                            await sendWelcomeEmail({
+                                email: user.email,
+                                name: undefined,
+                                plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                                subscriptionId: subscriptionId
+                            });
+                        }
+
+                        // Always send receipt email
                         await sendReceiptEmail({
                             email: user.email,
                             name: undefined,
@@ -175,8 +185,8 @@ export async function POST(req: NextRequest) {
                             subscriptionId: subscriptionId
                         });
                     }
-                    
-                    console.log(`✅ Extended subscription for user ${user.id} until ${newEndDate.toISOString()}`);
+
+                    console.log(`✅ ${isResubscription ? 'Resubscription' : wasActive ? 'Renewal' : 'New subscription'} for user ${user.id} until ${newEndDate.toISOString()}`);
                 });
             }
         }

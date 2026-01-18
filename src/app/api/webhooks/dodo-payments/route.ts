@@ -95,7 +95,7 @@ export async function POST(req: Request) {
 
             default:
                 console.log(`⚠️ Unhandled event type: ${eventType}`);
-                // Don't fail for unhandled events
+            // Don't fail for unhandled events
         }
 
         return NextResponse.json({ received: true, eventType });
@@ -110,12 +110,14 @@ export async function POST(req: Request) {
  * Handle subscription created / trial started
  */
 async function handleSubscriptionCreated(data: any) {
+    // Dodo payload structure: data.customer.email, data.subscription_id, data.customer.customer_id
     const customerEmail = data.customer?.email || data.customer_email;
-    const subscriptionId = data.subscription?.id || data.id;
-    const customerId = data.customer?.id || data.customer_id;
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
+    const customerId = data.customer?.customer_id || data.customer?.id || data.customer_id;
 
     if (!customerEmail) {
         console.error('❌ No customer email in subscription.created event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
@@ -129,8 +131,9 @@ async function handleSubscriptionCreated(data: any) {
         return;
     }
 
-    // Determine plan from subscription data
-    const plan = data.subscription?.plan?.interval === 'year' ? 'yearly' : 'monthly';
+    // Determine plan from Dodo's payment_frequency_interval (Month/Year)
+    const interval = data.payment_frequency_interval || data.subscription_period_interval || data.subscription?.plan?.interval;
+    const plan = interval?.toLowerCase() === 'year' ? 'yearly' : 'monthly';
 
     // Calculate trial end date (usually 7 days)
     const trialEndDate = new Date();
@@ -147,6 +150,7 @@ async function handleSubscriptionCreated(data: any) {
     );
 
     // Update user with trial status
+    // Only set trialUsedAt if not already set (preserves first trial date)
     await db.user.update({
         where: { id: user.id },
         data: {
@@ -155,6 +159,8 @@ async function handleSubscriptionCreated(data: any) {
             subscriptionId: subscriptionId,
             customerId: customerId,
             subscriptionEndsAt: trialEndDate,
+            // Track trial usage - only set once to prevent re-trial abuse
+            ...(user.trialUsedAt ? {} : { trialUsedAt: new Date() }),
         }
     });
 
@@ -170,44 +176,48 @@ async function handleSubscriptionCreated(data: any) {
 }
 
 /**
- * Handle payment succeeded (first payment after trial or recurring)
+ * Handle payment succeeded (first payment after trial, recurring, or resubscription)
  */
 async function handlePaymentSucceeded(data: any) {
-    const subscriptionId = data.subscription?.id || data.subscription_id;
+    // Dodo payload: subscription_id at root level, customer.email, customer.customer_id
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
     const customerEmail = data.customer?.email || data.customer_email;
+    const customerId = data.customer?.customer_id || data.customer?.id || data.customer_id;
 
     if (!subscriptionId && !customerEmail) {
         console.error('❌ No subscription ID or email in payment.succeeded event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
-    // Find user by subscription ID or email
-    const user = await db.user.findFirst({
-        where: subscriptionId 
-            ? { subscriptionId: subscriptionId }
-            : { email: customerEmail }
+    // Find user by subscription ID first, then by email (for resubscribers with new subscription ID)
+    let user = await db.user.findFirst({
+        where: subscriptionId ? { subscriptionId: subscriptionId } : undefined
     });
+
+    // If not found by subscription ID, try by email (resubscription case)
+    if (!user && customerEmail) {
+        user = await db.user.findFirst({
+            where: { email: customerEmail }
+        });
+    }
 
     if (!user) {
         console.warn(`⚠️ User not found for subscription: ${subscriptionId || customerEmail}`);
         return;
     }
 
-    // Prevent reactivation if user cancelled
-    if (user.subscriptionStatus === 'cancelled') {
-        console.log(`⚠️ Skipping payment activation for ${user.id} - user has cancelled`);
-        await logStateTransition(
-            user.id,
-            'cancelled',
-            'active',
-            subscriptionId,
-            'dodo',
-            { event: 'payment.succeeded', blocked: true, reason: 'User already cancelled' }
-        );
-        return;
-    }
+    // Determine if this is a new subscription (first payment or resubscription)
+    // vs a renewal (same subscription ID, already active)
+    const isNewSubscription = user.subscriptionId !== subscriptionId;
+    const isResubscription = isNewSubscription && (user.subscriptionStatus === 'cancelled' || user.subscriptionStatus === 'expired' || user.subscriptionStatus === 'free');
+    const wasActive = user.subscriptionStatus === 'active';
 
-    const plan = user.subscriptionPlan || 'monthly';
+    // Get plan from Dodo's payment_frequency_interval (Month/Year), or fallback
+    const interval = data.payment_frequency_interval || data.subscription_period_interval || data.subscription?.plan?.interval;
+    const plan = interval?.toLowerCase() === 'year' ? 'yearly'
+        : interval?.toLowerCase() === 'month' ? 'monthly'
+            : user.subscriptionPlan || 'monthly';
 
     // Calculate next billing date
     const nextBillingDate = new Date();
@@ -224,20 +234,34 @@ async function handlePaymentSucceeded(data: any) {
         'active',
         subscriptionId,
         'dodo',
-        { event: 'payment.succeeded', plan }
+        { event: 'payment.succeeded', plan, isResubscription, isNewSubscription }
     );
 
-    // Update user to active
+    // Update user to active with new subscription details
     await db.user.update({
         where: { id: user.id },
         data: {
             subscriptionStatus: 'active',
             subscriptionEndsAt: nextBillingDate,
+            subscriptionId: subscriptionId,
+            subscriptionPlan: plan,
+            customerId: customerId || user.customerId,
         }
     });
 
-    // Send receipt email
+    // Send emails
     if (user.email) {
+        // Send welcome email for new subscriptions and resubscriptions
+        if (isNewSubscription || isResubscription) {
+            await sendWelcomeEmail({
+                email: user.email,
+                name: undefined,
+                plan: plan as 'monthly' | 'yearly',
+                subscriptionId: subscriptionId
+            });
+        }
+
+        // Always send receipt email for payments
         await sendReceiptEmail({
             email: user.email,
             name: undefined,
@@ -246,17 +270,19 @@ async function handlePaymentSucceeded(data: any) {
         });
     }
 
-    console.log(`✅ Payment succeeded for user ${user.id}, active until ${nextBillingDate.toISOString()}`);
+    console.log(`✅ Payment succeeded for user ${user.id}${isResubscription ? ' (resubscription)' : wasActive ? ' (renewal)' : ' (new)'}, active until ${nextBillingDate.toISOString()}`);
 }
 
 /**
  * Handle subscription cancelled
  */
 async function handleSubscriptionCancelled(data: any) {
-    const subscriptionId = data.subscription?.id || data.id;
+    // Dodo payload: subscription_id at root level
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
 
     if (!subscriptionId) {
         console.error('❌ No subscription ID in cancelled event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
@@ -316,10 +342,12 @@ async function handleSubscriptionCancelled(data: any) {
  * Handle trial ended without payment
  */
 async function handleTrialEnded(data: any) {
-    const subscriptionId = data.subscription?.id || data.id;
+    // Dodo payload: subscription_id at root level
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
 
     if (!subscriptionId) {
         console.error('❌ No subscription ID in trial_ended event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
@@ -358,10 +386,12 @@ async function handleTrialEnded(data: any) {
  * Handle subscription expired
  */
 async function handleSubscriptionExpired(data: any) {
-    const subscriptionId = data.subscription?.id || data.id;
+    // Dodo payload: subscription_id at root level
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
 
     if (!subscriptionId) {
         console.error('❌ No subscription ID in expired event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
@@ -400,23 +430,35 @@ async function handleSubscriptionExpired(data: any) {
  * Handle subscription updated (plan change, etc)
  */
 async function handleSubscriptionUpdated(data: any) {
-    const subscriptionId = data.subscription?.id || data.id;
+    // Dodo payload: subscription_id at root level
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
+    const customerEmail = data.customer?.email || data.customer_email;
 
     if (!subscriptionId) {
         console.error('❌ No subscription ID in updated event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
-    const user = await db.user.findFirst({
+    // Find user by subscription ID, or by email if new subscription
+    let user = await db.user.findFirst({
         where: { subscriptionId: subscriptionId }
     });
+
+    if (!user && customerEmail) {
+        user = await db.user.findFirst({
+            where: { email: customerEmail }
+        });
+    }
 
     if (!user) {
         console.warn(`⚠️ User not found for subscription: ${subscriptionId}`);
         return;
     }
 
-    const newPlan = data.subscription?.plan?.interval === 'year' ? 'yearly' : 'monthly';
+    // Get plan from Dodo's payment_frequency_interval
+    const interval = data.payment_frequency_interval || data.subscription_period_interval || data.subscription?.plan?.interval;
+    const newPlan = interval?.toLowerCase() === 'year' ? 'yearly' : 'monthly';
 
     // Log state transition
     await logStateTransition(
@@ -444,10 +486,12 @@ async function handleSubscriptionUpdated(data: any) {
  * Handle payment failed
  */
 async function handlePaymentFailed(data: any) {
-    const subscriptionId = data.subscription?.id || data.subscription_id;
+    // Dodo payload: subscription_id at root level
+    const subscriptionId = data.subscription_id || data.subscription?.id || data.id;
 
     if (!subscriptionId) {
         console.error('❌ No subscription ID in payment.failed event');
+        console.log('Available data keys:', Object.keys(data));
         return;
     }
 
@@ -478,8 +522,8 @@ async function handlePaymentFailed(data: any) {
  * Handle GET requests for health check
  */
 export async function GET() {
-    return NextResponse.json({ 
-        status: 'active', 
+    return NextResponse.json({
+        status: 'active',
         message: 'Dodo Payments Webhook Listener is running',
         webhook_url: 'https://skoowlai.com/api/webhooks/dodo-payments'
     });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check, Ghost, GraduationCap, Sparkles, Zap, Loader2, CreditCard, Smartphone, Wallet } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,20 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
     const [isLoading, setIsLoading] = useState(false);
     const [view, setView] = useState<'plan' | 'payment-method'>('plan');
+    const [isTrialEligible, setIsTrialEligible] = useState<boolean | null>(null);
     const { user } = useUser();
+
+    // Check trial eligibility when modal opens
+    useEffect(() => {
+        if (isOpen && user) {
+            fetch('/api/subscription/trial-eligibility')
+                .then(res => res.json())
+                .then(data => setIsTrialEligible(data.eligible))
+                .catch(() => setIsTrialEligible(true)); // Default to eligible on error
+        } else if (!user) {
+            setIsTrialEligible(true); // Not logged in = assume eligible
+        }
+    }, [isOpen, user]);
 
     if (!isOpen) return null;
 
@@ -76,26 +89,35 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
         }
 
         // Card and QRIS use Dodo Payments
-        let paymentLink = billingPeriod === 'yearly'
+        // Select product based on trial eligibility
+        let productId: string | undefined;
+
+        if (isTrialEligible) {
+            // First-time user - use trial products
+            productId = billingPeriod === 'yearly'
+                ? process.env.NEXT_PUBLIC_DODO_STUDENT_YEARLY_PRODUCT_ID
+                : process.env.NEXT_PUBLIC_DODO_STUDENT_MONTHLY_PRODUCT_ID;
+        } else {
+            // Returning user - use no-trial products
+            productId = billingPeriod === 'yearly'
+                ? process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID
+                : process.env.NEXT_PUBLIC_DODO_MONTHLY_NO_TRIAL_PRODUCT_ID;
+        }
+
+        // Fallback to payment link if no product ID
+        const paymentLink = billingPeriod === 'yearly'
             ? process.env.NEXT_PUBLIC_DODO_YEARLY_PAYMENT_LINK
             : process.env.NEXT_PUBLIC_DODO_MONTHLY_PAYMENT_LINK;
 
-        const productId = billingPeriod === 'yearly'
-            ? process.env.NEXT_PUBLIC_DODO_STUDENT_YEARLY_PRODUCT_ID
-            : process.env.NEXT_PUBLIC_DODO_STUDENT_MONTHLY_PRODUCT_ID;
-
         let checkoutUrl: string;
 
-        if (paymentLink) {
-            checkoutUrl = paymentLink;
-        } else if (productId) {
-            // Hardcoded to live mode for now
+        if (productId) {
             checkoutUrl = `https://checkout.dodopayments.com/buy/${productId}`;
+        } else if (paymentLink) {
+            checkoutUrl = paymentLink;
         } else {
             console.error('No payment config found');
             setIsLoading(false);
-            // Consider showing a toast/alert to inform the user
-            // e.g., toast.error('Payment is temporarily unavailable. Please try again later.');
             return;
         }
         try {
@@ -264,8 +286,17 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
                                     <div className="mb-3 h-[52px] flex flex-col justify-center">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-3xl font-bold text-white">$0</span>
-                                            <span className="text-slate-400 text-xs">today</span>
+                                            {isTrialEligible !== false ? (
+                                                <>
+                                                    <span className="text-3xl font-bold text-white">$0</span>
+                                                    <span className="text-slate-400 text-xs">today</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-3xl font-bold text-white">${currentPrice.toFixed(2)}</span>
+                                                    <span className="text-slate-400 text-xs">/{billingPeriod === 'yearly' ? 'mo' : 'month'}</span>
+                                                </>
+                                            )}
                                             {billingPeriod === 'yearly' && (
                                                 <span className="px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-[10px] font-bold rounded-full">
                                                     🎉 33% OFF
@@ -273,8 +304,11 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                                             )}
                                         </div>
                                         <p className="text-[10px] text-slate-400 mt-0.5 h-4">
-                                            Then ${currentPrice.toFixed(2)}/mo
-                                            {billingPeriod === 'yearly' && ` ($${pricing.yearly.price}/year)`}
+                                            {isTrialEligible !== false ? (
+                                                <>Then ${currentPrice.toFixed(2)}/mo{billingPeriod === 'yearly' && ` ($${pricing.yearly.price}/year)`}</>
+                                            ) : (
+                                                <>{billingPeriod === 'yearly' && `Billed $${pricing.yearly.price}/year`}</>
+                                            )}
                                         </p>
                                     </div>
 
@@ -282,7 +316,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                                         onClick={handleProceedToPayment}
                                         className="w-full py-2 px-3 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition-all shadow-lg shadow-purple-600/25 mb-3 text-xs h-9 flex items-center justify-center gap-2"
                                     >
-                                        Try Pro Free • 7-Day Trial
+                                        {isTrialEligible !== false ? 'Try Pro Free • 7-Day Trial' : `Subscribe Now • $${currentPrice.toFixed(2)}/mo`}
                                     </button>
 
                                     <ul className="space-y-1.5 flex-1">

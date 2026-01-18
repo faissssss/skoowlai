@@ -28,6 +28,7 @@ model User {
   subscriptionId      String? // Dodo subscription ID
   customerId          String? // Dodo customer ID
   subscriptionEndsAt  DateTime?
+  trialUsedAt         DateTime?      // Tracks when user started their first trial (prevents re-trial abuse)
   collaborators       Collaborator[]
   decks               Deck[]
   workspaces          Workspace[]
