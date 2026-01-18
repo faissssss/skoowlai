@@ -5,13 +5,22 @@ import { db } from '@/lib/db';
 import { sendWelcomeEmail, sendReceiptEmail, sendCancellationEmail } from '@/lib/email';
 import { logStateTransition } from '@/lib/subscriptionState';
 import { SubscriptionStatus } from '@/lib/subscription';
+import { DISABLE_PAYMENTS } from '@/lib/config';
 
 /**
  * Dodo Payments Webhook Handler
  * Handles all subscription lifecycle events from Dodo Payments
  * Webhook URL: https://skoowlai.com/api/webhooks/dodo-payments
+ * 
+ * NOTE: Currently disabled while migrating to Clerk Billing
  */
 export async function POST(req: Request) {
+    // TEMPORARILY DISABLED - Migrating to Clerk Billing
+    if (DISABLE_PAYMENTS) {
+        console.log('⚠️ Dodo webhook received but payments are disabled');
+        return NextResponse.json({ message: 'Payments temporarily disabled' }, { status: 200 });
+    }
+
     try {
         // 1. Get webhook secret
         const webhookSecret = process.env.DODO_PAYMENTS_WEBHOOK_KEY;

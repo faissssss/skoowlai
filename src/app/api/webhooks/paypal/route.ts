@@ -4,6 +4,7 @@ import { getPayPalAccessToken } from '@/lib/paypal';
 import { logStateTransition } from '@/lib/subscriptionState';
 import { SubscriptionStatus } from '@/lib/subscription';
 import { sendWelcomeEmail, sendReceiptEmail, sendCancellationEmail } from '@/lib/email';
+import { DISABLE_PAYMENTS } from '@/lib/config';
 
 /**
  * Verify PayPal Webhook Signature
@@ -46,7 +47,17 @@ async function verifyPayPalWebhookSignature(req: NextRequest, bodyText: string):
     }
 }
 
+/**
+ * PayPal Webhook Handler
+ * NOTE: Currently disabled while migrating to Clerk Billing
+ */
 export async function POST(req: NextRequest) {
+    // TEMPORARILY DISABLED - Migrating to Clerk Billing
+    if (DISABLE_PAYMENTS) {
+        console.log('⚠️ PayPal webhook received but payments are disabled');
+        return NextResponse.json({ message: 'Payments temporarily disabled' }, { status: 200 });
+    }
+
     try {
         // 1. Get Raw Body (needed for verification)
         const bodyText = await req.text();
