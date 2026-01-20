@@ -662,3 +662,88 @@ export function trialEndingEmailTemplate({
 
     return emailWrapper(content);
 }
+export const planChangeEmailTemplate = ({
+    name,
+    newPlan,
+    nextBillingDate,
+}: {
+    name: string;
+    newPlan: string;
+    nextBillingDate: string;
+}) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Your plan has been updated</title>
+</head>
+<body style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #6d28d9; margin-bottom: 10px;">Plan Updated Successfully!</h1>
+        <p style="font-size: 16px; color: #666;">Your subscription preference has been saved.</p>
+    </div>
+
+    <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 10px;">Hi ${name},</p>
+        <p style="margin: 0 0 20px;">You have successfully switched to the <strong>${newPlan}</strong> plan.</p>
+        
+        <div style="background-color: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <p style="margin: 5px 0; font-size: 14px; color: #666;">New Plan:</p>
+            <p style="margin: 0 0 15px; font-weight: bold; font-size: 18px; color: #111827;">${newPlan}</p>
+            
+            <p style="margin: 5px 0; font-size: 14px; color: #666;">Next Billing Date:</p>
+            <p style="margin: 0; font-weight: bold; font-size: 18px; color: #111827;">${nextBillingDate}</p>
+        </div>
+    </div>
+
+    <p style="text-align: center; font-size: 14px; color: #666; margin-top: 30px;">
+        Need help? Reply to this email or contact support.
+    </p>
+</body>
+</html>
+`;
+
+export const trialWelcomeEmailTemplate = ({
+    name,
+    trialDays = 7,
+    trialEndsAt
+}: {
+    name: string;
+    trialDays?: number;
+    trialEndsAt?: string;
+}) => {
+    return emailWrapper(`
+        ${emailHeader()}
+        <tr>
+            <td style="padding: 40px 40px 32px; background-color: ${COLORS.white};">
+                <h1 style="color: ${COLORS.text}; font-size: 24px; font-weight: 700; margin: 0 0 16px; text-align: center;">
+                    Welcome to your free trial! 🚀
+                </h1>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; line-height: 1.6; margin: 0 0 24px; text-align: center;">
+                    Hi ${name},
+                </p>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; line-height: 1.6; margin: 0 0 24px; text-align: center;">
+                    Thanks for starting your <strong>${trialDays}-day free trial</strong> of Skoowl AI Pro. You now have full access to all features!
+                </p>
+                
+                <div style="background-color: ${COLORS.background}; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                    <p style="color: ${COLORS.text}; font-weight: 600; font-size: 16px; margin: 0 0 12px; text-align: center;">
+                        Your trial details:
+                    </p>
+                    <p style="font-size: 14px; color: ${COLORS.textLight}; margin: 0; text-align: center;">
+                        <strong>Status:</strong> Active Trial<br>
+                        <strong>Duration:</strong> ${trialDays} Days<br>
+                        ${trialEndsAt ? `<strong>Ends on:</strong> ${trialEndsAt}` : ''}
+                    </p>
+                </div>
+
+                <p style="color: ${COLORS.textLight}; font-size: 14px; line-height: 1.6; margin: 0 0 24px; text-align: center;">
+                    Enjoy unlimited study decks, flashcards, quizzes, and more. We won't charge you until your trial ends.
+                </p>
+
+                ${ctaButton('Go to Dashboard', 'https://skoowlai.com/dashboard')}
+            </td>
+        </tr>
+        ${emailFooter()}
+    `);
+};

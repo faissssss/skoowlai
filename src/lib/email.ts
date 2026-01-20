@@ -6,8 +6,51 @@ import {
     cancellationEmailTemplate,
     renewalEmailTemplate,
     paymentFailedEmailTemplate,
-    trialEndingEmailTemplate
+    trialEndingEmailTemplate,
+    planChangeEmailTemplate,
+    trialWelcomeEmailTemplate
 } from './emailTemplates';
+
+// ... (existing code)
+
+/**
+ * Send plan change confirmation email
+ */
+export async function sendPlanChangeEmail({
+    email,
+    name,
+    newPlan,
+    nextBillingDate
+}: {
+    email: string;
+    name?: string;
+    newPlan: string;
+    nextBillingDate: Date;
+}) {
+    try {
+        const formattedDate = nextBillingDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '🔄 Your subscription plan has been updated',
+            html: planChangeEmailTemplate({
+                name: name || 'there',
+                newPlan,
+                nextBillingDate: formattedDate
+            }),
+        });
+        console.log(`✅ Plan change email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send plan change email:', error);
+        return false;
+    }
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,7 +60,7 @@ interface SubscriptionEmailData {
     email: string;
     name?: string;
     plan: 'monthly' | 'yearly';
-    subscriptionId: string;
+    subscriptionId?: string;
 }
 
 /**
@@ -52,7 +95,7 @@ export async function sendReceiptEmail({ email, name, plan, subscriptionId }: Su
                 name: name || 'Valued Customer',
                 email,
                 plan,
-                subscriptionId
+                subscriptionId: subscriptionId || 'N/A'
             }),
         });
         console.log(`✅ Receipt email sent to ${email}`);
@@ -200,6 +243,40 @@ export async function sendPaymentFailedEmail({
         return true;
     } catch (error) {
         console.error('❌ Failed to send payment failed email:', error);
+        return false;
+    }
+}
+
+
+/**
+ * Send trial welcome email
+ */
+export async function sendTrialWelcomeEmail({
+    email,
+    name,
+    trialDays,
+    trialEndsAt
+}: {
+    email: string;
+    name?: string;
+    trialDays?: number;
+    trialEndsAt?: string;
+}) {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '🚀 Welcome to your free trial! (Skoowl AI Pro)',
+            html: trialWelcomeEmailTemplate({
+                name: name || 'there',
+                trialDays,
+                trialEndsAt
+            }),
+        });
+        console.log(`✅ Trial welcome email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send trial welcome email:', error);
         return false;
     }
 }

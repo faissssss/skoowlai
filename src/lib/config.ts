@@ -8,11 +8,11 @@
  * 
  * Set to false when ready to launch with paid plans
  */
-export const IS_PRE_LAUNCH = true;  // Set to true to hide Dodo/PayPal while migrating to Clerk Billing
+export const IS_PRE_LAUNCH = false;  // Set to false now that Clerk Billing is active
 
 /**
  * Payment System Configuration
  * Set to true to completely disable all payment processing
- * Used during migration to Clerk Billing
+ * Clerk Billing is now active
  */
-export const DISABLE_PAYMENTS = true;
+export const DISABLE_PAYMENTS = false;

@@ -18,8 +18,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { User, CreditCard, LogOut, Bug, Lightbulb, MessageSquare, Check, Crown, Loader2 } from 'lucide-react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { User, CreditCard, LogOut, Bug, Lightbulb, MessageSquare, Check, Crown, Loader2, X } from 'lucide-react';
+import { useUser, useClerk, UserProfile } from '@clerk/nextjs';
 import BugReportModal from '@/components/BugReportModal';
 import FeedbackModal from '@/components/FeedbackModal';
 import PricingModal from '@/components/PricingModal';
@@ -55,34 +55,42 @@ function SubscriptionCard() {
     const [cancelling, setCancelling] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [error, setError] = useState(false);
+    const [showAccountModal, setShowAccountModal] = useState(false);
+    const { openUserProfile } = useClerk();
+
+    const fetchSubscription = async () => {
+        try {
+            setLoading(true);
+            // First, sync subscription from Clerk to ensure DB matches
+            await fetch('/api/subscription/sync', {
+                method: 'POST'
+            });
+
+            // Then fetch the updated subscription data
+            const res = await fetch('/api/subscription');
+            if (res.ok) {
+                const data = await res.json();
+                setSubscription(data);
+            } else {
+                setError(true);
+            }
+        } catch (error) {
+            console.error('Failed to fetch subscription:', error);
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const controller = new AbortController();
-
-        async function fetchSubscription() {
-            try {
-                const res = await fetch('/api/subscription', { signal: controller.signal });
-                if (res.ok) {
-                    const data = await res.json();
-                    setSubscription(data);
-                } else {
-                    setError(true);
-                }
-            } catch (error: any) {
-                if (error.name !== 'AbortError') {
-                    console.error('Failed to fetch subscription:', error);
-                    setError(true);
-                }
-            } finally {
-                if (!controller.signal.aborted) {
-                    setLoading(false);
-                }
-            }
-        }
         fetchSubscription();
-
-        return () => controller.abort();
     }, []);
+
+    const handleModalClose = () => {
+        setShowAccountModal(false);
+        // Sync data when modal closes to reflect any plan changes
+        fetchSubscription();
+    };
 
     const handleCancelSubscription = async () => {
         setCancelling(true);
@@ -168,7 +176,7 @@ function SubscriptionCard() {
                             </p>
                             <p className={`text-sm ${isActive ? 'text-violet-700 dark:text-violet-400' : isCancelled ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
                                 {isActive ? (isTrial ? `Trial ends on ${endDate}` : `${subscription.plan === 'yearly' ? 'Yearly' : 'Monthly'} subscription`)
-                                    : isCancelled ? `Access until ${endDate}`
+                                    : isCancelled ? (endDate ? `Access until ${endDate}` : 'Access until end of billing period')
                                         : 'Basic features with daily limits'}
                             </p>
                         </div>
@@ -206,36 +214,20 @@ function SubscriptionCard() {
                         </Button>
                     )}
 
-                    {/* Cancel button for active subscribers */}
+                    {/* Manage Subscription Button (Opens Clerk Portal Modal) */}
                     {isActive && (
                         <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20">
-                                        {isTrial ? 'Cancel Trial' : 'Cancel Subscription'}
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>{isTrial ? 'Cancel your free trial?' : 'Cancel your subscription?'}</AlertDialogTitle>
-                                        <AlertDialogDescription className="space-y-2">
-                                            <p>Your Pro features will remain active until <strong>{endDate || 'the end of your billing period'}</strong>.</p>
-                                            <p>{isTrial ? "You won't be charged if you cancel before the trial ends." : "After that, you'll be moved to the Free plan with limited daily usage."}</p>
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleCancelSubscription}
-                                            disabled={cancelling}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                        >
-                                            {cancelling ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                            Yes, Cancel
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setShowAccountModal(true)}
+                            >
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Manage Subscription
+                            </Button>
+                            <p className="text-xs text-center text-slate-500 mt-2">
+                                Manage your plan, payment method, and invoices.
+                            </p>
                         </div>
                     )}
 
@@ -251,7 +243,42 @@ function SubscriptionCard() {
                     )}
                 </CardContent>
             </Card>
-            <PricingModal isOpen={showPricing} onClose={() => setShowPricing(false)} />
+            <PricingModal
+                isOpen={showPricing}
+                onClose={() => {
+                    setShowPricing(false);
+                    fetchSubscription();
+                }}
+            />
+
+            {/* Account Management Modal */}
+            {showAccountModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Blur Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={handleModalClose}
+                    />
+                    {/* Modal Content */}
+                    <div className="relative z-10 max-h-[90vh] overflow-auto rounded-lg">
+                        <button
+                            onClick={handleModalClose}
+                            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <UserProfile
+                            routing="hash"
+                            appearance={{
+                                elements: {
+                                    rootBox: "mx-auto",
+                                    card: "shadow-2xl"
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     );
 }

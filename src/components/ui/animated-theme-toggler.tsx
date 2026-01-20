@@ -76,6 +76,7 @@ export const AnimatedThemeToggler = ({
       <button
         ref={buttonRef}
         onClick={toggleTheme}
+        data-theme-toggler
         className={cn(
           "inline-flex items-center justify-center size-9 rounded-md p-0 bg-transparent",
           "text-slate-500 dark:text-slate-400 hover:text-accent-foreground dark:hover:text-accent-foreground",

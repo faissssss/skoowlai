@@ -222,8 +222,52 @@
   }
 }
 
-::view-transition-old(root), ::view-transition-new(root) {
-    animation: none;
-    mix-blend-mode: normal;
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 
+}
+
+/* ========================================
+   Clerk Billing: Force checkout modal above all elements
+   ======================================== */
+/* Clerk renders checkout in a portal - force it to be on top */
+.cl-modalContent,
+.cl-modal,
+.cl-modalBackdrop,
+.cl-checkout,
+.cl-checkoutPage,
+[data-clerk-component] .cl-modal,
+[data-clerk-component] .cl-modalContent,
+.cl-rootBox .cl-modal,
+.cl-rootBox .cl-modalContent,
+div[data-floating-ui-portal] {
+  z-index: 99999999 !important;
+  position: relative !important;
+}
+
+/* Clerk Pricing Table: Bright yellow checkmarks */
+[data-clerk-component] li svg,
+.cl-pricingTable svg,
+.cl-pricingTableFeatureListItem svg,
+.cl-pricingTableCard li svg {
+  color: #fbbf24 !important;
+}
+
+[data-clerk-component] li svg path,
+.cl-pricingTable svg path,
+.cl-pricingTableFeatureListItem svg path {
+  stroke: #fbbf24 !important;
+  fill: none !important;
+}
+
+/* Clerk Pricing Table: Upcoming badge styling (match Active badge) */
+[data-clerk-component] [class*="badge"]:not([class*="active"]),
+.cl-badge,
+.cl-pricingTableCard [class*="badge"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: none !important;
 }

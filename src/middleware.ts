@@ -9,6 +9,7 @@ const isProtectedRoute = createRouteMatcher([
     "/notes(.*)",
     "/quiz(.*)",
     "/mindmap(.*)",
+    "/account(.*)",
 ]);
 
 // Define public routes that don't require authentication

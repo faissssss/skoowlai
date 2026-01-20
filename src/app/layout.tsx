@@ -114,6 +114,8 @@ export default function RootLayout({
           colorText: "#f8fafc",
           colorTextSecondary: "#94a3b8",
           borderRadius: "0.75rem",
+          // Clerk Billing - bright yellow checkmarks
+          colorSuccess: "#fbbf24",
         },
         elements: {
           formButtonPrimary: "bg-violet-600 hover:bg-violet-500",
@@ -131,6 +133,13 @@ export default function RootLayout({
           userButtonPopoverFooter: "hidden",
           userPreviewMainIdentifier: "text-white",
           userPreviewSecondaryIdentifier: "text-slate-400",
+          // Clerk Billing - Pricing Table & Checkout styling
+          pricingTableFeatureListItem: "text-slate-300",
+          pricingTableFeatureListItemIcon: "text-yellow-400",
+          badge: "bg-amber-500 text-slate-900 font-semibold",
+          // Checkout modal z-index fix
+          modalContent: "z-[99999]",
+          modalBackdrop: "z-[99998]",
         },
       }}
     >

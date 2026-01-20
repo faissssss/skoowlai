@@ -99,7 +99,7 @@ export default function DashboardLayout({
                             className={cn(
                                 "w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25 justify-center"
                             )}
-                            title={isCollapsed && !mobile ? "Upgrade Plan" : undefined}
+                            title={isCollapsed && !mobile ? "Upgrade to Pro" : undefined}
                         >
                             <Crown className="w-4 h-4 shrink-0" />
                             <AnimatePresence mode="wait">
@@ -111,7 +111,7 @@ export default function DashboardLayout({
                                         transition={{ duration: 0.2 }}
                                         className="whitespace-nowrap overflow-hidden"
                                     >
-                                        Upgrade Plan
+                                        Upgrade to Pro
                                     </motion.span>
                                 )}
                             </AnimatePresence>
