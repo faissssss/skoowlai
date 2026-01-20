@@ -1,11 +1,23 @@
 # Subscription Workflows Documentation
 
 ## Overview
-This application supports TWO payment providers:
-1. **Dodo Payments** (Primary - for card payments)
+
+### Current Status (Clerk Billing First)
+
+- **Primary system**: **Clerk Billing** (checkout via Clerk `<PricingTable />`, webhooks at `/api/webhooks/clerk`).
+- **Source of truth**: Clerk Billing → `webhooks/clerk` → `db.user.subscription*` → `getUserSubscription()`.
+- **Legacy systems**: Dodo Payments + direct PayPal webhooks are kept for reference but **are disabled in production** (`DISABLE_PAYMENTS = true`) and should not be used for new integrations.
+
+The sections below describe the legacy Dodo / PayPal workflows, followed by a summary of the Clerk Billing flow.
+
+---
+
+## Legacy Payment Providers
+This application historically supported TWO payment providers:
+1. **Dodo Payments** (Card payments)
 2. **PayPal** (Alternative payment method)
 
-Both providers now have complete subscription workflows with proper email notifications and trial handling.
+Both providers had complete subscription workflows with proper email notifications and trial handling.
 
 ---
 
@@ -18,9 +30,11 @@ Configure these URLs in your payment provider dashboards:
 
 ---
 
-## ✅ Complete Workflows
+## ✅ Legacy Workflows (Dodo / PayPal)
 
-### Dodo Payments Workflow
+> **Note**: These flows are **legacy**. Webhook handlers still exist in the codebase but are effectively disabled in production in favor of Clerk Billing.
+
+### Dodo Payments Workflow (Legacy)
 
 #### Events Handled:
 1. **`subscription.created` / `subscription.trial_started`**
@@ -58,7 +72,7 @@ Configure these URLs in your payment provider dashboards:
 
 ---
 
-### PayPal Workflow
+### PayPal Workflow (Legacy)
 
 #### Events Handled:
 1. **`BILLING.SUBSCRIPTION.ACTIVATED`**
@@ -156,16 +170,16 @@ free → trialing → active → cancelled/expired
 
 ---
 
-## 🚀 Checkout Flow
+## 🚀 Checkout Flow (Legacy Providers)
 
-### Dodo Payments (Card)
+### Dodo Payments (Card, Legacy)
 1. User clicks "Try Pro Free • 7-Day Trial"
 2. Selects "Pay with Card"
 3. Redirected to Dodo checkout page
 4. After payment → Redirected to `/dashboard`
 5. Webhook activates subscription
 
-### PayPal
+### PayPal (Legacy)
 1. User clicks "Try Pro Free • 7-Day Trial"
 2. Selects "Pay with PayPal"
 3. Redirected to `/checkout/paypal?plan=monthly|yearly`
@@ -175,7 +189,7 @@ free → trialing → active → cancelled/expired
 
 ---
 
-## 🔧 Environment Variables Required
+## 🔧 Environment Variables Required (Legacy Providers)
 
 ```env
 # Dodo Payments
@@ -195,9 +209,9 @@ RESEND_API_KEY=your_resend_api_key
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features (Legacy)
 
-✅ **Dual Payment Provider Support** - Dodo Payments + PayPal  
+✅ **Dual Payment Provider Support** - Dodo Payments + PayPal (now superseded by Clerk Billing)  
 ✅ **Complete Email Notifications** - Welcome, Receipt, Cancellation  
 ✅ **Trial Cancellation Handling** - Immediate vs. End-of-period  
 ✅ **Race Condition Prevention** - Transaction-based updates  
@@ -207,9 +221,9 @@ RESEND_API_KEY=your_resend_api_key
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing (Legacy Webhooks)
 
-### Test the Webhooks:
+### Test the Legacy Webhooks:
 ```bash
 # Dodo Payments
 GET https://skoowlai.com/api/webhooks/dodo-payments
@@ -226,9 +240,9 @@ GET https://skoowlai.com/api/webhooks/paypal
 
 ---
 
-## 📝 Notes
+## 📝 Notes (Legacy)
 
-1. Both webhook handlers prevent reactivation if user has cancelled
+1. Both legacy webhook handlers prevent reactivation if user has cancelled
 2. All state transitions are logged to database for auditing
 3. Emails are sent asynchronously and don't block webhook response
 4. Return URL is configured to redirect to dashboard after payment
@@ -236,7 +250,7 @@ GET https://skoowlai.com/api/webhooks/paypal
 
 ---
 
-## 🐛 Debugging
+## 🐛 Debugging (Legacy)
 
 Check these logs for issues:
 - Console logs: `📨 Dodo Payments Webhook:` or `Received PayPal Webhook:`
@@ -247,4 +261,42 @@ Check these logs for issues:
 ---
 
 **Last Updated**: January 13, 2026  
-**Webhook URLs**: Configured and ready to receive events
+**Webhook URLs** (legacy): Dodo / PayPal handlers remain in the codebase but are disabled in production in favor of Clerk Billing.
+
+---
+
+## Clerk Billing Workflow (Current Primary)
+
+### Overview
+
+- **Checkout UI**: Clerk `<PricingTable />` rendered via `PricingModal`.
+- **Webhooks**: Clerk → `/api/webhooks/clerk`.
+- **Persistence**: Webhooks map Clerk subscription events to:
+  - `subscriptionStatus` ∈ {`free`, `trialing`, `active`, `cancelled`, `expired`}
+  - `subscriptionPlan` ∈ {`monthly`, `yearly`, `null`}
+  - `subscriptionEndsAt` for trials and cancellations.
+
+### Events Handled
+
+- `subscription.created` / `subscription.active` / `subscription.updated`
+  - Maps Clerk statuses to internal `subscriptionStatus` + `subscriptionPlan`.
+  - Sends **welcome** and **receipt** emails with idempotency.
+- `subscription.trialing`
+  - Sets status to `trialing`.
+  - Sets `subscriptionEndsAt` based on Clerk `trial_end`.
+  - Sends **trial welcome** email.
+- `subscription.canceled` / `subscriptionItem.canceled`
+  - Sets status to `cancelled`.
+  - Sets `subscriptionEndsAt` to the end of the current billing period (keeps access until then).
+  - Sends **cancellation email** (only when truly cancelling, not plan switching).
+- `subscription.ended`
+  - Sets status to `free`, clears plan.
+- `subscription.past_due`
+  - Treated as `active` (grace period).
+
+### Access Semantics
+
+- `trialing`: Full Pro access for the trial duration.
+- `active`: Full Pro access.
+- `cancelled` + future `subscriptionEndsAt`: Pro access until the end of the billing period.
+- `expired` / `free`: No Pro access.

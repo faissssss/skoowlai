@@ -108,9 +108,21 @@ export async function verifyUsageLimits(options: VerifyOptions): Promise<VerifyR
     }
 
     // Step 2: Check if user is a subscriber (bypass daily limit)
-    const isSubscriber = user.subscriptionStatus === 'active';
+    // Keep this logic consistent with `getUserSubscription`:
+    // - active           → full access
+    // - trialing         → full access during trial
+    // - cancelled + future subscriptionEndsAt → access until end of period
+    const now = new Date();
+    const hasFutureAccess =
+        user.subscriptionEndsAt && new Date(user.subscriptionEndsAt) > now;
+
+    const isSubscriber =
+        user.subscriptionStatus === 'active' ||
+        user.subscriptionStatus === 'trialing' ||
+        (user.subscriptionStatus === 'cancelled' && hasFutureAccess);
+
     if (isSubscriber) {
-        console.log('✅ Subscriber detected, bypassing daily limit');
+        console.log('✅ Subscriber (or trial / in-period cancelled) detected, bypassing daily limit');
         return { success: true, user };
     }
 

@@ -3,10 +3,14 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { sendCancellationEmail } from '@/lib/email';
 import { checkCsrfOrigin } from '@/lib/csrf';
+import { cancelDodoSubscriptionViaSdk } from '@/lib/dodo';
 
 /**
  * Cancel subscription API endpoint
- * Cancels the user's subscription via Dodo Payments or PayPal
+ *
+ * Current behavior (Dodo-only):
+ * - Attempts to cancel the user's subscription via Dodo Payments using the Node SDK.
+ * - Updates our local DB, actual access end date is enforced via webhooks + subscriptionEndsAt.
  */
 export async function POST(request: NextRequest) {
     // CSRF Protection: Check origin
@@ -18,8 +22,8 @@ export async function POST(request: NextRequest) {
     if (errorResponse) return errorResponse;
 
     try {
-        // Check if user has an active subscription
-        if (user.subscriptionStatus !== 'active') {
+        // Check if user has an active subscription (trialing or active)
+        if (user.subscriptionStatus !== 'active' && user.subscriptionStatus !== 'trialing') {
             return NextResponse.json(
                 { error: 'No active subscription to cancel' },
                 { status: 400 }
@@ -34,30 +38,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Determine if this is a PayPal or Dodo subscription
-        const isPayPal = user.customerId?.startsWith('paypal_');
-
-        if (isPayPal) {
-            // Cancel via PayPal API
-            const cancelled = await cancelPayPalSubscription(subscriptionId);
-            if (!cancelled) {
-                return NextResponse.json(
-                    { error: 'Failed to cancel PayPal subscription. Please try again or cancel directly on PayPal.' },
-                    { status: 500 }
-                );
-            }
-        } else {
-            // Cancel via Dodo Payments API
-            const cancelled = await cancelDodoSubscription(subscriptionId);
-            if (!cancelled) {
-                return NextResponse.json(
-                    { error: 'Failed to cancel subscription. Please try again.' },
-                    { status: 500 }
-                );
-            }
+        // Attempt to cancel via Dodo Billing SDK
+        const cancelled = await cancelDodoSubscriptionViaSdk(subscriptionId);
+        if (!cancelled) {
+            return NextResponse.json(
+                { error: 'Failed to cancel subscription. Please try again or use the customer portal.' },
+                { status: 500 }
+            );
         }
 
-        // Update database
+        // Local status will be updated by the webhook, but we can optimistically mark as cancelled
         const accessEndsAt = user.subscriptionEndsAt || new Date();
         await db.user.update({
             where: { id: user.id },
@@ -67,7 +57,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Send cancellation email
-        if (user.email) {
+        if (user.email && user.subscriptionPlan) {
             await sendCancellationEmail({
                 email: user.email,
                 name: undefined,
@@ -76,7 +66,7 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        console.log(`✅ Subscription cancelled for user ${user.id}`);
+        console.log(`✅ Subscription cancellation requested for user ${user.id}`);
 
         return NextResponse.json({
             success: true,
@@ -84,7 +74,7 @@ export async function POST(request: NextRequest) {
             accessEndsAt,
         });
     } catch (error) {
-        console.error('Error cancelling subscription:', error);
+        console.error('Error cancelling subscription via Dodo SDK:', error);
         return NextResponse.json(
             { error: 'Failed to cancel subscription' },
             { status: 500 }

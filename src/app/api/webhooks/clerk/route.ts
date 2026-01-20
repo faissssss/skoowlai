@@ -59,12 +59,16 @@ async function processWebhookEvent(evt: any) {
         await handleUserEvent(evt);
     }
 
-    // Handle subscription-related events (various possible prefixes)
-    if (eventType.startsWith('subscription') ||
+    // Billing is disabled: Subscriptions are managed via Dodo Payments webhooks.
+    // We intentionally ignore Clerk Billing/Commerce events to avoid conflicting writes.
+    if (
+        eventType.startsWith('subscription') ||
         eventType.startsWith('checkout') ||
         eventType.startsWith('invoice') ||
-        eventType.startsWith('payment')) {
-        await handleSubscriptionEvent(evt);
+        eventType.startsWith('payment')
+    ) {
+        console.log(`[Clerk Webhook] Billing event ignored (Dodo is source of truth): ${eventType}`);
+        return;
     }
 
     console.log(`[Clerk Webhook] ✓ Finished processing: ${eventType}`);

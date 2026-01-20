@@ -13,6 +13,6 @@ export const IS_PRE_LAUNCH = false;  // Set to false now that Clerk Billing is a
 /**
  * Payment System Configuration
  * Set to true to completely disable all payment processing
- * Clerk Billing is now active
+ * Payments are handled via Dodo Payments.
  */
 export const DISABLE_PAYMENTS = false;

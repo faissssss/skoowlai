@@ -56,7 +56,6 @@ function SubscriptionCard() {
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [error, setError] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
-    const { openUserProfile } = useClerk();
 
     const fetchSubscription = async () => {
         try {
@@ -88,7 +87,6 @@ function SubscriptionCard() {
 
     const handleModalClose = () => {
         setShowAccountModal(false);
-        // Sync data when modal closes to reflect any plan changes
         fetchSubscription();
     };
 
@@ -215,18 +213,26 @@ function SubscriptionCard() {
                     )}
 
                     {/* Manage Subscription Button (Opens Clerk Portal Modal) */}
-                    {isActive && (
+                    {isActive && subscription?.status === 'active' && (
                         <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                             <Button
                                 variant="outline"
                                 className="w-full"
-                                onClick={() => setShowAccountModal(true)}
+                                onClick={() => {
+                                    // Open Dodo customer portal in a new tab; backend route expects customer_id
+                                    const params = new URLSearchParams();
+                                    if (subscription && (subscription as any).customerId) {
+                                        params.set('customer_id', (subscription as any).customerId);
+                                    }
+                                    const url = `/api/customer-portal?${params.toString()}`;
+                                    window.open(url, '_blank');
+                                }}
                             >
                                 <CreditCard className="w-4 h-4 mr-2" />
                                 Manage Subscription
                             </Button>
                             <p className="text-xs text-center text-slate-500 mt-2">
-                                Manage your plan, payment method, and invoices.
+                                Opens the secure Dodo Payments customer portal.
                             </p>
                         </div>
                     )}
@@ -251,34 +257,8 @@ function SubscriptionCard() {
                 }}
             />
 
-            {/* Account Management Modal */}
-            {showAccountModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    {/* Blur Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={handleModalClose}
-                    />
-                    {/* Modal Content */}
-                    <div className="relative z-10 max-h-[90vh] overflow-auto rounded-lg">
-                        <button
-                            onClick={handleModalClose}
-                            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <UserProfile
-                            routing="hash"
-                            appearance={{
-                                elements: {
-                                    rootBox: "mx-auto",
-                                    card: "shadow-2xl"
-                                }
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
+            {/* Account Management Modal (currently unused for billing; kept for future customization) */}
+            {showAccountModal && null}
         </>
     );
 }

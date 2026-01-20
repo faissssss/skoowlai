@@ -9,6 +9,8 @@ export async function GET() {
             plan: subscription.plan,
             isActive: subscription.isActive,
             subscriptionEndsAt: subscription.subscriptionEndsAt,
+            customerId: subscription.customerId,
+            subscriptionId: subscription.subscriptionId,
         });
     } catch (error) {
         console.error('Failed to get subscription:', error);
