@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,8 +17,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { User, CreditCard, LogOut, Bug, Lightbulb, MessageSquare, Check, Crown, Loader2, X } from 'lucide-react';
-import { useUser, useClerk, UserProfile } from '@clerk/nextjs';
+import { CreditCard, Bug, Lightbulb, MessageSquare, Check, Crown, Loader2 } from 'lucide-react';
+import { useUser, useClerk } from '@clerk/nextjs';
 import BugReportModal from '@/components/BugReportModal';
 import FeedbackModal from '@/components/FeedbackModal';
 import PricingModal from '@/components/PricingModal';
@@ -49,13 +48,19 @@ const studentPlanFeatures = [
 ];
 
 function SubscriptionCard() {
-    const [subscription, setSubscription] = useState<{ status: string; plan: string | null; subscriptionEndsAt?: string } | null>(null);
+    type SubscriptionDTO = {
+        status: string;
+        plan: string | null;
+        subscriptionEndsAt?: string | null;
+        customerId?: string | null;
+        subscriptionId?: string | null;
+    };
+    const [subscription, setSubscription] = useState<SubscriptionDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [showPricing, setShowPricing] = useState(false);
-    const [cancelling, setCancelling] = useState(false);
-    const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [error, setError] = useState(false);
-    const [showAccountModal, setShowAccountModal] = useState(false);
+    const [showAccountModal] = useState(false);
+    const [openingPortal, setOpeningPortal] = useState(false);
 
     const fetchSubscription = async () => {
         try {
@@ -85,33 +90,7 @@ function SubscriptionCard() {
         fetchSubscription();
     }, []);
 
-    const handleModalClose = () => {
-        setShowAccountModal(false);
-        fetchSubscription();
-    };
 
-    const handleCancelSubscription = async () => {
-        setCancelling(true);
-        try {
-            const res = await fetch('/api/subscription/cancel', { method: 'POST' });
-            if (res.ok) {
-                // Refresh subscription status
-                const subRes = await fetch('/api/subscription');
-                if (subRes.ok) {
-                    setSubscription(await subRes.json());
-                }
-                setShowCancelDialog(false);
-            } else {
-                const data = await res.json();
-                alert(data.error || 'Failed to cancel subscription');
-            }
-        } catch (err) {
-            console.error('Error cancelling:', err);
-            alert('Failed to cancel subscription. Please try again.');
-        } finally {
-            setCancelling(false);
-        }
-    };
 
     if (error) {
         return (
@@ -194,7 +173,7 @@ function SubscriptionCard() {
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {features.map((feature, i) => (
                                 <li key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                    <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                    <Check className="w-4 h-4 text-green-500 shrink-0" />
                                     {feature}
                                 </li>
                             ))}
@@ -205,31 +184,49 @@ function SubscriptionCard() {
                     {!isActive && !isCancelled && (
                         <Button
                             onClick={() => setShowPricing(true)}
-                            className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                            className="w-full bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
                         >
                             <Crown className="w-4 h-4 mr-2" />
                             Upgrade to Pro
                         </Button>
                     )}
 
-                    {/* Manage Subscription Button (Opens Clerk Portal Modal) */}
-                    {isActive && subscription?.status === 'active' && (
+                    {/* Manage Subscription Button (opens Dodo Payments Customer Portal) */}
+                    {isActive && (
                         <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                             <Button
                                 variant="outline"
                                 className="w-full"
-                                onClick={() => {
-                                    // Open Dodo customer portal in a new tab; backend route expects customer_id
-                                    const params = new URLSearchParams();
-                                    if (subscription && (subscription as any).customerId) {
-                                        params.set('customer_id', (subscription as any).customerId);
+                                disabled={openingPortal}
+                                onClick={async () => {
+                                    try {
+                                        setOpeningPortal(true);
+                                        const params = new URLSearchParams();
+                                        if (subscription?.customerId) {
+                                            params.set('customer_id', String(subscription.customerId));
+                                        }
+                                        const url = `/api/customer-portal?${params.toString()}`;
+                                        // Navigate in the same tab; server handler will redirect or return a URL.
+                                        window.location.href = url;
+                                    } catch (e) {
+                                        console.error('Failed to open customer portal', e);
+                                        alert('Unable to open customer portal. Please try again.');
+                                    } finally {
+                                        setOpeningPortal(false);
                                     }
-                                    const url = `/api/customer-portal?${params.toString()}`;
-                                    window.open(url, '_blank');
                                 }}
                             >
-                                <CreditCard className="w-4 h-4 mr-2" />
-                                Manage Subscription
+                                {openingPortal ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Opening Portal...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CreditCard className="w-4 h-4 mr-2" />
+                                        Manage Subscription
+                                    </>
+                                )}
                             </Button>
                             <p className="text-xs text-center text-slate-500 mt-2">
                                 Opens the secure Dodo Payments customer portal.
@@ -241,7 +238,7 @@ function SubscriptionCard() {
                     {isCancelled && (
                         <Button
                             onClick={() => setShowPricing(true)}
-                            className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+                            className="w-full bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
                         >
                             <Crown className="w-4 h-4 mr-2" />
                             Resubscribe
@@ -268,17 +265,18 @@ export default function SettingsPage() {
     const router = useRouter();
     const { user, isLoaded } = useUser();
     const { signOut } = useClerk();
-    const [activeTab, setActiveTab] = useState("account");
+    const [activeTab, setActiveTab] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const hash = window.location.hash.replace('#', '');
+            if (hash && ['account', 'billing'].includes(hash)) {
+                return hash;
+            }
+        }
+        return 'account';
+    });
     const [isBugReportOpen, setIsBugReportOpen] = useState(false);
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
-    useEffect(() => {
-        // Read hash on mount
-        const hash = window.location.hash.replace('#', '');
-        if (hash && ['account', 'billing'].includes(hash)) {
-            setActiveTab(hash);
-        }
-    }, []);
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
