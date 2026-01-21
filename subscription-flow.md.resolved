@@ -1,0 +1,329 @@
+# Skoowl AI Subscription & Email Flow Documentation
+
+## Overview
+
+This document provides a comprehensive analysis of the subscription lifecycle, email notifications, and identifies areas for improvement.
+
+---
+
+## Subscription State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> free: New User
+    free --> trialing: Start Trial
+    free --> active: Direct Subscribe
+    trialing --> active: Payment Succeeded
+    trialing --> cancelled: User Cancels Trial
+    trialing --> expired: Trial Ends (No Payment)
+    trialing --> on_hold: Payment Issue
+    active --> cancelled: User Cancels
+    active --> expired: Subscription Expires
+    active --> on_hold: Payment Issue
+    cancelled --> active: Resubscribe
+    cancelled --> expired: Period Ends
+    cancelled --> free: Full Reset
+    on_hold --> active: Payment Resolved
+    on_hold --> cancelled: User Cancels
+    on_hold --> expired: Grace Period Ends
+    expired --> free: Reset
+    expired --> trialing: New Trial (if eligible)
+    expired --> active: Resubscribe
+```
+
+### Status Definitions
+
+| Status | Description | Has Pro Access |
+|--------|-------------|----------------|
+| `free` | Default state, no subscription | ❌ |
+| `trialing` | Free trial period active | ✅ |
+| `active` | Paid subscription active | ✅ |
+| `cancelled` | Cancelled but within paid period | ✅ (until `subscriptionEndsAt`) |
+| `on_hold` | Payment failed, awaiting resolution | ❌ |
+| `expired` | Subscription fully ended | ❌ |
+
+---
+
+## Subscription Flow
+
+### 1. Checkout Flow
+
+```
+User clicks "Upgrade" in PricingModal
+        ↓
+PricingModal.tsx fetches /api/subscription for existing customerId
+        ↓
+Builds checkout URL with:
+  - productId (monthly/yearly)
+  - customer_id (if exists)
+  - email (from Clerk)
+  - metadata_clerkId (for webhook matching)
+        ↓
+GET /api/checkout → Dodo Payments SDK
+        ↓
+User redirected to Dodo Payments checkout page
+        ↓
+User completes payment
+        ↓
+Dodo redirects back to /dashboard
+        ↓
+Dodo sends webhook to /api/webhooks/dodo-payments
+```
+
+### 2. Webhook Processing
+
+**Endpoint:** `/api/webhooks/dodo-payments`
+
+**Events Handled:**
+
+| Event | Action | Email Sent |
+|-------|--------|------------|
+| `subscription.created` / `subscription.trial_started` | Set status to `trialing`, record trial end date | Trial Welcome |
+| `subscription.active` / `payment.succeeded` | Set status to `active`, record next billing date | Welcome + Receipt |
+| `subscription.renewed` | Update `subscriptionEndsAt` to next billing date | Renewal Confirmation |
+| `subscription.cancelled` | Set status to `cancelled` (preserves access until period end) | Cancellation |
+| `subscription.on_hold` / `subscription.paused` | Set status to `on_hold` | (none currently) |
+| `subscription.trial_ended` | Set status to `expired` | (none currently) |
+| `subscription.expired` | Set status to `expired` | (none currently) |
+| `subscription.updated` / `subscription.plan_changed` | Update plan (monthly/yearly) | Plan Change |
+| `payment.failed` | Log failure, keep current status | Payment Failed |
+
+### 3. User Matching Logic
+
+Webhook handler finds user by (in order):
+1. `subscriptionId` — existing subscriber
+2. `customerId` — returning customer with new subscription
+3. `email` — resubscription or new subscriber
+
+### 4. Subscription Sync
+
+**Endpoint:** `/api/subscription/sync`
+
+Pulls authoritative data from Dodo and reconciles local DB:
+- Updates `subscriptionPlan` from interval or billing period
+- Updates `subscriptionEndsAt` from `next_billing_date`
+- Backfills `customerId` if missing
+- Optionally aligns status when mapping exists
+
+---
+
+## Email Flow Diagram
+
+```mermaid
+flowchart TD
+    subgraph Webhook["Webhook Events"]
+        W1["subscription.created<br/>subscription.trial_started"]
+        W2["subscription.active<br/>payment.succeeded"]
+        W3["subscription.renewed"]
+        W4["subscription.cancelled"]
+        W5["payment.failed"]
+        W6["subscription.updated<br/>plan_changed"]
+    end
+
+    subgraph CRON["CRON Jobs (Recommended)"]
+        C1["Trial Ending<br/>(3 days before)"]
+        C2["Renewal Reminder<br/>(7 days before)"]
+        C3["Win-back<br/>(30/60/90 days)"]
+    end
+
+    subgraph Emails["Email Notifications"]
+        E1["📧 Trial Welcome"]
+        E2["📧 Welcome"]
+        E3["📧 Receipt"]
+        E4["📧 Renewal Confirmation"]
+        E5["📧 Cancellation"]
+        E6["📧 Payment Failed"]
+        E7["📧 Plan Change"]
+        E8["📧 Trial Ending ⚠️"]
+        E9["📧 Reminder ⚠️"]
+        E10["📧 Win-back ⚠️"]
+    end
+
+    W1 --> E1
+    W2 --> E2
+    W2 --> E3
+    W3 --> E4
+    W4 --> E5
+    W5 --> E6
+    W6 --> E7
+    C1 -.-> E8
+    C2 -.-> E9
+    C3 -.-> E10
+
+    style E8 stroke-dasharray: 5 5
+    style E9 stroke-dasharray: 5 5
+    style E10 stroke-dasharray: 5 5
+```
+
+> [!NOTE]
+> Dashed lines (⚠️) indicate emails that require CRON job implementation.
+
+---
+
+## Email System
+
+### Email Types
+
+| Email | Trigger | Template |
+|-------|---------|----------|
+| **Trial Welcome** | Trial started | `trialWelcomeEmailTemplate` |
+| **Welcome** | Payment succeeded (new/resubscription) | `welcomeEmailTemplate` |
+| **Receipt** | Every successful payment | `receiptEmailTemplate` |
+| **Cancellation** | User cancels | `cancellationEmailTemplate` |
+| **Renewal** | Subscription auto-renewed | `renewalEmailTemplate` |
+| **Payment Failed** | Payment attempt fails | `paymentFailedEmailTemplate` |
+| **Plan Change** | User switches plans | `planChangeEmailTemplate` |
+| **Trial Ending** | X days before trial ends | `trialEndingEmailTemplate` |
+| **Reminder** | X days before renewal | `reminderEmailTemplate` |
+
+### Email Idempotency
+
+Emails use idempotency keys (`webhookId` + `emailType`) to prevent duplicate sends:
+- Stored in `EmailIdempotency` table
+- Each email type per webhook is sent exactly once
+- 24-hour window for key expiration
+
+### Email Configuration
+
+- **Provider:** Resend
+- **From:** `Skoowl AI <noreply@skoowlai.com>`
+- **Header Image:** `https://skoowlai.com/email-header.png`
+
+---
+
+## Customer Portal
+
+**Endpoint:** `/api/customer-portal`
+
+- Resolves `customer_id` from DB or Dodo API
+- Redirects to Dodo Payments customer portal
+- Users can manage payment methods, view invoices, cancel
+
+---
+
+## Database Schema (Subscription Fields)
+
+```prisma
+model User {
+  subscriptionStatus  String?   // free, active, cancelled, on_hold, expired, trialing
+  subscriptionPlan    String?   // monthly, yearly, null
+  subscriptionId      String?   // Dodo subscription ID
+  customerId          String?   // Dodo customer ID
+  subscriptionEndsAt  DateTime? // When current period ends
+  trialUsedAt         DateTime? // When trial was first used (prevents re-trials)
+}
+```
+
+---
+
+## Security & Audit
+
+### Webhook Signature Verification
+
+- Uses Svix library to verify signatures
+- Supports both `webhook-*` and `svix-*` header formats
+- Rejects unsigned or tampered payloads
+
+### State Transition Validation
+
+All state changes are validated against allowed transitions:
+```typescript
+const VALID_TRANSITIONS = {
+    'free': ['trialing', 'active'],
+    'trialing': ['active', 'cancelled', 'expired', 'on_hold'],
+    'active': ['cancelled', 'expired', 'on_hold'],
+    'cancelled': ['active', 'expired', 'free'],
+    'on_hold': ['active', 'cancelled', 'expired'],
+    'expired': ['free', 'trialing', 'active'],
+};
+```
+
+### Audit Logging
+
+All subscription state changes are logged to [AuditLog](file:///c:/antigravity/studybuddy/src/lib/subscriptionState.ts#59-66) table with:
+- User ID
+- From/To status
+- Source (dodo, paypal, manual)
+- Metadata and timestamp
+
+---
+
+## Current Gaps & Suggestions
+
+### 🔴 Critical Priority
+
+| Gap | Impact | Suggested Fix |
+|-----|--------|---------------|
+| **No trial ending reminder** | Users don't know trial is ending | Implement CRON job at `/api/cron/trial-reminders` to send email 3 days before trial ends |
+| **No email on `on_hold` status** | Users unaware of payment issues | Send "Action Required: Update Payment" email |
+| **No email on expiration** | Users may not realize access ended | Send "Your subscription has expired" email with resubscribe CTA |
+
+### 🟡 High Priority
+
+| Gap | Impact | Suggested Fix |
+|-----|--------|---------------|
+| **Plan inference relies on heuristics** | May misidentify monthly vs yearly | Store `product_id` in DB and map directly to plan type |
+| **No grace period for failed payments** | Immediate access loss | Keep access for 3-7 days while retrying |
+| **Trial abuse prevention is weak** | Same user could get multiple trials | Enforce `trialUsedAt` check before allowing new trials |
+| **No renewal reminder emails** | Surprise charges | Send reminder 7 days before renewal via CRON |
+
+### 🟢 Nice to Have
+
+| Enhancement | Benefit |
+|-------------|---------|
+| **Proration support for plan changes** | Better UX when upgrading/downgrading |
+| **Invoice PDF generation** | Professional receipts |
+| **Subscription analytics dashboard** | Track MRR, churn, trial conversion |
+| **Email open/click tracking** | Measure email effectiveness |
+| **Multi-currency support** | International users |
+| **Pause subscription option** | Reduce churn for temporary users |
+| **Win-back emails** | Re-engage churned users 30 days after cancellation |
+
+---
+
+## Recommended CRON Jobs
+
+| Job | Schedule | Action |
+|-----|----------|--------|
+| **Trial ending reminders** | Daily | Email users 3 days before trial ends |
+| **Renewal reminders** | Daily | Email users 7 days before renewal |
+| **Expired subscription cleanup** | Daily | Set cancelled → expired when period ends |
+| **Win-back campaign** | Daily | Email churned users at 30/60/90 days |
+
+---
+
+## Testing Checklist
+
+### Manual Tests
+- [ ] Complete checkout flow with test card
+- [ ] Receive trial welcome email
+- [ ] Complete payment after trial → receive welcome + receipt
+- [ ] Cancel subscription → receive cancellation email
+- [ ] Verify access persists until `subscriptionEndsAt`
+- [ ] Resubscribe after cancellation
+- [ ] Test webhook with ngrok + Dodo dashboard
+
+### Verification Commands
+```bash
+# Reset subscription for testing
+npx tsx scripts/reset-all-subscriptions.ts --email=test@example.com --commit
+
+# View current subscription state
+# Navigate to: https://skoowlai.com/dashboard/settings#billing
+```
+
+---
+
+## File Reference
+
+| File | Purpose |
+|------|---------|
+| [route.ts](file:///c:/antigravity/studybuddy/src/app/api/webhooks/dodo-payments/route.ts) | Webhook handler (719 lines) |
+| [subscription.ts](file:///c:/antigravity/studybuddy/src/lib/subscription.ts) | Status checks & usage limits |
+| [subscriptionState.ts](file:///c:/antigravity/studybuddy/src/lib/subscriptionState.ts) | State validation & audit logging |
+| [email.ts](file:///c:/antigravity/studybuddy/src/lib/email.ts) | Email sending functions |
+| [emailTemplates.ts](file:///c:/antigravity/studybuddy/src/lib/emailTemplates.ts) | HTML email templates |
+| [emailIdempotency.ts](file:///c:/antigravity/studybuddy/src/lib/emailIdempotency.ts) | Duplicate email prevention |
+| [dodo.ts](file:///c:/antigravity/studybuddy/src/lib/dodo.ts) | Dodo Payments client & helpers |
+| [PricingModal.tsx](file:///c:/antigravity/studybuddy/src/components/PricingModal.tsx) | Checkout UI |
+| [sync/route.ts](file:///c:/antigravity/studybuddy/src/app/api/subscription/sync/route.ts) | Subscription reconciliation |

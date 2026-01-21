@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
+import { useUser } from '@clerk/nextjs';
 import { PricingTableFour } from '@/components/billingsdk/pricing-table-four';
 import { plans } from '@/lib/billingsdk-config';
 
@@ -20,6 +21,34 @@ interface PricingModalProps {
  */
 export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+    const { user } = useUser();
+
+    // Subscription state for UI logic
+    const [subscriptionData, setSubscriptionData] = useState<{
+        isActive: boolean;
+        plan: 'monthly' | 'yearly' | null;
+        trialEligible: boolean;
+    }>({ isActive: false, plan: null, trialEligible: true });
+
+    // Fetch subscription data when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            fetch('/api/subscription')
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data) {
+                        // Trial eligible if user hasn't used trial AND is not currently active
+                        const isTrialEligible = !data.trialUsedAt && data.status !== 'active' && data.status !== 'trialing';
+                        setSubscriptionData({
+                            isActive: data.isActive,
+                            plan: data.plan,
+                            trialEligible: isTrialEligible,
+                        });
+                    }
+                })
+                .catch(console.error);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -42,6 +71,25 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
             const url = new URL('/api/checkout', window.location.origin);
             url.searchParams.set('productId', productId);
+
+            // Attach identity hints so Dodo links back to this user
+            // 1) Prefer existing customer_id to avoid duplications
+            try {
+                const subRes = await fetch('/api/subscription');
+                if (subRes.ok) {
+                    const s = await subRes.json();
+                    if (s?.customerId) {
+                        url.searchParams.set('customer_id', String(s.customerId));
+                    }
+                }
+            } catch (e) {
+                console.warn('Unable to prefetch subscription for customer_id', e);
+            }
+            // 2) Provide email and clerkId as metadata for webhook matching
+            const email = user?.primaryEmailAddress?.emailAddress;
+            if (email) url.searchParams.set('email', email);
+            const clerkId = user?.id;
+            if (clerkId) url.searchParams.set('metadata_clerkId', clerkId);
 
             // Dodo Checkout handler returns JSON { checkout_url }
             const res = await fetch(url.toString(), { method: 'GET' });
@@ -67,16 +115,9 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
     };
 
     // Configure via env vars (client safe)
-    // Prefer your Student plan IDs; fallback to generic vars for compatibility.
     // These must be Dodo product IDs like `pdt_...`
-    const monthlyProductId =
-        process.env.NEXT_PUBLIC_DODO_STUDENT_MONTHLY_PRODUCT_ID
-        || process.env.NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID
-        || '';
-    const yearlyProductId =
-        process.env.NEXT_PUBLIC_DODO_STUDENT_YEARLY_PRODUCT_ID
-        || process.env.NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID
-        || '';
+    const monthlyProductId = process.env.NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID || '';
+    const yearlyProductId = process.env.NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID || '';
 
     const modalContent = (
         <div
@@ -110,7 +151,8 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
                     <PricingTableFour
                         plans={plans}
-                        title="Choose Your Plan"
+                        title="Upgrade Plan"
+                        subtitle="Manage your billing and subscription"
                         theme="minimal"
                         size="medium"
                         showBillingToggle={true}
@@ -119,6 +161,8 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                             yearly: "Yearly",
                         }}
                         loadingPlanId={loadingPlan}
+                        showTrialBadge={subscriptionData.trialEligible}
+                        currentPlanInterval={subscriptionData.isActive ? subscriptionData.plan : null}
                         onPlanSelect={(planId, interval) => {
                             if (planId === 'free') {
                                 onClose();

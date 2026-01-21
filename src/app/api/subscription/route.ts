@@ -11,6 +11,7 @@ export async function GET() {
             subscriptionEndsAt: subscription.subscriptionEndsAt,
             customerId: subscription.customerId,
             subscriptionId: subscription.subscriptionId,
+            trialUsedAt: subscription.trialUsedAt,
         });
     } catch (error) {
         console.error('Failed to get subscription:', error);

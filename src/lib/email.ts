@@ -8,7 +8,9 @@ import {
     paymentFailedEmailTemplate,
     trialEndingEmailTemplate,
     planChangeEmailTemplate,
-    trialWelcomeEmailTemplate
+    trialWelcomeEmailTemplate,
+    onHoldEmailTemplate,
+    expirationEmailTemplate
 } from './emailTemplates';
 
 // ... (existing code)
@@ -277,6 +279,69 @@ export async function sendTrialWelcomeEmail({
         return true;
     } catch (error) {
         console.error('❌ Failed to send trial welcome email:', error);
+        return false;
+    }
+}
+
+/**
+ * Send on-hold (payment issue) email
+ */
+export async function sendOnHoldEmail({
+    email,
+    name,
+    plan,
+    reason
+}: {
+    email: string;
+    name?: string;
+    plan: 'monthly' | 'yearly';
+    reason?: string;
+}) {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '⚠️ Action required: payment issue on your Skoowl AI subscription',
+            html: onHoldEmailTemplate({
+                name: name || 'there',
+                plan,
+                reason
+            }),
+        });
+        console.log(`✅ On-hold email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send on-hold email:', error);
+        return false;
+    }
+}
+
+/**
+ * Send expiration email when subscription ends
+ */
+export async function sendExpirationEmail({
+    email,
+    name,
+    endedAt
+}: {
+    email: string;
+    name?: string;
+    endedAt: Date;
+}) {
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: 'Your Skoowl AI subscription has expired',
+            html: expirationEmailTemplate({
+                name: name || 'there',
+                endedAt
+            }),
+        });
+        console.log(`✅ Expiration email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send expiration email:', error);
         return false;
     }
 }

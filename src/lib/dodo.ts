@@ -24,6 +24,7 @@ type SubscriptionLite = {
 
 type SubscriptionsApiLite = {
   retrieve?: (id: string) => Promise<unknown>;
+  update?: (id: string, body?: unknown) => Promise<unknown>;
   cancel?: (id: string) => Promise<unknown>;
   cancelSubscription?: (id: string) => Promise<unknown>;
 };
@@ -51,6 +52,16 @@ export async function cancelDodoSubscriptionViaSdk(
   try {
     if (!apiKey || !subscriptionId) return false;
 
+    // Preferred: schedule cancellation at period end to retain access
+    if (dodoClient?.subscriptions?.update) {
+      await dodoClient.subscriptions.update(subscriptionId, {
+        // See: https://docs.dodopayments.com/api-reference/subscriptions/patch-subscriptions
+        cancel_at_next_billing_date: true,
+      });
+      return true;
+    }
+
+    // Fallbacks for older SDKs
     if (dodoClient?.subscriptions?.cancel) {
       await dodoClient.subscriptions.cancel(subscriptionId);
       return true;

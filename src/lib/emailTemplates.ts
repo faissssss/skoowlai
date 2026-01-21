@@ -747,3 +747,126 @@ export const trialWelcomeEmailTemplate = ({
         ${emailFooter()}
     `);
 };
+
+/**
+ * Subscription on-hold (payment issue) email
+ */
+export function onHoldEmailTemplate({
+    name,
+    plan,
+    reason
+}: {
+    name: string;
+    plan: 'monthly' | 'yearly';
+    reason?: string;
+}) {
+    const planName = plan === 'yearly' ? 'Yearly' : 'Monthly';
+    const userName = name || 'there';
+    const reasonText = reason || 'There was an issue charging your payment method';
+
+    const content = `
+        ${emailHeader()}
+        
+        <tr>
+            <td style="padding: 40px;">
+                <!-- Header -->
+                <h1 style="color: #111827; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Action Required: Update your payment method
+                </h1>
+                <p style="color: #64748b; font-size: 16px; margin: 0 0 32px; text-align: center; line-height: 1.5;">
+                    Your subscription is currently on hold
+                </p>
+
+                <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                    Hey ${userName}! 👋
+                </p>
+                <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
+                    We couldn't process your <strong style="color: #7c3aed;">Pro (${planName})</strong> renewal. ${reasonText}.
+                </p>
+
+                <!-- Warning Box -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.5;">
+                                Please update your payment method to avoid losing Pro access.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Update Payment Method →', 'https://skoowlai.com/dashboard/settings')}
+
+                <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    You can also retry the payment from your billing settings.
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}
+
+/**
+ * Subscription expired email
+ */
+export function expirationEmailTemplate({
+    name,
+    endedAt
+}: {
+    name: string;
+    endedAt: Date;
+}) {
+    const userName = name || 'there';
+    const endDateFormatted = endedAt.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    const content = `
+        ${emailHeader()}
+        
+        <tr>
+            <td style="padding: 40px;">
+                <!-- Header -->
+                <h1 style="color: #111827; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Your subscription has expired
+                </h1>
+                <p style="color: #64748b; font-size: 16px; margin: 0 0 32px; text-align: center; line-height: 1.5;">
+                    Pro access ended on ${endDateFormatted}
+                </p>
+
+                <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+                    Hey ${userName}! 👋
+                </p>
+                <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 28px;">
+                    Your Pro subscription period has ended. You can resubscribe anytime to regain access to premium features.
+                </p>
+
+                <!-- Info Box -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 8px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 18px 20px;">
+                            <p style="color: #065f46; font-size: 14px; margin: 0; line-height: 1.5;">
+                                Your data is safe. Upgrade again to continue where you left off.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Resubscribe →', 'https://skoowlai.com/dashboard/settings')}
+
+                <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    Need help or have feedback? Reply to this email and we’ll assist you.
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}

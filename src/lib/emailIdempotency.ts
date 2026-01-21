@@ -17,7 +17,10 @@ export type EmailType =
     | 'cancellation'
     | 'payment_failed'
     | 'trial_ending'
-    | 'reminder';
+    | 'reminder'
+    | 'plan_change'
+    | 'on_hold'
+    | 'expired';
 
 /**
  * Generates an idempotency key for an email.

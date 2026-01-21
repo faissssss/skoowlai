@@ -11,7 +11,13 @@ const nextConfig: NextConfig = {
     },
     // Allow large file uploads through proxy (50MB)
     proxyClientMaxBodySize: '50mb',
+
   },
+
+  allowedDevOrigins: [
+    "localhost:3000",
+    "quartziferous-cephalate-cain.ngrok-free.dev",
+  ],
 
   serverExternalPackages: ['openai'],
   // Enable Vercel Edge Image Optimization for external images

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendSubscriptionReminderEmail } from '@/lib/email';
+import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from '@/lib/emailIdempotency';
 
 // This endpoint should be triggered by a cron job (e.g., Vercel Cron)
 // Configure in vercel.json: { "crons": [{ "path": "/api/cron/subscription-reminders", "schedule": "0 9 * * *" }] }
@@ -53,17 +54,32 @@ export async function GET(req: NextRequest) {
                 if (!user.email || !user.subscriptionPlan) continue;
 
                 const isTrial = user.subscriptionStatus === 'trialing';
+                const dateKey = targetDate.toISOString().slice(0, 10);
+                const uniqueId = `${user.subscriptionId || user.id}:${days}:${dateKey}`;
+                const emailType: 'trial_ending' | 'reminder' = isTrial ? 'trial_ending' : 'reminder';
+                const idempotencyKey = generateEmailIdempotencyKey(emailType, uniqueId);
 
-                await sendSubscriptionReminderEmail({
-                    email: user.email,
-                    name: undefined,
-                    plan: user.subscriptionPlan as 'monthly' | 'yearly',
-                    subscriptionId: user.subscriptionId || 'unknown',
-                    daysRemaining: days,
-                    isTrial: isTrial,
-                });
-                emailsSent++;
-                console.log(`Sent ${days}-day reminder to ${user.email}`);
+                const sent = await sendEmailWithIdempotency(
+                    idempotencyKey,
+                    emailType,
+                    user.email,
+                    () =>
+                        sendSubscriptionReminderEmail({
+                            email: user.email,
+                            name: undefined,
+                            plan: user.subscriptionPlan as 'monthly' | 'yearly',
+                            subscriptionId: user.subscriptionId || 'unknown',
+                            daysRemaining: days,
+                            isTrial: isTrial,
+                        })
+                );
+
+                if (sent) {
+                    emailsSent++;
+                    console.log(`Sent ${days}-day ${isTrial ? 'trial' : 'renewal'} reminder to ${user.email}`);
+                } else {
+                    console.log(`Skipped duplicate ${days}-day ${isTrial ? 'trial' : 'renewal'} reminder for ${user.email}`);
+                }
             }
         }
 

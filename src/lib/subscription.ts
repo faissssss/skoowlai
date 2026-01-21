@@ -13,6 +13,7 @@ export interface UserSubscription {
     customerId: string | null;
     subscriptionId: string | null;
     subscriptionEndsAt: Date | null;
+    trialUsedAt: Date | null;
 }
 
 /**
@@ -31,6 +32,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             customerId: null,
             subscriptionId: null,
             subscriptionEndsAt: new Date('2026-12-31'), // Far future date
+            trialUsedAt: new Date(), // Pre-launch users treated as trial used
         };
     }
 
@@ -43,6 +45,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             customerId: null,
             subscriptionId: null,
             subscriptionEndsAt: null,
+            trialUsedAt: null,
         };
     }
 
@@ -55,6 +58,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
                 subscriptionId: true,
                 customerId: true,
                 subscriptionEndsAt: true,
+                trialUsedAt: true,
             }
         });
 
@@ -67,6 +71,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
                 customerId: null,
                 subscriptionId: null,
                 subscriptionEndsAt: null,
+                trialUsedAt: null,
             };
         }
 
@@ -88,6 +93,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             customerId: user.customerId,
             subscriptionId: user.subscriptionId,
             subscriptionEndsAt: user.subscriptionEndsAt,
+            trialUsedAt: user.trialUsedAt,
         };
     } catch (error) {
         console.error('Error fetching subscription:', error);
@@ -99,6 +105,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             customerId: null,
             subscriptionId: null,
             subscriptionEndsAt: null,
+            trialUsedAt: null,
         };
     }
 }

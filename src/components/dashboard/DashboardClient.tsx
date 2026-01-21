@@ -809,48 +809,15 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 </div>
 
                 {filteredDecks.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.4 }}
-                        className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 relative overflow-hidden"
-                    >
-                        {/* Subtle background glow */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20" />
-
-                        {/* Floating/bouncing icon */}
-                        <motion.div
-                            animate={{
-                                y: [0, -8, 0],
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
-                            className="w-16 h-16 bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 relative z-10 shadow-lg shadow-slate-200 dark:shadow-slate-900/50"
-                        >
-                            <BookOpen className="w-8 h-8" />
-                        </motion.div>
-
-                        {/* Animated text */}
-                        <motion.h3
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-lg font-medium text-slate-900 dark:text-slate-100 relative z-10"
-                        >
-                            No study sets found
-                        </motion.h3>
-                        <motion.p
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto relative z-10"
-                        >
+                    <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                        <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <BookOpen className="w-6 h-6 text-slate-400" />
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400">No study sets found</p>
+                        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
                             Try adjusting your filters or create a new set to get started.
-                        </motion.p>
-                    </motion.div>
+                        </p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredDecks.map((deck) => {
