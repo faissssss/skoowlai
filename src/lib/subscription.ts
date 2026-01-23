@@ -59,6 +59,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
                 customerId: true,
                 subscriptionEndsAt: true,
                 trialUsedAt: true,
+                paymentGracePeriodEndsAt: true,
             }
         });
 
@@ -72,18 +73,22 @@ export async function getUserSubscription(): Promise<UserSubscription> {
                 subscriptionId: null,
                 subscriptionEndsAt: null,
                 trialUsedAt: null,
+
             };
         }
 
         // Check if user has active access:
         // 1. Active or trialing status = always active
         // 2. Cancelled status = still active if within paid period (until subscriptionEndsAt)
+        // 3. On-hold status = active if within grace period (payment retry window)
         const now = new Date();
         const isWithinPaidPeriod = Boolean(user.subscriptionEndsAt && user.subscriptionEndsAt > now);
+        const isWithinGracePeriod = Boolean(user.paymentGracePeriodEndsAt && user.paymentGracePeriodEndsAt > now);
         const isActive =
             user.subscriptionStatus === 'active' ||
             user.subscriptionStatus === 'trialing' ||
-            (user.subscriptionStatus === 'cancelled' && isWithinPaidPeriod);
+            (user.subscriptionStatus === 'cancelled' && isWithinPaidPeriod) ||
+            (user.subscriptionStatus === 'on_hold' && isWithinGracePeriod);
 
         return {
             status: user.subscriptionStatus as SubscriptionStatus,
@@ -106,6 +111,7 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             subscriptionId: null,
             subscriptionEndsAt: null,
             trialUsedAt: null,
+
         };
     }
 }

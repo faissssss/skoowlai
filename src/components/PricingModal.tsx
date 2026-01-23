@@ -33,6 +33,9 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
     // Fetch subscription data when modal opens
     useEffect(() => {
         if (isOpen) {
+            // Ensure DB is in sync with provider before reading
+            fetch('/api/subscription/sync', { method: 'POST' }).catch(() => { /* non-blocking */ });
+
             fetch('/api/subscription')
                 .then(res => res.ok ? res.json() : null)
                 .then(data => {
@@ -170,7 +173,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                             }
                             const productId = interval === 'yearly' ? yearlyProductId : monthlyProductId;
                             if (!productId) {
-                                alert('Product ID not configured. Please set NEXT_PUBLIC_DODO_STUDENT_MONTHLY_PRODUCT_ID and NEXT_PUBLIC_DODO_STUDENT_YEARLY_PRODUCT_ID in .env');
+                                alert('Product ID not configured. Set NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID and NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID (and optional *_NO_TRIAL variants) in .env');
                                 return;
                             }
                             startCheckout(productId);

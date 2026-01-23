@@ -39,20 +39,29 @@ export async function POST(request: NextRequest) {
         }
 
         // Attempt to cancel via Dodo Billing SDK
-        const cancelled = await cancelDodoSubscriptionViaSdk(subscriptionId);
+        // - Immediate for trials (access ends now)
+        // - Schedule at period end for paid
+        const isTrial = user.subscriptionStatus === 'trialing';
+        const cancelled = await cancelDodoSubscriptionViaSdk(subscriptionId, { immediate: isTrial });
         if (!cancelled) {
             return NextResponse.json(
-                { error: 'Failed to cancel subscription. Please try again or use the customer portal.' },
+                { error: 'Failed to cancel subscription. Please try again later.' },
                 { status: 500 }
             );
         }
 
-        // Local status will be updated by the webhook, but we can optimistically mark as cancelled
+        // Update our DB immediately
+        // - Trial: keep access until end of trial period (do not revoke immediately)
+        // - Paid: keep access until end of current period
+        // For both cases, we use the existing subscriptionEndsAt or fallback to now if missing
         const accessEndsAt = user.subscriptionEndsAt || new Date();
+
         await db.user.update({
             where: { id: user.id },
             data: {
                 subscriptionStatus: 'cancelled',
+                // For trials and paid plans, we DON'T change the end date on cancel
+                // We just mark status as cancelled. Access continues until subscriptionEndsAt.
             }
         });
 

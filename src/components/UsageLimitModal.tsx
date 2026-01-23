@@ -43,30 +43,30 @@ export default function UsageLimitModal({ isOpen, onClose, feature, limit, used 
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none"
                         >
-                            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto">
+                            <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden pointer-events-auto">
                                 {/* Header */}
                                 <div className="p-6 text-center">
-                                    <div className="mx-auto w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
+                                    <div className="mx-auto w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4">
                                         <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
                                     </div>
-                                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                                    <h2 className="text-xl font-bold text-foreground mb-2">
                                         Daily Limit Reached
                                     </h2>
-                                    <p className="text-slate-600 dark:text-slate-400">
-                                        You've used all <span className="font-semibold text-amber-600">{limit}</span> of your daily {feature} generations.
+                                    <p className="text-muted-foreground">
+                                        You've used all <span className="font-semibold text-amber-600 dark:text-amber-500">{limit}</span> of your daily {feature} generations.
                                     </p>
                                 </div>
 
                                 {/* Progress bar */}
                                 <div className="px-6 pb-4">
-                                    <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
                                         <div className="h-full bg-amber-500 rounded-full" style={{ width: '100%' }} />
                                     </div>
-                                    <p className="text-center text-sm text-slate-500 mt-2">{used}/{limit} used today</p>
+                                    <p className="text-center text-sm text-muted-foreground mt-2">{used}/{limit} used today</p>
                                 </div>
 
                                 {/* Actions */}
-                                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+                                <div className="p-6 bg-muted/30 space-y-3">
                                     <Button
                                         onClick={handleUpgrade}
                                         className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium rounded-xl"
@@ -77,7 +77,7 @@ export default function UsageLimitModal({ isOpen, onClose, feature, limit, used 
                                     <Button
                                         variant="ghost"
                                         onClick={onClose}
-                                        className="w-full text-slate-500"
+                                        className="w-full text-muted-foreground hover:text-foreground"
                                     >
                                         Maybe Later
                                     </Button>

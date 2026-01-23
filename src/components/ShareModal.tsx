@@ -151,54 +151,54 @@ export default function ShareModal({
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-[95vw] sm:max-w-lg transform rounded-2xl bg-slate-900 border border-white/10 p-4 sm:p-6 text-left align-middle shadow-xl transition-all">
+                            <Dialog.Panel className="w-full max-w-[95vw] sm:max-w-lg transform rounded-2xl bg-background border border-border p-4 sm:p-6 text-left align-middle shadow-xl transition-all">
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-4 sm:mb-6">
-                                    <Dialog.Title className="text-base sm:text-lg font-semibold text-white flex items-center gap-2 truncate pr-2">
+                                    <Dialog.Title className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2 truncate pr-2">
                                         Share "{deckTitle.length > 20 ? deckTitle.slice(0, 20) + '...' : deckTitle}"
                                     </Dialog.Title>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <button
                                             onClick={onClose}
-                                            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                            className="p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors"
                                         >
-                                            <X className="w-5 h-5 text-slate-400" />
+                                            <X className="w-5 h-5 text-muted-foreground" />
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Add People Input */}
                                 <div className="relative mb-6 z-20">
-                                    <div className="flex items-center bg-slate-800 border border-white/10 rounded-xl focus-within:ring-2 focus-within:ring-violet-500/50 focus-within:border-violet-500/50">
+                                    <div className="flex items-center bg-muted/50 border border-input rounded-xl focus-within:ring-2 focus-within:ring-violet-500/50 focus-within:border-violet-500/50 transition-all">
                                         <input
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             placeholder="Add by email..."
-                                            className="flex-1 px-3 py-2 sm:px-4 sm:py-3 bg-transparent text-white text-sm placeholder-slate-500 focus:outline-none rounded-l-xl min-w-0"
+                                            className="flex-1 px-3 py-2 sm:px-4 sm:py-3 bg-transparent text-foreground text-sm placeholder:text-muted-foreground focus:outline-none rounded-l-xl min-w-0"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') handleInvite();
                                             }}
                                         />
 
                                         {/* Role Selector */}
-                                        <div className="relative border-l border-white/10 shrink-0">
+                                        <div className="relative border-l border-border shrink-0">
                                             <button
                                                 onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                                                className="flex items-center gap-1 px-2 py-2 sm:px-3 sm:py-3 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
+                                                className="flex items-center gap-1 px-2 py-2 sm:px-3 sm:py-3 text-xs sm:text-sm text-foreground/80 hover:text-foreground transition-colors"
                                             >
                                                 {selectedRole === 'EDITOR' ? 'Editor' : 'Viewer'}
                                                 <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
                                             </button>
 
                                             {showRoleDropdown && (
-                                                <div className="absolute right-0 top-full mt-2 w-32 bg-slate-800 border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                                                <div className="absolute right-0 top-full mt-2 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden">
                                                     <button
                                                         onClick={() => {
                                                             setSelectedRole('EDITOR');
                                                             setShowRoleDropdown(false);
                                                         }}
-                                                        className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors"
+                                                        className="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
                                                     >
                                                         Editor
                                                     </button>
@@ -207,7 +207,7 @@ export default function ShareModal({
                                                             setSelectedRole('VIEWER');
                                                             setShowRoleDropdown(false);
                                                         }}
-                                                        className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors"
+                                                        className="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-muted transition-colors"
                                                     >
                                                         Viewer
                                                     </button>
@@ -220,7 +220,7 @@ export default function ShareModal({
                                             <Button
                                                 onClick={handleInvite}
                                                 disabled={!email.trim() || isInviting}
-                                                className="bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-4 h-[34px] sm:h-[42px] rounded-lg text-xs sm:text-sm"
+                                                className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 sm:px-4 h-[34px] sm:h-[42px] rounded-lg text-xs sm:text-sm"
                                             >
                                                 {isInviting ? (
                                                     <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
@@ -234,24 +234,24 @@ export default function ShareModal({
 
                                 {/* People with access */}
                                 <div className="mb-6 relative z-10">
-                                    <h3 className="text-sm font-medium text-slate-400 mb-3">People with access</h3>
+                                    <h3 className="text-sm font-medium text-muted-foreground mb-3">People with access</h3>
 
                                     {isLoading ? (
                                         <div className="flex justify-center py-4">
-                                            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
                                             {/* Owner */}
                                             {owner && (
-                                                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                                                <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
                                                             {owner.email.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-medium text-white">{owner.email}</p>
-                                                            <p className="text-xs text-slate-500">You</p>
+                                                            <p className="text-sm font-medium text-foreground">{owner.email}</p>
+                                                            <p className="text-xs text-muted-foreground">You</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-amber-500">
@@ -265,45 +265,45 @@ export default function ShareModal({
                                             {collaborators.map((collab) => (
                                                 <div
                                                     key={collab.id}
-                                                    className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50"
+                                                    className="flex items-center justify-between p-3 rounded-xl bg-card border border-border"
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-medium text-sm">
                                                             {collab.email.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <p className="text-sm font-medium text-white">{collab.email}</p>
+                                                        <p className="text-sm font-medium text-foreground">{collab.email}</p>
                                                     </div>
 
                                                     {/* Role Dropdown */}
                                                     <div className="relative">
                                                         <button
                                                             onClick={() => setActiveDropdown(activeDropdown === collab.id ? null : collab.id)}
-                                                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                                         >
                                                             {collab.role === 'EDITOR' ? 'Editor' : 'Viewer'}
                                                             <ChevronDown className="w-4 h-4" />
                                                         </button>
 
                                                         {activeDropdown === collab.id && (
-                                                            <div className="absolute right-0 top-full mt-1 w-48 bg-slate-800 border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                                                            <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden">
                                                                 <button
                                                                     onClick={() => handleRoleChange(collab.id, 'EDITOR')}
-                                                                    className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center justify-between"
+                                                                    className="w-full px-4 py-3 text-left text-sm text-popover-foreground hover:bg-muted transition-colors flex items-center justify-between"
                                                                 >
                                                                     <span className="font-medium">Editor</span>
-                                                                    {collab.role === 'EDITOR' && <Check className="w-4 h-4 text-green-400" />}
+                                                                    {collab.role === 'EDITOR' && <Check className="w-4 h-4 text-green-500" />}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleRoleChange(collab.id, 'VIEWER')}
-                                                                    className="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center justify-between"
+                                                                    className="w-full px-4 py-3 text-left text-sm text-popover-foreground hover:bg-muted transition-colors flex items-center justify-between"
                                                                 >
                                                                     <span className="font-medium">Viewer</span>
-                                                                    {collab.role === 'VIEWER' && <Check className="w-4 h-4 text-green-400" />}
+                                                                    {collab.role === 'VIEWER' && <Check className="w-4 h-4 text-green-500" />}
                                                                 </button>
-                                                                <div className="border-t border-white/10" />
+                                                                <div className="border-t border-border" />
                                                                 <button
                                                                     onClick={() => handleRemove(collab.id, collab.email)}
-                                                                    className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                                                                    className="w-full px-4 py-3 text-left text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-2"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
                                                                     Remove access
@@ -315,7 +315,7 @@ export default function ShareModal({
                                             ))}
 
                                             {collaborators.length === 0 && (
-                                                <p className="text-sm text-slate-500 text-center py-4">
+                                                <p className="text-sm text-muted-foreground text-center py-4">
                                                     No collaborators yet. Invite someone by email above.
                                                 </p>
                                             )}
@@ -324,19 +324,19 @@ export default function ShareModal({
                                 </div>
 
                                 {/* General Access */}
-                                <div className="border-t border-white/10 pt-6">
-                                    <h3 className="text-sm font-medium text-slate-400 mb-3">General access</h3>
+                                <div className="border-t border-border pt-6">
+                                    <h3 className="text-sm font-medium text-muted-foreground mb-3">General access</h3>
 
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50">
+                                    <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border bg-muted/20">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isPublic ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isPublic ? 'bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-muted text-muted-foreground'}`}>
                                                 {isPublic ? <Globe className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium text-white">
+                                                <p className="text-sm font-medium text-foreground">
                                                     {isPublic ? 'Anyone with the link' : 'Restricted'}
                                                 </p>
-                                                <p className="text-xs text-slate-500">
+                                                <p className="text-xs text-muted-foreground">
                                                     {isPublic ? 'Anyone on the internet with the link can view' : 'Only people added can access'}
                                                 </p>
                                             </div>
@@ -344,7 +344,7 @@ export default function ShareModal({
 
                                         <button
                                             onClick={handlePublicToggle}
-                                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                            className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                         >
                                             <ChevronDown className="w-4 h-4" />
                                         </button>
@@ -354,11 +354,11 @@ export default function ShareModal({
                                     <Button
                                         onClick={handleCopyLink}
                                         variant="outline"
-                                        className="w-full mt-4 border-white/10 text-white hover:bg-white/10 gap-2"
+                                        className="w-full mt-4 border-border text-foreground hover:bg-muted gap-2"
                                     >
                                         {copied ? (
                                             <>
-                                                <Check className="w-4 h-4 text-green-400" />
+                                                <Check className="w-4 h-4 text-green-500" />
                                                 Copied!
                                             </>
                                         ) : (

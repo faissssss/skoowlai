@@ -49,8 +49,15 @@ export async function checkFeatureLimit(feature: FeatureType): Promise<FeatureLi
         return { allowed: false, isSubscriber: false, currentUsage: 0, limit: 0, errorResponse };
     }
 
-    const isSubscriber = user.subscriptionStatus === 'active';
     const today = new Date();
+    const hasFutureAccess =
+        user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) > today : false;
+
+    // Treat trialing users as subscribers, and cancelled users retain access until period end
+    const isSubscriber =
+        user.subscriptionStatus === 'active' ||
+        user.subscriptionStatus === 'trialing' ||
+        (user.subscriptionStatus === 'cancelled' && hasFutureAccess);
 
     // Get the appropriate usage field and limit
     const usageMap: Record<FeatureType, { countField: string; dateField: string; freeLimit: number; studentLimit: number }> = {

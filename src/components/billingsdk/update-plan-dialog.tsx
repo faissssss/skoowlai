@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Toggle } from "@/components/ui/toggle";
 import { Label } from "@/components/ui/label";
-import { type Plan } from "@/lib/billingsdk-config";
+import { type Plan, type BillingInterval } from "@/lib/billingsdk-config";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -25,6 +25,8 @@ export interface UpdatePlanDialogProps {
   onPlanChange: (planId: string) => void;
   className?: string;
   title?: string;
+  /** The user's current plan interval (monthly/yearly). Used to mark Current Plan correctly. */
+  currentInterval: BillingInterval;
 }
 
 const easing = [0.4, 0, 0.2, 1] as const;
@@ -36,8 +38,9 @@ export function UpdatePlanDialog({
   className,
   title,
   triggerText,
+  currentInterval,
 }: UpdatePlanDialogProps) {
-  const [isYearly, setIsYearly] = useState(false);
+  const [isYearly, setIsYearly] = useState(currentInterval === "yearly");
   const [selectedPlan, setSelectedPlan] = useState<string | undefined>(
     undefined,
   );
@@ -250,20 +253,31 @@ export function UpdatePlanDialog({
                             <Button
                               className={cn(
                                 "h-10 w-full touch-manipulation text-sm font-medium sm:h-11 sm:text-base",
-                                selectedPlan === currentPlan.id
-                                  ? ""
-                                  : "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 shadow-lg shadow-violet-500/20"
+                                plan.id === "free"
+                                  ? "border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                  : (selectedPlan === currentPlan.id &&
+                                      ((isYearly ? "yearly" : "monthly") === currentInterval)
+                                        ? ""
+                                        : "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 shadow-lg shadow-violet-500/20")
                               )}
-                              disabled={selectedPlan === currentPlan.id}
+                              disabled={
+                                plan.id !== "free" &&
+                                selectedPlan === currentPlan.id &&
+                                ((isYearly ? "yearly" : "monthly") === currentInterval)
+                              }
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onPlanChange(plan.id);
                                 handleOpenChange(false);
                               }}
                             >
-                              {selectedPlan === currentPlan.id
-                                ? "Current Plan"
-                                : "Upgrade"}
+                              {plan.id === "free"
+                                ? "Start for free"
+                                : selectedPlan === currentPlan.id
+                                  ? ((isYearly ? "yearly" : "monthly") === currentInterval
+                                      ? "Current Plan"
+                                      : (isYearly ? "Upgrade to Yearly" : "Switch to Monthly"))
+                                  : "Upgrade"}
                             </Button>
                           </motion.div>
                         </motion.div>

@@ -177,7 +177,7 @@ async function reconcileFromDodo(userClerkId: string) {
                         if (days > 300) nextPlan = 'yearly';
                         else if (days <= 60) nextPlan = 'monthly';
                     }
-                } catch {}
+                } catch { }
             }
         }
     }
@@ -187,17 +187,51 @@ async function reconcileFromDodo(userClerkId: string) {
         selectedSub?.customer?.customer_id ?? selectedSub?.customer_id ?? selectedSub?.customerId ?? null;
     const dodoStatus: SubStatus | null = mapDodoStatus(normStr(selectedSub?.status));
 
-    // Build minimal update
+    // If user locally cancelled a trial immediately (EndsAt ~ now), do not let remote "trialing/active"
+    // resurrect status or future endsAt. Allow only remote cancelled/expired to tighten state.
+    const now = new Date();
+    const immediateLocalCancel =
+        (user.subscriptionStatus === 'cancelled') &&
+        !!user.subscriptionEndsAt &&
+        (user.subscriptionEndsAt.getTime() <= now.getTime() + 2 * 60 * 1000); // 2 min skew
+
+    // Build minimal update with guards
     const update: Record<string, any> = {};
-    if (selectedSub?.subscription_id && selectedSub.subscription_id !== user.subscriptionId) {
-        update.subscriptionId = selectedSub.subscription_id;
-    }
-    if (nextPlan && nextPlan !== user.subscriptionPlan) update.subscriptionPlan = nextPlan;
-    if (nextEndsAt && String(user.subscriptionEndsAt) !== String(nextEndsAt))
-        update.subscriptionEndsAt = nextEndsAt;
+
+    // Always allow customerId backfill
     if (nextCustomerId && nextCustomerId !== user.customerId) update.customerId = nextCustomerId;
-    if (dodoStatus && dodoStatus !== (user.subscriptionStatus as SubStatus))
-        update.subscriptionStatus = dodoStatus;
+
+    // Only override identifiers/plan/dates if NOT an immediate local cancel
+    if (!immediateLocalCancel) {
+        if (selectedSub?.subscription_id && selectedSub.subscription_id !== user.subscriptionId) {
+            update.subscriptionId = selectedSub.subscription_id;
+        }
+        if (nextPlan && nextPlan !== user.subscriptionPlan) update.subscriptionPlan = nextPlan;
+        if (nextEndsAt && String(user.subscriptionEndsAt) !== String(nextEndsAt)) {
+            update.subscriptionEndsAt = nextEndsAt;
+        }
+    }
+
+    // Status override rules:
+    // - Normal: accept any mapped remote status
+    // - Immediate local cancel: only accept remote 'cancelled' or 'expired'
+    // - Scheduled cancel: preserve local 'cancelled' even if remote shows 'active' with cancel_at_next_billing_date
+    // - Trial: preserve local 'trialing' if remote shows 'active' (Dodo sends active for trials)
+    const scheduledCancel = selectedSub?.cancel_at_next_billing_date === true;
+
+    if (dodoStatus && dodoStatus !== (user.subscriptionStatus as SubStatus)) {
+        // PROTECTION 1: Don't override local 'cancelled' with remote 'active' if Dodo has scheduled cancel
+        if (user.subscriptionStatus === 'cancelled' && dodoStatus === 'active' && scheduledCancel) {
+            console.log('[Sync] Preserving local cancelled status (Dodo has cancel_at_next_billing_date=true)');
+        }
+        // PROTECTION 2: Don't override local 'trialing' with remote 'active' (Dodo trials are 'active' until end)
+        else if (user.subscriptionStatus === 'trialing' && dodoStatus === 'active') {
+            console.log('[Sync] Preserving local trialing status (Dodo reports active for trials)');
+        }
+        else if (!immediateLocalCancel || dodoStatus === 'cancelled' || dodoStatus === 'expired') {
+            update.subscriptionStatus = dodoStatus;
+        }
+    }
 
     let updated = user;
     if (Object.keys(update).length > 0) {

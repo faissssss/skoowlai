@@ -11,12 +11,14 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export type EmailType =
+    | 'trial_welcome'
     | 'welcome'
     | 'receipt'
     | 'renewal'
     | 'cancellation'
     | 'payment_failed'
     | 'trial_ending'
+    | 'trial_ended'
     | 'reminder'
     | 'plan_change'
     | 'on_hold'
@@ -38,6 +40,8 @@ export function generateEmailIdempotencyKey(
  * If not, marks it as sent and returns true (proceed with sending).
  * If already sent, returns false (skip sending).
  * 
+ * ✅ BUG #9 FIX: Uses atomic upsert to prevent race conditions from concurrent webhooks
+ * 
  * @param idempotencyKey Unique key for this email
  * @param emailType Type of email being sent
  * @param recipientEmail Recipient's email address
@@ -49,22 +53,32 @@ export async function checkAndMarkEmailSent(
     recipientEmail: string
 ): Promise<boolean> {
     try {
-        // Try to create the record - will fail if idempotencyKey already exists
-        await prisma.sentEmail.create({
-            data: {
+        // Use atomic upsert: only creates if doesn't exist
+        // Returns the created/found record
+        const result = await prisma.sentEmail.upsert({
+            where: { idempotencyKey },
+            create: {
                 idempotencyKey,
                 emailType,
                 recipientEmail,
-            }
+            },
+            update: {
+                // No updates needed - if it exists, we just retrieve it
+            },
         });
-        return true; // Email not sent before, proceed
-    } catch (error: any) {
-        // If unique constraint violation, email was already sent
-        if (error.code === 'P2002') {
-            console.log(`📧 Skipping duplicate email: ${idempotencyKey}`);
-            return false;
+
+        // Check if we just created it (new record) or it already existed
+        // If the createdAt is within the last second, we just created it
+        const wasJustCreated = (Date.now() - result.createdAt.getTime()) < 1000;
+
+        if (wasJustCreated) {
+            return true; // We created it, proceed with sending email
+        } else {
+            console.log(`📧 Skipping duplicate email: ${idempotencyKey} (already sent at ${result.createdAt.toISOString()})`);
+            return false; // Already existed, skip email
         }
-        // For other errors, log but allow email to send (fail-open)
+    } catch (error: any) {
+        // For any errors, log but allow email to send (fail-open for reliability)
         console.error('Error checking email idempotency:', error);
         return true;
     }

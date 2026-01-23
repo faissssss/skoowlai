@@ -290,12 +290,14 @@ export async function sendOnHoldEmail({
     email,
     name,
     plan,
-    reason
+    reason,
+    gracePeriodEndsAt
 }: {
     email: string;
     name?: string;
     plan: 'monthly' | 'yearly';
     reason?: string;
+    gracePeriodEndsAt?: Date;
 }) {
     try {
         await resend.emails.send({
@@ -305,7 +307,8 @@ export async function sendOnHoldEmail({
             html: onHoldEmailTemplate({
                 name: name || 'there',
                 plan,
-                reason
+                reason,
+                gracePeriodEndsAt
             }),
         });
         console.log(`✅ On-hold email sent to ${email}`);

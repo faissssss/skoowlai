@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sendSubscriptionEmails, sendWelcomeEmail, sendReceiptEmail } from '@/lib/email';
+import { sendSubscriptionEmails, sendWelcomeEmail, sendReceiptEmail, sendTrialWelcomeEmail } from '@/lib/email';
 import { requireAuth } from '@/lib/auth';
+import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from '@/lib/emailIdempotency';
 
 /**
  * Verify PayPal subscription status with PayPal API
@@ -160,24 +161,50 @@ export async function POST(request: NextRequest) {
 
         console.log(`PayPal subscription activated for user ${user.id} (${user.email}): ${subscriptionId}`);
 
-        // 5. Send welcome and receipt emails
+        // 5. Send emails with correct trial vs paid workflow + idempotency
         if (user.email) {
             if (verification.isTrial) {
-                // For trials, only send welcome email (no receipt for $0)
-                await sendWelcomeEmail({
-                    email: user.email,
-                    name: name || undefined,
-                    plan: planType,
-                    subscriptionId,
-                });
+                // Trial: send only Trial Welcome (no Pro welcome, no receipt)
+                const trialEndsStr = subscriptionEndsAt ? subscriptionEndsAt.toLocaleDateString() : undefined;
+                await sendEmailWithIdempotency(
+                    generateEmailIdempotencyKey('trial_welcome', `trial_${subscriptionId}`),
+                    'trial_welcome',
+                    user.email,
+                    () =>
+                        sendTrialWelcomeEmail({
+                            email: user.email,
+                            name: name || undefined,
+                            trialEndsAt: trialEndsStr
+                        })
+                );
             } else {
-                // For paid, send both
-                await sendSubscriptionEmails({
-                    email: user.email,
-                    name: name || undefined,
-                    plan: planType,
-                    subscriptionId,
-                });
+                // Paid: Pro Welcome + Receipt
+                await sendEmailWithIdempotency(
+                    generateEmailIdempotencyKey('welcome', `sub_${subscriptionId}`),
+                    'welcome',
+                    user.email,
+                    () =>
+                        sendWelcomeEmail({
+                            email: user.email,
+                            name: name || undefined,
+                            plan: planType,
+                            subscriptionId,
+                        })
+                );
+
+                const periodKey = (subscriptionEndsAt || new Date()).toISOString().slice(0, 10);
+                await sendEmailWithIdempotency(
+                    generateEmailIdempotencyKey('receipt', `sub_${subscriptionId}_${periodKey}`),
+                    'receipt',
+                    user.email,
+                    () =>
+                        sendReceiptEmail({
+                            email: user.email,
+                            name: name || undefined,
+                            plan: planType,
+                            subscriptionId,
+                        })
+                );
             }
         }
 

@@ -703,7 +703,7 @@ export const planChangeEmailTemplate = ({
 </html>
 `;
 
-export const trialWelcomeEmailTemplate = ({
+export function trialWelcomeEmailTemplate({
     name,
     trialDays = 7,
     trialEndsAt
@@ -711,7 +711,7 @@ export const trialWelcomeEmailTemplate = ({
     name: string;
     trialDays?: number;
     trialEndsAt?: string;
-}) => {
+}) {
     return emailWrapper(`
         ${emailHeader()}
         <tr>
@@ -746,7 +746,7 @@ export const trialWelcomeEmailTemplate = ({
         </tr>
         ${emailFooter()}
     `);
-};
+}
 
 /**
  * Subscription on-hold (payment issue) email
@@ -754,15 +754,20 @@ export const trialWelcomeEmailTemplate = ({
 export function onHoldEmailTemplate({
     name,
     plan,
-    reason
+    reason,
+    gracePeriodEndsAt
 }: {
     name: string;
     plan: 'monthly' | 'yearly';
     reason?: string;
+    gracePeriodEndsAt?: Date;
 }) {
     const planName = plan === 'yearly' ? 'Yearly' : 'Monthly';
     const userName = name || 'there';
     const reasonText = reason || 'There was an issue charging your payment method';
+    const gracePeriodText = gracePeriodEndsAt
+        ? gracePeriodEndsAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : null;
 
     const content = `
         ${emailHeader()}
@@ -784,12 +789,30 @@ export function onHoldEmailTemplate({
                     We couldn't process your <strong style="color: #7c3aed;">Pro (${planName})</strong> renewal. ${reasonText}.
                 </p>
 
+                ${gracePeriodText ? `
+                <!-- Grace Period Notice -->
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #f5f3ff, #eef2ff); border-radius: 12px; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 20px 24px;">
+                            <p style="color: #7c3aed; font-size: 14px; font-weight: 600; margin: 0 0 8px; line-height: 1.5;">
+                                ✨ Good news: You still have Pro access!
+                            </p>
+                            <p style="color: #111827; font-size: 14px; margin: 0; line-height: 1.5;">
+                                We've extended your access until <strong>${gracePeriodText}</strong> while we retry your payment.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                ` : ''}
+
                 <!-- Warning Box -->
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; margin-bottom: 24px;">
                     <tr>
                         <td style="padding: 18px 20px;">
                             <p style="color: #991b1b; font-size: 14px; margin: 0; line-height: 1.5;">
-                                Please update your payment method to avoid losing Pro access.
+                                ${gracePeriodText
+            ? `⚠️ Your Pro access will end on <strong>${gracePeriodText}</strong> if payment isn't resolved.`
+            : 'Please update your payment method to avoid losing Pro access.'}
                             </p>
                         </td>
                     </tr>

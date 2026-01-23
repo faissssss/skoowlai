@@ -44,30 +44,38 @@ export const dodoClient: DodoClientLite = (new DodoPayments({
 
 /**
  * Cancel a subscription via SDK (best-effort).
- * Tries common method names and returns false if unsupported.
+ * - When immediate=true: attempt immediate cancellation (for trials)
+ * - When immediate=false: schedule cancellation at period end (for paid)
+ * Returns false if unsupported or failed.
  */
 export async function cancelDodoSubscriptionViaSdk(
-  subscriptionId: string
+  subscriptionId: string,
+  opts?: { immediate?: boolean }
 ): Promise<boolean> {
   try {
     if (!apiKey || !subscriptionId) return false;
+    const immediate = !!opts?.immediate;
 
-    // Preferred: schedule cancellation at period end to retain access
+    // Immediate cancellation path (use hard cancel endpoints if available)
+    if (immediate) {
+      if (dodoClient?.subscriptions?.cancel) {
+        await dodoClient.subscriptions.cancel(subscriptionId);
+        return true;
+      }
+      if (dodoClient?.subscriptions?.cancelSubscription) {
+        await dodoClient.subscriptions.cancelSubscription(subscriptionId);
+        return true;
+      }
+      // As a last resort, try update without scheduling if API supports it in future
+      console.warn("[Dodo] Immediate cancel not available on SDK, attempting scheduled cancel instead.");
+    }
+
+    // Scheduled cancellation at next billing date (retain access until period end)
     if (dodoClient?.subscriptions?.update) {
       await dodoClient.subscriptions.update(subscriptionId, {
         // See: https://docs.dodopayments.com/api-reference/subscriptions/patch-subscriptions
         cancel_at_next_billing_date: true,
       });
-      return true;
-    }
-
-    // Fallbacks for older SDKs
-    if (dodoClient?.subscriptions?.cancel) {
-      await dodoClient.subscriptions.cancel(subscriptionId);
-      return true;
-    }
-    if (dodoClient?.subscriptions?.cancelSubscription) {
-      await dodoClient.subscriptions.cancelSubscription(subscriptionId);
       return true;
     }
 

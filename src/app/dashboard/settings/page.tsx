@@ -46,13 +46,28 @@ function SubscriptionCard() {
     const fetchSubscription = async () => {
         try {
             setLoading(true);
-            // First, sync subscription from Clerk to ensure DB matches
+            // First, sync subscription to ensure DB matches provider
             await fetch('/api/subscription/sync', {
-                method: 'POST'
+                method: 'POST',
+                cache: 'no-store',
+                credentials: 'include',
+                headers: {
+                    'pragma': 'no-cache',
+                    'cache-control': 'no-cache',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
 
-            // Then fetch the updated subscription data
-            const res = await fetch('/api/subscription');
+            // Then fetch the updated subscription data (cache-busted)
+            const res = await fetch(`/api/subscription?t=${Date.now()}`, {
+                cache: 'no-store',
+                credentials: 'include',
+                headers: {
+                    'pragma': 'no-cache',
+                    'cache-control': 'no-cache',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setSubscription(data);
@@ -98,13 +113,44 @@ function SubscriptionCard() {
         );
     }
 
-    const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
-    const isTrial = subscription?.status === 'trialing';
-    const isCancelled = subscription?.status === 'cancelled';
-    const isFree = !isActive && !isCancelled;
+    // Derive status from server + local fallback
+    const nowMs = Date.now();
+    const endsAtMs = subscription?.subscriptionEndsAt ? new Date(subscription.subscriptionEndsAt).getTime() : null;
 
-    // Determine the plan to display
-    const currentPlanData: Plan = isActive || isCancelled ? plans[1] : plans[0]; // Pro or Free
+    const isCancelled = subscription?.status === 'cancelled';
+    const isTrial = subscription?.status === 'trialing';
+    // Prefer server-computed isActive when available; otherwise recompute with paid-period grace
+    const isActive =
+        (typeof subscription?.isActive === 'boolean')
+            ? subscription.isActive
+            : (subscription?.status === 'active' || isTrial || (isCancelled && endsAtMs !== null && endsAtMs > nowMs));
+
+    // Immediate end (trial cancelled now or cancelled with no remaining access)
+    const isImmediateEnd = isCancelled && (endsAtMs === null || endsAtMs <= nowMs + 1000);
+
+    // Display status badge rules:
+    // - Show 'cancelled' badge whenever status is cancelled (even if access remains until period end)
+    // - Else show 'trialing' during trial, 'active' when active, or 'free'
+    const displayStatus: 'trialing' | 'active' | 'cancelled' | 'free' =
+        isCancelled ? 'cancelled' : (isTrial ? 'trialing' : (isActive ? 'active' : 'free'));
+
+    console.log('[Settings] Subscription data:', {
+        apiStatus: subscription?.status,
+        isCancelled,
+        isTrial,
+        isActive,
+        displayStatus,
+        subscriptionEndsAt: subscription?.subscriptionEndsAt
+    });
+
+    // Determine the plan card to display:
+    // - Show Free when not active AND (not cancelled OR cancelled with immediate end)
+    // - Keep Pro card when paid cancellation scheduled at period end (still active until end)
+    const showProCard = isActive || (isCancelled && endsAtMs !== null && endsAtMs > nowMs);
+    const currentPlanData: Plan = showProCard ? plans[1] : plans[0];
+
+    // UI helper for trigger text
+    const isFreeUI = !showProCard;
 
     const endDate = subscription?.subscriptionEndsAt ? new Date(subscription.subscriptionEndsAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -113,13 +159,14 @@ function SubscriptionCard() {
     }) : 'N/A';
 
     // Build CurrentPlan object for SubscriptionManagement
+    const currentInterval = (subscription?.plan as 'monthly' | 'yearly') || 'monthly';
     const currentPlan: CurrentPlanType = {
         plan: currentPlanData,
-        type: (subscription?.plan as 'monthly' | 'yearly') || 'monthly',
+        type: currentInterval,
         price: subscription?.plan === 'yearly' ? '$39.99/year' : '$4.99/month',
         nextBillingDate: endDate,
-        paymentMethod: 'Credit Card', // Dodo doesn't expose this; placeholder
-        status: isTrial ? 'trialing' : isCancelled ? 'cancelled' : isActive ? 'active' : 'free',
+        paymentMethod: (isTrial || (isCancelled && isTrial)) ? 'None' : 'Credit Card', // Show None for trials (even converted to cancel)
+        status: displayStatus,
     };
 
 
@@ -132,10 +179,24 @@ function SubscriptionCard() {
                 updatePlan={{
                     currentPlan: currentPlanData,
                     plans: plans,
-                    triggerText: isCancelled ? "Resubscribe" : isFree ? "Upgrade to Pro" : "Update Plan",
-                    onPlanChange: () => {
+                    triggerText: isCancelled ? "Resubscribe (no trial)" : (isFreeUI ? "Upgrade to Pro" : "Update Plan"),
+                    onPlanChange: async () => {
+                        try {
+                            // Prefer direct session checkout for cancelled users to avoid connector/currency issues
+                            if (isCancelled) {
+                                const yearlyNoTrial = process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID || "";
+                                const target = yearlyNoTrial
+                                  ? `/api/checkout/session?productId=${encodeURIComponent(yearlyNoTrial)}`
+                                  : `/api/checkout/session`;
+                                window.location.href = target;
+                                return;
+                            }
+                        } catch (e) {
+                            console.error("[Settings] Direct session redirect failed, falling back to Pricing modal", e);
+                        }
                         setShowPricing(true);
                     },
+                    currentInterval: currentInterval,
                 }}
                 cancelSubscription={{
                     title: "Cancel Subscription",
@@ -146,17 +207,32 @@ function SubscriptionCard() {
                         ? "If you cancel now, your trial will end and you'll be downgraded to the Free plan."
                         : `Your Pro access will continue until ${endDate}. After that, you'll be downgraded to the Free plan.`,
                     onCancel: async () => {
-                        // Redirect to Dodo customer portal for cancellation
+                        // Cancel via our API (no redirect to Dodo portal)
                         try {
                             setOpeningPortal(true);
-                            const params = new URLSearchParams();
-                            if (subscription?.customerId) {
-                                params.set('customer_id', String(subscription.customerId));
+                            const res = await fetch('/api/subscription/cancel', {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'pragma': 'no-cache',
+                                    'cache-control': 'no-cache',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                            });
+                            if (!res.ok) {
+                                const text = await res.text().catch(() => 'Unknown error');
+                                throw new Error(text || 'Cancellation failed');
                             }
-                            window.location.href = `/api/customer-portal?${params.toString()}`;
+                            // Refresh local state after server-side cancellation
+                            await fetchSubscription();
+                            // Redirect user back to Billing tab (anchor) after cancellation
+                            window.location.href = '/dashboard/settings#billing';
                         } catch (e) {
-                            console.error('Failed to open customer portal', e);
-                            throw new Error('Unable to open customer portal. Please try again.');
+                            console.error('Failed to cancel subscription via API', e);
+                            throw new Error('Unable to cancel subscription. Please try again.');
+                        } finally {
+                            setOpeningPortal(false);
                         }
                     },
                     onKeepSubscription: async () => {
@@ -210,25 +286,25 @@ export default function SettingsPage() {
     return (
         <div className="p-6 pt-16 md:p-12 max-w-4xl mx-auto space-y-8">
             <div>
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your account and preferences</p>
+                <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+                <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
             </div>
 
             <div className="w-full">
                 {/* Custom Animated Tab Buttons with Sliding Indicator */}
                 <LayoutGroup>
-                    <div className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-900/50 border border-slate-800 p-1 text-slate-400 lg:w-[300px] w-full relative">
+                    <div className="inline-flex h-10 items-center justify-center rounded-lg bg-muted border border-border p-1 text-muted-foreground lg:w-[300px] w-full relative">
                         {['account', 'billing'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => handleTabChange(tab)}
-                                className={`relative inline-flex items-center justify-center flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === tab ? 'text-white' : 'hover:text-slate-200'
+                                className={`relative inline-flex items-center justify-center flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === tab ? 'text-primary-foreground' : 'hover:text-foreground'
                                     }`}
                             >
                                 {activeTab === tab && (
                                     <motion.div
                                         layoutId="settings-tab-indicator"
-                                        className="absolute inset-0 bg-violet-600 rounded-md shadow-sm shadow-violet-500/20"
+                                        className="absolute inset-0 bg-primary rounded-md shadow-sm"
                                         transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                                     />
                                 )}
@@ -240,42 +316,42 @@ export default function SettingsPage() {
 
                 {activeTab === "account" && (
                     <div className="mt-6 space-y-6 w-full text-left">
-                        <Card className="shadow-lg border border-slate-800 bg-slate-900">
+                        <Card className="shadow-lg border border-border bg-card">
                             <CardHeader className="px-4 pb-4 sm:px-6 sm:pb-6">
-                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-slate-100">
+                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-foreground">
                                     <div className="bg-primary/10 ring-primary/20 rounded-lg p-1.5 ring-1 sm:p-2">
                                         <User className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
                                     </div>
                                     Profile Information
                                 </CardTitle>
-                                <CardDescription className="text-sm sm:text-base text-slate-400">
+                                <CardDescription className="text-sm sm:text-base text-muted-foreground">
                                     Your account details from your sign-in provider.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6 px-4 sm:space-y-8 sm:px-6">
                                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name" className="text-slate-200">Name</Label>
+                                        <Label htmlFor="name" className="text-foreground">Name</Label>
                                         <Input
                                             id="name"
                                             value={isLoaded ? userName : 'Loading...'}
                                             disabled
-                                            className="bg-slate-950 border-slate-800 text-slate-300 focus-visible:ring-violet-500 placeholder:text-slate-600"
+                                            className="bg-muted/50 border-input text-foreground focus-visible:ring-ring"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-slate-200">Email</Label>
+                                        <Label htmlFor="email" className="text-foreground">Email</Label>
                                         <Input
                                             id="email"
                                             value={isLoaded ? userEmail : 'Loading...'}
                                             disabled
-                                            className="bg-slate-950 border-slate-800 text-slate-300 focus-visible:ring-violet-500 placeholder:text-slate-600"
+                                            className="bg-muted/50 border-input text-foreground focus-visible:ring-ring"
                                         />
                                     </div>
                                 </div>
-                                <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3 sm:p-4">
-                                    <p className="text-sm text-slate-400 flex items-center gap-2">
-                                        <span className="bg-slate-800 rounded-full p-1"><Lightbulb className="w-3 h-3 text-yellow-500" /></span>
+                                <div className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <span className="bg-muted rounded-full p-1"><Lightbulb className="w-3 h-3 text-yellow-500" /></span>
                                         To update your profile, use the account menu in the top navigation.
                                     </p>
                                 </div>
@@ -283,15 +359,15 @@ export default function SettingsPage() {
                         </Card>
 
                         {/* Help & Feedback Section */}
-                        <Card className="shadow-lg border border-slate-800 bg-slate-900">
+                        <Card className="shadow-lg border border-border bg-card">
                             <CardHeader className="px-4 pb-4 sm:px-6 sm:pb-6">
-                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-slate-100">
+                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-foreground">
                                     <div className="bg-primary/10 ring-primary/20 rounded-lg p-1.5 ring-1 sm:p-2">
                                         <MessageSquare className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
                                     </div>
                                     Help & Feedback
                                 </CardTitle>
-                                <CardDescription className="text-sm sm:text-base text-slate-400">
+                                <CardDescription className="text-sm sm:text-base text-muted-foreground">
                                     Report issues or share your ideas with us.
                                 </CardDescription>
                             </CardHeader>
@@ -301,7 +377,7 @@ export default function SettingsPage() {
                                         wrapperClassName="flex-1"
                                         beamColor="#ef4444"
                                         variant="outline"
-                                        className="gap-2 bg-slate-900 border-slate-700 text-slate-200 hover:bg-red-900/10 hover:text-red-400 hover:border-red-900/50"
+                                        className="gap-2 bg-card border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
                                         onClick={() => setIsBugReportOpen(true)}
                                     >
                                         <Bug className="w-4 h-4" />
@@ -311,7 +387,7 @@ export default function SettingsPage() {
                                         wrapperClassName="flex-1"
                                         beamColor="#10b981"
                                         variant="outline"
-                                        className="gap-2 bg-slate-900 border-slate-700 text-slate-200 hover:bg-emerald-900/10 hover:text-emerald-400 hover:border-emerald-900/50"
+                                        className="gap-2 bg-card border-border text-foreground hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/50"
                                         onClick={() => setIsFeedbackOpen(true)}
                                     >
                                         <Lightbulb className="w-4 h-4" />
@@ -322,15 +398,15 @@ export default function SettingsPage() {
                         </Card>
 
                         {/* Logout Card */}
-                        <Card className="shadow-lg border border-red-900/20 bg-slate-900">
+                        <Card className="shadow-lg border border-destructive/20 bg-card">
                             <CardHeader className="px-4 pb-4 sm:px-6 sm:pb-6">
-                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-slate-100">
-                                    <div className="bg-red-500/10 ring-red-500/20 rounded-lg p-1.5 ring-1 sm:p-2">
-                                        <LogOut className="text-red-500 h-4 w-4 sm:h-5 sm:w-5" />
+                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-foreground">
+                                    <div className="bg-destructive/10 ring-destructive/20 rounded-lg p-1.5 ring-1 sm:p-2">
+                                        <LogOut className="text-destructive h-4 w-4 sm:h-5 sm:w-5" />
                                     </div>
                                     Sign Out
                                 </CardTitle>
-                                <CardDescription className="text-sm sm:text-base text-slate-400">
+                                <CardDescription className="text-sm sm:text-base text-muted-foreground">
                                     Sign out of your account on this device.
                                 </CardDescription>
                             </CardHeader>
@@ -341,25 +417,25 @@ export default function SettingsPage() {
                                             variant="destructive"
                                             wrapperClassName="w-full sm:w-auto"
                                             beamColor="#ef4444"
-                                            className="bg-red-600 hover:bg-red-700 text-white border-0"
+                                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0"
                                         >
                                             <LogOut className="w-4 h-4 mr-2" />
                                             Log Out
                                         </SettingsButton>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent className="bg-slate-900 border-slate-800 text-slate-100">
+                                    <AlertDialogContent className="bg-background border-border text-foreground">
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-slate-100">Are you sure you want to log out?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-slate-400">
+                                            <AlertDialogTitle className="text-foreground">Are you sure you want to log out?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-muted-foreground">
                                                 You will be signed out of your account and redirected to the landing page.
                                                 Any unsaved changes will be lost.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                            <AlertDialogCancel className="bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white">Cancel</AlertDialogCancel>
+                                            <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent hover:text-accent-foreground">Cancel</AlertDialogCancel>
                                             <AlertDialogAction
                                                 onClick={handleLogout}
-                                                className="bg-red-600 hover:bg-red-700 text-white"
+                                                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                                             >
                                                 Yes, Log Out
                                             </AlertDialogAction>

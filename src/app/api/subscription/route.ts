@@ -4,6 +4,7 @@ import { getUserSubscription } from '@/lib/subscription';
 export async function GET() {
     try {
         const subscription = await getUserSubscription();
+        console.log('[Subscription API] Status:', subscription.status, 'isActive:', subscription.isActive, 'isPro:', subscription.isPro);
         return NextResponse.json({
             status: subscription.status,
             plan: subscription.plan,

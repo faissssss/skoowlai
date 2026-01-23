@@ -15,15 +15,7 @@ const dodoHandler = Checkout({
     process.env.DODO_PAYMENTS_RETURN_URL || "https://skoowlai.com/dashboard",
 });
 
-// Product ID mappings: Trial -> No Trial
-const TRIAL_TO_NO_TRIAL_MAP: Record<string, string> = {
-  // Monthly: NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID -> NEXT_PUBLIC_DODO_MONTHLY_NO_TRIAL_PRODUCT_ID
-  [process.env.NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID || ""]:
-    process.env.NEXT_PUBLIC_DODO_MONTHLY_NO_TRIAL_PRODUCT_ID || "",
-  // Yearly: NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID -> NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID
-  [process.env.NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID || ""]:
-    process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID || "",
-};
+
 
 /**
  * Smart Checkout Handler
@@ -31,6 +23,19 @@ const TRIAL_TO_NO_TRIAL_MAP: Record<string, string> = {
  * - Swaps to no-trial product if trial already used
  * - Falls back to original handler for unauthenticated users
  */
+const TRIAL_TO_NO_TRIAL_MAP: Record<string, string> = {
+  // Monthly: standard and student trial → monthly no-trial
+  [process.env.NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID || ""]:
+    process.env.NEXT_PUBLIC_DODO_MONTHLY_NO_TRIAL_PRODUCT_ID || "",
+  [process.env.NEXT_PUBLIC_DODO_STUDENT_MONTHLY_PRODUCT_ID || ""]:
+    process.env.NEXT_PUBLIC_DODO_MONTHLY_NO_TRIAL_PRODUCT_ID || "",
+  // Yearly: standard and student trial → yearly no-trial
+  [process.env.NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID || ""]:
+    process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID || "",
+  [process.env.NEXT_PUBLIC_DODO_STUDENT_YEARLY_PRODUCT_ID || ""]:
+    process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID || "",
+};
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -60,6 +65,8 @@ export async function GET(req: NextRequest) {
           // Create new URL with swapped productId
           url.searchParams.set("productId", noTrialProductId);
 
+          // Keep Dodo defaults for currency, country, and payment method types; do not override.
+
           // Create new request with modified URL
           const newReq = new NextRequest(url.toString(), {
             method: req.method,
@@ -70,6 +77,8 @@ export async function GET(req: NextRequest) {
         }
       }
     }
+
+    // Do not apply any hardening overrides; pass through to Dodo with defaults.
 
     // Default: pass through to Dodo handler
     return dodoHandler(req);

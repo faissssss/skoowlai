@@ -147,18 +147,18 @@ export default function EmbeddedChat({ context, deckId }: { context: string; dec
     };
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        <div className="flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm">
             {/* Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                <h2 className="font-semibold text-slate-900 dark:text-white">Chat Assistant</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Ask questions about your document</p>
+            <div className="p-4 border-b border-border bg-muted/30">
+                <h2 className="font-semibold text-foreground">Chat Assistant</h2>
+                <p className="text-xs text-muted-foreground">Ask questions about your document</p>
             </div>
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
                 <div className="space-y-4">
                     {messages.length === 0 && (
-                        <div className="text-center text-slate-500 mt-10">
+                        <div className="text-center text-muted-foreground mt-10">
                             <p className="text-sm">Type a question below to get started.</p>
                         </div>
                     )}
@@ -174,8 +174,8 @@ export default function EmbeddedChat({ context, deckId }: { context: string; dec
                                 className={cn(
                                     "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                                     m.role === 'user'
-                                        ? "bg-indigo-600 text-white"
-                                        : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted text-foreground border border-border"
                                 )}
                             >
                                 {m.content}
@@ -184,9 +184,9 @@ export default function EmbeddedChat({ context, deckId }: { context: string; dec
                     ))}
                     {isLoading && (
                         <div className="flex justify-start w-full">
-                            <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-2.5 flex items-center gap-2">
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-                                <span className="text-xs text-slate-500 dark:text-slate-400">Thinking...</span>
+                            <div className="bg-muted border border-border rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                                <span className="text-xs text-muted-foreground">Thinking...</span>
                             </div>
                         </div>
                     )}
@@ -194,20 +194,20 @@ export default function EmbeddedChat({ context, deckId }: { context: string; dec
             </ScrollArea>
 
             {/* Input */}
-            <div className="p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+            <div className="p-4 bg-card border-t border-border">
                 <form onSubmit={handleSubmit} className="relative">
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Ask a question..."
-                        className="w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 placeholder:text-slate-500 rounded-xl pr-10 py-5 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500"
+                        className="w-full bg-muted/50 border-input text-foreground placeholder:text-muted-foreground rounded-xl pr-10 py-5 focus-visible:ring-ring"
                         disabled={isLoading}
                     />
                     <Button
                         type="submit"
                         size="icon"
                         disabled={isLoading || !input.trim()}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Send className="w-3.5 h-3.5" />
                     </Button>
