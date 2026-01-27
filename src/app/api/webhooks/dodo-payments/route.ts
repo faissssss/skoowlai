@@ -694,13 +694,36 @@ async function handlePaymentSucceeded(data: any, webhookId: string) {
             generateEmailIdempotencyKey('receipt', `sub_${subscriptionId}_${periodKey}`),
             'receipt',
             user.email,
-            () =>
-                sendReceiptEmail({
+            () => {
+                const discCodes: string[] | undefined = (() => {
+                    const code = (data as any)?.discount_code || (data as any)?.coupon_code;
+                    if (typeof code === 'string' && code.trim()) return [code.trim()];
+                    const ds = (data as any)?.discounts;
+                    if (Array.isArray(ds)) {
+                        const codes = ds.map((d: any) => d?.code).filter((c: any) => typeof c === 'string' && c.trim());
+                        return codes.length ? codes : undefined;
+                    }
+                    return undefined;
+                })();
+
+                const totals: any = {};
+                if (typeof (data as any)?.total_amount === 'number') totals.total = (data as any).total_amount;
+                if (typeof (data as any)?.tax === 'number') totals.tax = (data as any).tax;
+                if (typeof (data as any)?.discount_amount === 'number') totals.discount = (data as any).discount_amount;
+
+                return sendReceiptEmail({
                     email: user.email!,
                     name: undefined,
                     plan: plan as 'monthly' | 'yearly',
-                    subscriptionId
-                })
+                    subscriptionId,
+                    paymentId: (data as any)?.payment_id,
+                    currency: (data as any)?.currency,
+                    discountCodes: discCodes,
+                    totals,
+                    invoiceId: (data as any)?.invoice_id,
+                    nextBillingDate
+                });
+            }
         );
     }
 

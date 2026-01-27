@@ -3,7 +3,7 @@ name: Database Keep Alive
 on:
   schedule:
     - cron: '*/5 * * * *' # Run every 5 minutes
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   ping:
@@ -11,5 +11,5 @@ jobs:
     steps:
       - name: Ping Keep-Alive Endpoint
         run: |
-          curl -X GET https://www.skoowlai.com/api/cron/keep-alive \
+          curl -I -X GET "${{ secrets.APP_URL }}/api/cron/keep-alive" \
           -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

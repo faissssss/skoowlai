@@ -16,6 +16,7 @@ if (!apiKey) {
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
+    // Overlay/JSON flags not used in hosted flow
     const productId =
       url.searchParams.get("productId") ||
       process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID ||

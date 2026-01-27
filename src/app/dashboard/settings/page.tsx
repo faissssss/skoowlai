@@ -43,47 +43,109 @@ function SubscriptionCard() {
     const [error, setError] = useState(false);
     const [openingPortal, setOpeningPortal] = useState(false);
 
-    const fetchSubscription = async () => {
-        try {
-            setLoading(true);
-            // First, sync subscription to ensure DB matches provider
-            await fetch('/api/subscription/sync', {
-                method: 'POST',
-                cache: 'no-store',
-                credentials: 'include',
-                headers: {
-                    'pragma': 'no-cache',
-                    'cache-control': 'no-cache',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+    // Client-side cache to render instantly while we refresh in background
+    const CACHE_KEY = 'sub-cache-v1';
+    const CACHE_TTL = 120000; // 2 minutes
 
-            // Then fetch the updated subscription data (cache-busted)
-            const res = await fetch(`/api/subscription?t=${Date.now()}`, {
-                cache: 'no-store',
-                credentials: 'include',
-                headers: {
-                    'pragma': 'no-cache',
-                    'cache-control': 'no-cache',
-                    'X-Requested-With': 'XMLHttpRequest'
+    const fetchSubscription = async (showSpinner = true) => {
+        try {
+            if (showSpinner) setLoading(true);
+
+            // 1) Fast path: fetch current subscription quickly with a short timeout
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 1500);
+
+            try {
+                const res = await fetch(`/api/subscription?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    credentials: 'include',
+                    headers: {
+                        'pragma': 'no-cache',
+                        'cache-control': 'no-cache',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    signal: controller.signal,
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+                    setSubscription(data);
+                } else {
+                    setError(true);
                 }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setSubscription(data);
-            } else {
-                setError(true);
+            } catch (e) {
+                console.warn('[Settings] initial /api/subscription fetch timed out or failed', e);
+            } finally {
+                clearTimeout(timer);
+                // Render UI immediately after the quick fetch attempt
+                setLoading(false);
+            }
+
+            // 2) Background sync: throttle to at most once per minute
+            try {
+                const throttleMs = 60_000;
+                const key = 'sub-sync-at';
+                const last = Number(sessionStorage.getItem(key) || '0');
+                const now = Date.now();
+
+                if (now - last > throttleMs) {
+                    sessionStorage.setItem(key, String(now));
+
+                    await fetch('/api/subscription/sync', {
+                        method: 'POST',
+                        cache: 'no-store',
+                        credentials: 'include',
+                        headers: {
+                            'pragma': 'no-cache',
+                            'cache-control': 'no-cache',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    // Re-fetch after sync to refresh data if anything changed
+                    const refreshed = await fetch(`/api/subscription?t=${Date.now()}`, {
+                        cache: 'no-store',
+                        credentials: 'include',
+                        headers: {
+                            'pragma': 'no-cache',
+                            'cache-control': 'no-cache',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    if (refreshed.ok) {
+                        const next = await refreshed.json();
+                        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: next })); } catch {}
+                        setSubscription(next);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Settings] background subscription sync skipped/failed', e);
             }
         } catch (error) {
             console.error('Failed to fetch subscription:', error);
             setError(true);
-        } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchSubscription();
+        // 0) Try to serve cached data instantly
+        try {
+            const cachedRaw = sessionStorage.getItem(CACHE_KEY);
+            if (cachedRaw) {
+                const cached = JSON.parse(cachedRaw);
+                if (cached && typeof cached.ts === 'number' && cached.data && Date.now() - cached.ts < CACHE_TTL) {
+                    setSubscription(cached.data as SubscriptionDTO);
+                    setLoading(false);
+                    // Refresh in background without flashing spinner
+                    fetchSubscription(false);
+                    return;
+                }
+            }
+        } catch {}
+        // No cache → do normal fetch (with spinner)
+        fetchSubscription(true);
     }, []);
 
     if (error) {

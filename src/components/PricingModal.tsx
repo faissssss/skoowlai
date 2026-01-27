@@ -61,7 +61,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
         }
     };
 
-    const startCheckout = async (productId: string) => {
+    const startCheckout = async (productId: string, planParam?: 'monthly' | 'yearly') => {
         try {
             if (!productId || productId.startsWith('pdt_') === false) {
                 // Basic sanity check; real IDs begin with pdt_
@@ -99,7 +99,12 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
             if (!res.ok) {
                 const bodyText = await res.text().catch(() => 'Unknown error');
                 console.error('Failed to start checkout:', bodyText);
-                alert(`Failed to start checkout: ${bodyText || 'Please try again.'}`);
+                const failure = new URL('/checkout/failure', window.location.origin);
+                failure.searchParams.set('productId', productId);
+                if (planParam) failure.searchParams.set('plan', planParam);
+                failure.searchParams.set('m', (bodyText || 'Request failed').slice(0, 200));
+                failure.searchParams.set('block', '1');
+                window.location.href = failure.toString();
                 return;
             }
 
@@ -107,11 +112,24 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
             if (data.checkout_url) {
                 window.location.href = data.checkout_url;
             } else {
-                alert('Checkout link not available. Please try again.');
+                // Route user to a consistent Payment Failure page (block retry by default)
+                const failure = new URL('/checkout/failure', window.location.origin);
+                failure.searchParams.set('productId', productId);
+                if (planParam) failure.searchParams.set('plan', planParam);
+                failure.searchParams.set('m', 'Checkout link not available');
+                failure.searchParams.set('block', '1');
+                window.location.href = failure.toString();
+                return;
             }
         } catch (error) {
             console.error('Error starting checkout:', error);
-            alert('Something went wrong. Please try again.');
+            const failure = new URL('/checkout/failure', window.location.origin);
+            failure.searchParams.set('productId', productId);
+            if (planParam) failure.searchParams.set('plan', planParam);
+            failure.searchParams.set('m', 'Failed to start checkout');
+            failure.searchParams.set('block', '1');
+            window.location.href = failure.toString();
+            return;
         } finally {
             setLoadingPlan(null);
         }
@@ -176,7 +194,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                                 alert('Product ID not configured. Set NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID and NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID (and optional *_NO_TRIAL variants) in .env');
                                 return;
                             }
-                            startCheckout(productId);
+                            startCheckout(productId, interval);
                         }}
                     />
 

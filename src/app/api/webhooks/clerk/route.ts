@@ -151,235 +151,236 @@ async function handleUserEvent(evt: any) {
     }
 }
 
-/**
- * Handle subscription events and sync to database
- */
-async function handleSubscriptionEvent(evt: any) {
-    const { data, type } = evt;
-
-    // Extract user ID from the event
-    // Clerk Commerce events have user_id nested in payer object
-    const clerkUserId = data.payer?.user_id || data.user_id || data.subscriber_id;
-
-    if (!clerkUserId) {
-        console.log('[Clerk Webhook] No user ID found in event, skipping');
-        console.log('[Clerk Webhook] Available data keys:', Object.keys(data));
-        return;
-    }
-
-    console.log(`[Clerk Webhook] Processing ${type} for user ${clerkUserId}`);
-
-    // Map Clerk subscription status to our database status
-    let subscriptionStatus: string;
-    let subscriptionPlan: string | null = null;
-    let subscriptionEndsAt: Date | null = null;
-
-    switch (type) {
-        case 'subscription.created':
-        case 'subscription.active':
-        case 'subscription.updated':
-            // For subscription.updated, check status field
-            if (data.status === 'active') {
-                subscriptionStatus = 'active';
-                // Try to get plan info from items array
-                const activeItem = data.items?.find((item: any) => item.status === 'active' && item.plan?.slug !== 'free_user');
-                if (activeItem) {
-                    subscriptionPlan = activeItem.interval === 'annual' ? 'yearly' : 'monthly';
-                }
-            } else if (data.status === 'canceled' || data.status === 'cancelled') {
-                subscriptionStatus = 'cancelled';
-            } else if (data.status === 'ended' || data.status === 'expired') {
-                subscriptionStatus = 'expired';
-            } else if (data.status === 'trialing') {
-                subscriptionStatus = 'trialing';
-                if (data.trial_end) {
-                    subscriptionEndsAt = new Date(data.trial_end > 9999999999 ? data.trial_end : data.trial_end * 1000);
-                }
-            } else {
-                // incomplete, incomplete_expired, unpaid, paused, etc.
-                console.log(`[Clerk Webhook] Subscription status is ${data.status}, treating as free/inactive`);
-                subscriptionStatus = 'free';
-                subscriptionPlan = null;
-            }
-            break;
-        case 'subscription.past_due':
-            subscriptionStatus = 'active'; // Grace period - still give access
-            break;
-        case 'subscriptionItem.active':
-            subscriptionStatus = 'active';
-            if (data.plan_id) {
-                // Clerk uses 'annual' not 'year'
-                subscriptionPlan = data.interval === 'annual' ? 'yearly' : 'monthly';
-            }
-            break;
-        case 'subscriptionItem.canceled':
-        case 'subscription.canceled':
-            subscriptionStatus = 'cancelled';
-            // Clerk Commerce uses period_end, Stripe uses current_period_end
-            const periodEnd = data.period_end || data.current_period_end;
-            if (periodEnd) {
-                // Handle both milliseconds and seconds timestamp formats
-                subscriptionEndsAt = new Date(periodEnd > 9999999999 ? periodEnd : periodEnd * 1000);
-            }
-            console.log(`[Clerk Webhook] Cancellation - period_end: ${periodEnd}, subscriptionEndsAt: ${subscriptionEndsAt}`);
-            break;
-        case 'subscription.ended':
-            // When subscription ends, user goes back to free plan
-            subscriptionStatus = 'free';
-            subscriptionPlan = null;
-            break;
-        case 'subscriptionItem.upcoming':
-            // Upcoming renewal notification - no action needed, just acknowledge
-            console.log('[Clerk Webhook] Subscription renewal upcoming - acknowledged');
-            return; // Exit early, no DB update needed
-        default:
-            console.log(`[Clerk Webhook] Unhandled subscription event: ${type}`);
-            return;
-    }
-
-    // Fetch user BEFORE update to check for plan changes
-    let oldSubscriptionPlan: string | null = null;
-    try {
-        const currentUser = await db.user.findUnique({
-            where: { clerkId: clerkUserId },
-            select: { subscriptionPlan: true }
-        });
-        oldSubscriptionPlan = currentUser?.subscriptionPlan || null;
-    } catch (e) {
-        console.error(`[Clerk Webhook] Failed to fetch current user state:`, e);
-    }
-
-    // Update user in database
-    try {
-        const updateData: {
-            subscriptionStatus: string;
-            subscriptionPlan?: string;
-            subscriptionEndsAt?: Date;
-            subscriptionId?: string;
-        } = { subscriptionStatus };
-
-        if (subscriptionPlan) updateData.subscriptionPlan = subscriptionPlan;
-        if (subscriptionEndsAt) updateData.subscriptionEndsAt = subscriptionEndsAt;
-        if (data.id) updateData.subscriptionId = data.id;
-
-        await db.user.update({
-            where: { clerkId: clerkUserId },
-            data: updateData,
-        });
-
-        console.log(`[Clerk Webhook] Updated user ${clerkUserId} with status: ${subscriptionStatus}`);
-
-        // Extract email and name for notifications
-        const email = data.payer?.email || data.email;
-        const name = data.payer?.first_name || data.first_name || 'there';
-
-        if (subscriptionStatus === 'trialing' && email) {
-            console.log(`[Clerk Webhook] Sending trial welcome email to ${email}`);
-            const trialDays = data.trial_end ? Math.ceil((data.trial_end - data.start_date) / (24 * 60 * 60)) : 7;
-            const trialEndsAtDate = subscriptionEndsAt ? subscriptionEndsAt.toLocaleDateString() : undefined;
-            const trialKey = generateEmailIdempotencyKey('welcome', `trial_${data.id || clerkUserId}`);
-
-            await sendEmailWithIdempotency(trialKey, 'welcome', email, () =>
-                sendTrialWelcomeEmail({
-                    email,
-                    name,
-                    trialDays,
-                    trialEndsAt: trialEndsAtDate
-                })
-            );
-        }
-
-        // Send Emails Based on Event Type (NO idempotency - send every time)
-        if (subscriptionStatus === 'active' && email && subscriptionPlan) {
-            console.log(`[Clerk Webhook] Sending emails for active subscription to ${email}`);
-
-            // Detect if this is a plan switch (using pre-update state)
-            const isPlanSwitch = oldSubscriptionPlan && oldSubscriptionPlan !== subscriptionPlan;
-
-            if (isPlanSwitch) {
-                console.log(`[Clerk Webhook] Plan switch detected from ${oldSubscriptionPlan} to ${subscriptionPlan}`);
-
-                // Determine next billing date
-                const nextBillingDate = subscriptionEndsAt ||
-                    (data.period_end ? new Date(data.period_end > 9999999999 ? data.period_end : data.period_end * 1000) :
-                        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
-
-                const planChangeKey = generateEmailIdempotencyKey('receipt', `planchange_${data.id}_${subscriptionPlan}`);
-                await sendEmailWithIdempotency(planChangeKey, 'receipt', email, () =>
-                    sendPlanChangeEmail({
-                        email,
-                        name,
-                        newPlan: subscriptionPlan as string,
-                        nextBillingDate
-                    })
-                );
-            } else {
-                // Normal receipt for new subs or renewals
-                const receiptKey = generateEmailIdempotencyKey('receipt', data.id || `${clerkUserId}_${Date.now()}`);
-                await sendEmailWithIdempotency(receiptKey, 'receipt', email, () =>
-                    sendReceiptEmail({
-                        email,
-                        name,
-                        plan: subscriptionPlan as 'monthly' | 'yearly',
-                        subscriptionId: data.id || 'sub_unknown'
-                    })
-                );
-            }
-
-            // Send welcome only on creation AND NOT on plan switch (existing user)
-            if ((type === 'subscription.created' || type === 'subscriptionItem.active') && !isPlanSwitch) {
-                const welcomeKey = generateEmailIdempotencyKey('welcome', data.id || clerkUserId);
-                await sendEmailWithIdempotency(welcomeKey, 'welcome', email, () =>
-                    sendWelcomeEmail({
-                        email,
-                        name,
-                        plan: subscriptionPlan as 'monthly' | 'yearly',
-                        subscriptionId: data.id || 'sub_unknown'
-                    })
-                );
-            }
-        }
-
-        // Send Cancellation Email ONLY if truly cancelling (not switching plans)
-        if (subscriptionStatus === 'cancelled' && email) {
-            // Check current DB status - if still/already active, user is switching plans, not cancelling
-            const currentUser = await db.user.findUnique({
-                where: { clerkId: clerkUserId },
-                select: { subscriptionStatus: true }
-            });
-
-            const isSwitchingPlans = currentUser?.subscriptionStatus === 'active';
-
-            if (isSwitchingPlans) {
-                console.log(`[Clerk Webhook] User is switching plans, skipping cancellation email`);
-            } else {
-                console.log(`[Clerk Webhook] Sending cancellation email to ${email}`);
-
-                // Get plan from items or use default
-                let plan: 'monthly' | 'yearly' = 'monthly';
-                const activeItem = data.items?.find((item: any) => item.plan?.slug !== 'free_user');
-                if (activeItem) {
-                    plan = activeItem.interval === 'annual' ? 'yearly' : 'monthly';
-                }
-
-                // Calculate access end date
-                const accessEndsAt = subscriptionEndsAt ||
-                    (data.period_end ? new Date(data.period_end > 9999999999 ? data.period_end : data.period_end * 1000) :
-                        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
-
-                const cancelKey = generateEmailIdempotencyKey('cancellation', data.id || clerkUserId);
-                await sendEmailWithIdempotency(cancelKey, 'cancellation', email, () =>
-                    sendCancellationEmail({
-                        email,
-                        name,
-                        plan,
-                        accessEndsAt
-                    })
-                );
-            }
-        }
-
-    } catch (error) {
-        console.error(`[Clerk Webhook] Failed to update user ${clerkUserId}:`, error);
-    }
-}
+// /**
+//  * Handle subscription events and sync to database
+//  * DISABLED: Managed by Dodo Payments
+//  */
+// async function handleSubscriptionEvent(evt: any) {
+//     const { data, type } = evt;
+//
+//     // Extract user ID from the event
+//     // Clerk Commerce events have user_id nested in payer object
+//     const clerkUserId = data.payer?.user_id || data.user_id || data.subscriber_id;
+//
+//     if (!clerkUserId) {
+//         console.log('[Clerk Webhook] No user ID found in event, skipping');
+//         console.log('[Clerk Webhook] Available data keys:', Object.keys(data));
+//         return;
+//     }
+//
+//     console.log(`[Clerk Webhook] Processing ${type} for user ${clerkUserId}`);
+//
+//     // Map Clerk subscription status to our database status
+//     let subscriptionStatus: string;
+//     let subscriptionPlan: string | null = null;
+//     let subscriptionEndsAt: Date | null = null;
+//
+//     switch (type) {
+//         case 'subscription.created':
+//         case 'subscription.active':
+//         case 'subscription.updated':
+//             // For subscription.updated, check status field
+//             if (data.status === 'active') {
+//                 subscriptionStatus = 'active';
+//                 // Try to get plan info from items array
+//                 const activeItem = data.items?.find((item: any) => item.status === 'active' && item.plan?.slug !== 'free_user');
+//                 if (activeItem) {
+//                     subscriptionPlan = activeItem.interval === 'annual' ? 'yearly' : 'monthly';
+//                 }
+//             } else if (data.status === 'canceled' || data.status === 'cancelled') {
+//                 subscriptionStatus = 'cancelled';
+//             } else if (data.status === 'ended' || data.status === 'expired') {
+//                 subscriptionStatus = 'expired';
+//             } else if (data.status === 'trialing') {
+//                 subscriptionStatus = 'trialing';
+//                 if (data.trial_end) {
+//                     subscriptionEndsAt = new Date(data.trial_end > 9999999999 ? data.trial_end : data.trial_end * 1000);
+//                 }
+//             } else {
+//                 // incomplete, incomplete_expired, unpaid, paused, etc.
+//                 console.log(`[Clerk Webhook] Subscription status is ${data.status}, treating as free/inactive`);
+//                 subscriptionStatus = 'free';
+//                 subscriptionPlan = null;
+//             }
+//             break;
+//         case 'subscription.past_due':
+//             subscriptionStatus = 'active'; // Grace period - still give access
+//             break;
+//         case 'subscriptionItem.active':
+//             subscriptionStatus = 'active';
+//             if (data.plan_id) {
+//                 // Clerk uses 'annual' not 'year'
+//                 subscriptionPlan = data.interval === 'annual' ? 'yearly' : 'monthly';
+//             }
+//             break;
+//         case 'subscriptionItem.canceled':
+//         case 'subscription.canceled':
+//             subscriptionStatus = 'cancelled';
+//             // Clerk Commerce uses period_end, Stripe uses current_period_end
+//             const periodEnd = data.period_end || data.current_period_end;
+//             if (periodEnd) {
+//                 // Handle both milliseconds and seconds timestamp formats
+//                 subscriptionEndsAt = new Date(periodEnd > 9999999999 ? periodEnd : periodEnd * 1000);
+//             }
+//             console.log(`[Clerk Webhook] Cancellation - period_end: ${periodEnd}, subscriptionEndsAt: ${subscriptionEndsAt}`);
+//             break;
+//         case 'subscription.ended':
+//             // When subscription ends, user goes back to free plan
+//             subscriptionStatus = 'free';
+//             subscriptionPlan = null;
+//             break;
+//         case 'subscriptionItem.upcoming':
+//             // Upcoming renewal notification - no action needed, just acknowledge
+//             console.log('[Clerk Webhook] Subscription renewal upcoming - acknowledged');
+//             return; // Exit early, no DB update needed
+//         default:
+//             console.log(`[Clerk Webhook] Unhandled subscription event: ${type}`);
+//             return;
+//     }
+//
+//     // Fetch user BEFORE update to check for plan changes
+//     let oldSubscriptionPlan: string | null = null;
+//     try {
+//         const currentUser = await db.user.findUnique({
+//             where: { clerkId: clerkUserId },
+//             select: { subscriptionPlan: true }
+//         });
+//         oldSubscriptionPlan = currentUser?.subscriptionPlan || null;
+//     } catch (e) {
+//         console.error(`[Clerk Webhook] Failed to fetch current user state:`, e);
+//     }
+//
+//     // Update user in database
+//     try {
+//         const updateData: {
+//             subscriptionStatus: string;
+//             subscriptionPlan?: string;
+//             subscriptionEndsAt?: Date;
+//             subscriptionId?: string;
+//         } = { subscriptionStatus };
+//
+//         if (subscriptionPlan) updateData.subscriptionPlan = subscriptionPlan;
+//         if (subscriptionEndsAt) updateData.subscriptionEndsAt = subscriptionEndsAt;
+//         if (data.id) updateData.subscriptionId = data.id;
+//
+//         await db.user.update({
+//             where: { clerkId: clerkUserId },
+//             data: updateData,
+//         });
+//
+//         console.log(`[Clerk Webhook] Updated user ${clerkUserId} with status: ${subscriptionStatus}`);
+//
+//         // Extract email and name for notifications
+//         const email = data.payer?.email || data.email;
+//         const name = data.payer?.first_name || data.first_name || 'there';
+//
+//         if (subscriptionStatus === 'trialing' && email) {
+//             console.log(`[Clerk Webhook] Sending trial welcome email to ${email}`);
+//             const trialDays = data.trial_end ? Math.ceil((data.trial_end - data.start_date) / (24 * 60 * 60)) : 7;
+//             const trialEndsAtDate = subscriptionEndsAt ? subscriptionEndsAt.toLocaleDateString() : undefined;
+//             const trialKey = generateEmailIdempotencyKey('welcome', `trial_${data.id || clerkUserId}`);
+//
+//             await sendEmailWithIdempotency(trialKey, 'welcome', email, () =>
+//                 sendTrialWelcomeEmail({
+//                     email,
+//                     name,
+//                     trialDays,
+//                     trialEndsAt: trialEndsAtDate
+//                 })
+//             );
+//         }
+//
+//         // Send Emails Based on Event Type (NO idempotency - send every time)
+//         if (subscriptionStatus === 'active' && email && subscriptionPlan) {
+//             console.log(`[Clerk Webhook] Sending emails for active subscription to ${email}`);
+//
+//             // Detect if this is a plan switch (using pre-update state)
+//             const isPlanSwitch = oldSubscriptionPlan && oldSubscriptionPlan !== subscriptionPlan;
+//
+//             if (isPlanSwitch) {
+//                 console.log(`[Clerk Webhook] Plan switch detected from ${oldSubscriptionPlan} to ${subscriptionPlan}`);
+//
+//                 // Determine next billing date
+//                 const nextBillingDate = subscriptionEndsAt ||
+//                     (data.period_end ? new Date(data.period_end > 9999999999 ? data.period_end : data.period_end * 1000) :
+//                         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+//
+//                 const planChangeKey = generateEmailIdempotencyKey('receipt', `planchange_${data.id}_${subscriptionPlan}`);
+//                 await sendEmailWithIdempotency(planChangeKey, 'receipt', email, () =>
+//                     sendPlanChangeEmail({
+//                         email,
+//                         name,
+//                         newPlan: subscriptionPlan as string,
+//                         nextBillingDate
+//                     })
+//                 );
+//             } else {
+//                 // Normal receipt for new subs or renewals
+//                 const receiptKey = generateEmailIdempotencyKey('receipt', data.id || `${clerkUserId}_${Date.now()}`);
+//                 await sendEmailWithIdempotency(receiptKey, 'receipt', email, () =>
+//                     sendReceiptEmail({
+//                         email,
+//                         name,
+//                         plan: subscriptionPlan as 'monthly' | 'yearly',
+//                         subscriptionId: data.id || 'sub_unknown'
+//                     })
+//                 );
+//             }
+//
+//             // Send welcome only on creation AND NOT on plan switch (existing user)
+//             if ((type === 'subscription.created' || type === 'subscriptionItem.active') && !isPlanSwitch) {
+//                 const welcomeKey = generateEmailIdempotencyKey('welcome', data.id || clerkUserId);
+//                 await sendEmailWithIdempotency(welcomeKey, 'welcome', email, () =>
+//                     sendWelcomeEmail({
+//                         email,
+//                         name,
+//                         plan: subscriptionPlan as 'monthly' | 'yearly',
+//                         subscriptionId: data.id || 'sub_unknown'
+//                     })
+//                 );
+//             }
+//         }
+//
+//         // Send Cancellation Email ONLY if truly cancelling (not switching plans)
+//         if (subscriptionStatus === 'cancelled' && email) {
+//             // Check current DB status - if still/already active, user is switching plans, not cancelling
+//             const currentUser = await db.user.findUnique({
+//                 where: { clerkId: clerkUserId },
+//                 select: { subscriptionStatus: true }
+//             });
+//
+//             const isSwitchingPlans = currentUser?.subscriptionStatus === 'active';
+//
+//             if (isSwitchingPlans) {
+//                 console.log(`[Clerk Webhook] User is switching plans, skipping cancellation email`);
+//             } else {
+//                 console.log(`[Clerk Webhook] Sending cancellation email to ${email}`);
+//
+//                 // Get plan from items or use default
+//                 let plan: 'monthly' | 'yearly' = 'monthly';
+//                 const activeItem = data.items?.find((item: any) => item.plan?.slug !== 'free_user');
+//                 if (activeItem) {
+//                     plan = activeItem.interval === 'annual' ? 'yearly' : 'monthly';
+//                 }
+//
+//                 // Calculate access end date
+//                 const accessEndsAt = subscriptionEndsAt ||
+//                     (data.period_end ? new Date(data.period_end > 9999999999 ? data.period_end : data.period_end * 1000) :
+//                         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+//
+//                 const cancelKey = generateEmailIdempotencyKey('cancellation', data.id || clerkUserId);
+//                 await sendEmailWithIdempotency(cancelKey, 'cancellation', email, () =>
+//                     sendCancellationEmail({
+//                         email,
+//                         name,
+//                         plan,
+//                         accessEndsAt
+//                     })
+//                 );
+//             }
+//         }
+//
+//     } catch (error) {
+//         console.error(`[Clerk Webhook] Failed to update user ${clerkUserId}:`, error);
+//     }
+// }

@@ -893,3 +893,185 @@ export function expirationEmailTemplate({
 
     return emailWrapper(content);
 }
+
+// ========= Itemized Receipt (discount-aware) =========
+export function receiptEmailTemplateItemized({
+    name,
+    email,
+    currency,
+    items,
+    subtotal,
+    discount = 0,
+    tax = 0,
+    total,
+    discountCodes,
+    subscriptionId,
+    paymentId,
+    invoiceId,
+    nextBilling,
+}: {
+    name: string;
+    email: string;
+    currency: string;
+    items: Array<{
+        name: string;
+        quantity: number;
+        unit_amount: number; // minor units
+        total_amount?: number; // minor units
+        tax_amount?: number; // minor units
+        discount_amount?: number; // minor units
+        description?: string;
+    }>;
+    subtotal: number; // minor units
+    discount?: number; // minor units
+    tax?: number; // minor units
+    total: number; // minor units
+    discountCodes?: string[];
+    subscriptionId: string;
+    paymentId?: string;
+    invoiceId?: string;
+    nextBilling?: Date;
+}) {
+    const userName = name || 'Valued Customer';
+    const codeText = discountCodes?.length ? discountCodes.join(', ') : null;
+
+    const ZERO_DEC = new Set(['JPY', 'KRW', 'CLP', 'VND', 'UGX', 'MGA']);
+    const THREE_DEC = new Set(['BHD', 'JOD', 'KWD', 'OMR', 'TND']);
+    const upperCcy = (currency || 'USD').toUpperCase();
+    const decimals = ZERO_DEC.has(upperCcy) ? 0 : (THREE_DEC.has(upperCcy) ? 3 : 2);
+    const divisor = Math.pow(10, decimals);
+
+    const fmt = (amountMinor: number | undefined | null) => {
+        const n = typeof amountMinor === 'number' ? amountMinor : 0;
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: upperCcy,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+        }).format(n / divisor);
+    };
+
+    const itemsRows = (items && items.length ? items : []).map((it) => {
+        const qty = Number(it.quantity || 1);
+        const unit = Number(it.unit_amount || 0);
+        const line = typeof it.total_amount === 'number'
+            ? it.total_amount
+            : Math.max(0, unit * qty - Number(it.discount_amount || 0) + Number(it.tax_amount || 0));
+
+        const desc = it.description ? `<div style="color: ${COLORS.textMuted}; font-size: 12px; margin-top: 4px;">${it.description}</div>` : '';
+        return `
+            <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid ${COLORS.border};">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td width="45%" style="color: ${COLORS.text}; font-size: 14px; vertical-align: top;">
+                                <strong>${it.name || 'Item'}</strong>
+                                ${desc}
+                            </td>
+                            <td width="15%" style="color: ${COLORS.textLight}; font-size: 14px; text-align: center; vertical-align: top;">
+                                ${qty}
+                            </td>
+                            <td width="20%" style="color: ${COLORS.text}; font-size: 14px; text-align: right; vertical-align: top;">
+                                ${fmt(unit)}
+                            </td>
+                            <td width="20%" style="color: ${COLORS.text}; font-size: 14px; text-align: right; vertical-align: top; font-weight: 600;">
+                                ${fmt(line)}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const nextBillingStr = nextBilling
+        ? nextBilling.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : null;
+
+    const content = `
+        ${emailHeader()}
+
+        <tr>
+            <td style="padding: 40px;">
+                <h1 style="color: ${COLORS.text}; font-size: 26px; font-weight: 700; margin: 0 0 8px; text-align: center; line-height: 1.3;">
+                    Payment Receipt
+                </h1>
+                <p style="color: ${COLORS.textLight}; font-size: 16px; margin: 0 0 36px; text-align: center; line-height: 1.5;">
+                    Thank you for your purchase!
+                </p>
+
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid ${COLORS.border}; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 20px 24px; background-color: ${COLORS.background};">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="color: ${COLORS.textLight}; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">
+                                        Billed To
+                                    </td>
+                                    <td style="color: ${COLORS.textLight}; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; text-align: right;">
+                                        Receipt Info
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding-top: 6px;">
+                                        <div style="color: ${COLORS.text}; font-size: 16px; font-weight: 600;">${userName}</div>
+                                        <div style="color: ${COLORS.textLight}; font-size: 14px; margin-top: 2px;">${email}</div>
+                                    </td>
+                                    <td style="padding-top: 6px; text-align: right;">
+                                        <div style="color: ${COLORS.text}; font-size: 14px;">Date: ${today}</div>
+                                        ${subscriptionId ? `<div style="color: ${COLORS.textMuted}; font-size: 12px;">Subscription: <span style="font-family: monospace;">${subscriptionId}</span></div>` : ''}
+                                        ${paymentId ? `<div style="color: ${COLORS.textMuted}; font-size: 12px;">Payment: <span style="font-family: monospace;">${paymentId}</span></div>` : ''}
+                                        ${invoiceId ? `<div style="color: ${COLORS.textMuted}; font-size: 12px;">Invoice: <span style="font-family: monospace;">${invoiceId}</span></div>` : ''}
+                                        ${nextBillingStr ? `<div style="color: ${COLORS.textLight}; font-size: 12px; margin-top: 6px;">Next Billing: ${nextBillingStr}</div>` : ''}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 10px 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <th align="left" style="color: ${COLORS.textLight}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 0; border-bottom: 1px solid ${COLORS.border};">Item</th>
+                                    <th align="center" style="color: ${COLORS.textLight}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 0; border-bottom: 1px solid ${COLORS.border};">Qty</th>
+                                    <th align="right" style="color: ${COLORS.textLight}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 0; border-bottom: 1px solid ${COLORS.border};">Unit</th>
+                                    <th align="right" style="color: ${COLORS.textLight}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 0; border-bottom: 1px solid ${COLORS.border};">Amount</th>
+                                </tr>
+                                ${itemsRows || `
+                                    <tr>
+                                        <td colspan="4" style="padding: 16px 0; color: ${COLORS.textLight}; font-size: 14px; text-align: center;">
+                                            No items
+                                        </td>
+                                    </tr>
+                                `}
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 20px 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                ${detailRow('Subtotal', `<strong>${fmt(subtotal)}</strong>`)}
+                                ${discount > 0 ? detailRow('Discount' + (codeText ? ` (${codeText})` : ''), `<span style="color: ${COLORS.success};">- ${fmt(discount)}</span>`) : ''}
+                                ${tax > 0 ? detailRow('Tax', fmt(tax)) : ''}
+                                ${detailRow('Total', `<span style="font-weight: 700; font-size: 18px;">${fmt(total)}</span>`, true)}
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                ${ctaButton('Go to Dashboard →', 'https://skoowlai.com/dashboard')}
+
+                <p style="color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+                    Questions about this receipt? Reply to this email and we’ll help.
+                </p>
+            </td>
+        </tr>
+
+        ${emailFooter()}
+    `;
+
+    return emailWrapper(content);
+}

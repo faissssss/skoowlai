@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import {
     welcomeEmailTemplate,
     receiptEmailTemplate,
+    receiptEmailTemplateItemized,
     reminderEmailTemplate,
     cancellationEmailTemplate,
     renewalEmailTemplate,
@@ -12,6 +13,7 @@ import {
     onHoldEmailTemplate,
     expirationEmailTemplate
 } from './emailTemplates';
+import { dodoClient } from './dodo';
 
 // ... (existing code)
 
@@ -65,6 +67,33 @@ interface SubscriptionEmailData {
     subscriptionId?: string;
 }
 
+type ReceiptItem = {
+    name: string;
+    quantity: number;
+    unit_amount: number; // minor units
+    total_amount?: number; // minor units
+    tax_amount?: number; // minor units
+    discount_amount?: number; // minor units
+    description?: string;
+};
+
+type ReceiptTotals = {
+    subtotal?: number; // minor units
+    discount?: number; // minor units
+    tax?: number; // minor units
+    total?: number; // minor units
+};
+
+type ReceiptEmailData = SubscriptionEmailData & {
+    paymentId?: string;
+    currency?: string;
+    discountCodes?: string[];
+    items?: ReceiptItem[];
+    totals?: ReceiptTotals;
+    invoiceId?: string;
+    nextBillingDate?: Date;
+};
+
 /**
  * Send welcome email after successful subscription
  */
@@ -85,19 +114,99 @@ export async function sendWelcomeEmail({ email, name, plan }: SubscriptionEmailD
 }
 
 /**
- * Send receipt email with plan details
+ * Send receipt email.
+ * - If paymentId or itemization is provided, send a fully itemized receipt with discounts/tax.
+ * - Otherwise, fall back to legacy plan-based receipt.
  */
-export async function sendReceiptEmail({ email, name, plan, subscriptionId }: SubscriptionEmailData) {
+export async function sendReceiptEmail(params: ReceiptEmailData) {
+    const { email } = params;
     try {
+        // Itemized path when we have a payment to reference (preferred)
+        if (params.paymentId || (params.items && params.items.length)) {
+            let currency = params.currency;
+            let items: ReceiptItem[] = Array.isArray(params.items) ? params.items : [];
+            let totals: ReceiptTotals = params.totals || {};
+            let invoiceId: string | undefined = params.invoiceId;
+
+            // Enrich with Dodo Payments API when possible
+            try {
+                const paymentsApi: any = (dodoClient as any)?.payments;
+
+                if (params.paymentId && paymentsApi?.retrieveLineItems) {
+                    const res = await paymentsApi.retrieveLineItems(params.paymentId);
+                    if (res?.items?.length && !items.length) {
+                        items = res.items.map((it: any) => ({
+                            name: it.name || it.product_name || 'Item',
+                            quantity: Number(it.quantity ?? 1),
+                            unit_amount: Number(it.unit_amount ?? it.price_amount ?? 0),
+                            total_amount: typeof it.total_amount === 'number' ? it.total_amount : (typeof it.amount === 'number' ? it.amount : undefined),
+                            tax_amount: typeof it.tax_amount === 'number' ? it.tax_amount : 0,
+                            discount_amount: typeof it.discount_amount === 'number' ? it.discount_amount : 0,
+                            description: it.description || undefined,
+                        })) as ReceiptItem[];
+                    }
+                    currency = currency || res?.currency;
+                }
+
+                if (params.paymentId && paymentsApi?.retrieve) {
+                    const pay = await paymentsApi.retrieve(params.paymentId);
+                    invoiceId = invoiceId || pay?.invoice_id;
+                    currency = currency || pay?.currency;
+
+                    if (totals.total == null && typeof pay?.total_amount === 'number') totals.total = pay.total_amount;
+                    if (totals.tax == null && typeof pay?.tax === 'number') totals.tax = pay.tax;
+                    if (totals.discount == null && typeof pay?.discount_amount === 'number') totals.discount = pay.discount_amount;
+                }
+            } catch (e) {
+                console.warn('[Email] Failed to enrich receipt with payment details:', e);
+            }
+
+            // Derive subtotal/discount/tax/total if missing
+            const computedSubtotal = items.reduce((s, it) => s + Number(it.unit_amount || 0) * Number(it.quantity || 1), 0);
+            const computedDiscount = items.reduce((s, it) => s + Number(it.discount_amount || 0), 0);
+            const computedTax = items.reduce((s, it) => s + Number(it.tax_amount || 0), 0);
+
+            const subtotal = totals.subtotal ?? computedSubtotal;
+            const discount = totals.discount ?? computedDiscount;
+            const tax = totals.tax ?? computedTax;
+            const total = totals.total ?? Math.max(0, subtotal - discount + tax);
+
+            const html = receiptEmailTemplateItemized({
+                name: params.name || 'Valued Customer',
+                email: params.email,
+                currency: (currency || 'USD') as string,
+                items,
+                subtotal,
+                discount,
+                tax,
+                total,
+                discountCodes: params.discountCodes,
+                subscriptionId: params.subscriptionId || 'N/A',
+                paymentId: params.paymentId,
+                invoiceId,
+                nextBilling: params.nextBillingDate,
+            });
+
+            await resend.emails.send({
+                from: FROM_EMAIL,
+                to: email,
+                subject: '🧾 Your Skoowl AI Receipt',
+                html,
+            });
+            console.log(`✅ Itemized receipt email sent to ${email}`);
+            return true;
+        }
+
+        // Fallback legacy (plan-based) receipt
         await resend.emails.send({
             from: FROM_EMAIL,
             to: email,
             subject: '🧾 Your Skoowl AI Receipt',
             html: receiptEmailTemplate({
-                name: name || 'Valued Customer',
+                name: params.name || 'Valued Customer',
                 email,
-                plan,
-                subscriptionId: subscriptionId || 'N/A'
+                plan: params.plan,
+                subscriptionId: params.subscriptionId || 'N/A'
             }),
         });
         console.log(`✅ Receipt email sent to ${email}`);
