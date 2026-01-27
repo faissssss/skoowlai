@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/subscription-sync",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
