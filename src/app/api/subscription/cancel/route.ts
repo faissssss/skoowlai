@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
-import { sendCancellationEmail } from '@/lib/email';
 import { checkCsrfOrigin } from '@/lib/csrf';
 import { cancelDodoSubscriptionViaSdk } from '@/lib/dodo';
 
 /**
  * Cancel subscription API endpoint
  *
- * Current behavior (Dodo-only):
+ * Behavior (Dodo-only):
  * - Attempts to cancel the user's subscription via Dodo Payments using the Node SDK.
- * - Updates our local DB, actual access end date is enforced via webhooks + subscriptionEndsAt.
+ * - Marks the local subscription as cancelled; actual access end date is enforced via webhooks + subscriptionEndsAt.
+ * - Cancellation emails are sent exclusively from the Dodo webhook handler to ensure idempotency.
  */
 export async function POST(request: NextRequest) {
     // CSRF Protection: Check origin
@@ -65,21 +65,11 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        // Send cancellation email
-        if (user.email && user.subscriptionPlan) {
-            await sendCancellationEmail({
-                email: user.email,
-                name: undefined,
-                plan: (user.subscriptionPlan as 'monthly' | 'yearly') || 'monthly',
-                accessEndsAt,
-            });
-        }
-
         console.log(`✅ Subscription cancellation requested for user ${user.id}`);
 
         return NextResponse.json({
             success: true,
-            message: 'Subscription cancelled successfully',
+            message: 'Subscription cancelled successfully. A confirmation email will be sent shortly.',
             accessEndsAt,
         });
     } catch (error) {

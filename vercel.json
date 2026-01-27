@@ -1,8 +1,16 @@
 {
-    "crons": [
-        {
-            "path": "/api/cron/subscription-reminders",
-            "schedule": "0 9 * * *"
-        }
-    ]
+  "crons": [
+    {
+      "path": "/api/cron/subscription-reminders",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/normalize-subscriptions",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/subscription-sync",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

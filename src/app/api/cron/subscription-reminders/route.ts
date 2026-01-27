@@ -9,9 +9,16 @@ import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from '@/lib/ema
 export async function GET(req: NextRequest) {
     // Verify cron secret to prevent unauthorized access
     const authHeader = req.headers.get('authorization');
+    const querySecret = req.nextUrl.searchParams.get('secret');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Allow authentication via header OR query parameter
+    const isAuthorized =
+        !cronSecret ||
+        authHeader === `Bearer ${cronSecret}` ||
+        querySecret === cronSecret;
+
+    if (!isAuthorized) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

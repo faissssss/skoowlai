@@ -57,7 +57,7 @@ export function PricingTableFour(props: {
   size?: "small" | "medium" | "large";
   loadingPlanId?: string | null;
   activePlanId?: string;
-  /** Show "7-day free trial" badge - only for trial-eligible users */
+  /** Show "14-day free trial" badge - only for trial-eligible users */
   showTrialBadge?: boolean;
   /** Current user's plan interval (monthly/yearly) - disables that option */
   currentPlanInterval?: BillingInterval | null;
@@ -271,7 +271,7 @@ export function PricingTableFour(props: {
               <div className="mt-2 h-[22px] flex items-center">
                 {showTrialBadge ? (
                   <span className="inline-block bg-gradient-to-r from-emerald-400/10 to-emerald-500/10 text-emerald-400 text-[10px] font-medium px-2 py-0.5 rounded border border-emerald-500/20 leading-none">
-                    7-day free trial included
+                    14-day free trial included
                   </span>
                 ) : (
                   <span className="inline-block text-slate-500 text-[10px]">

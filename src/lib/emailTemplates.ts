@@ -705,7 +705,7 @@ export const planChangeEmailTemplate = ({
 
 export function trialWelcomeEmailTemplate({
     name,
-    trialDays = 7,
+    trialDays = 14,
     trialEndsAt
 }: {
     name: string;

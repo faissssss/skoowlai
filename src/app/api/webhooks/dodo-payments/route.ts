@@ -271,7 +271,7 @@ async function handleSubscriptionCreated(data: any, webhookId: string) {
     const trialDays =
         typeof data.trial_period_days === 'number'
             ? data.trial_period_days
-            : (typeof subDetails?.trial_period_days === 'number' ? subDetails.trial_period_days : 7);
+            : (typeof subDetails?.trial_period_days === 'number' ? subDetails.trial_period_days : 14);
     let trialEndDate: Date;
     if (data.next_billing_date) {
         trialEndDate = new Date(data.next_billing_date);
@@ -410,7 +410,7 @@ async function handleSubscriptionActivated(data: any, webhookId: string) {
                 ? data.trial_period_days
                 : (typeof (subDetails?.trial_period_days) === 'number' && subDetails.trial_period_days > 0)
                     ? subDetails.trial_period_days
-                    : 7;
+                    : 14;
 
         let trialEndDate: Date;
         if (data.next_billing_date) {

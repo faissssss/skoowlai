@@ -319,9 +319,11 @@ export default function SettingsPage() {
     const { user, isLoaded } = useUser();
     const { signOut } = useClerk();
     const [activeTab, setActiveTab] = useState<string>('account');
+    const [isMounted, setIsMounted] = useState(false);
 
-    // Read hash from URL after hydration to avoid SSR mismatch
+    // Ensure client-only behaviors (hash, dialogs) run after hydration to avoid SSR mismatches
     useEffect(() => {
+        setIsMounted(true);
         const hash = window.location.hash.replace('#', '');
         if (hash && ['account', 'billing'].includes(hash)) {
             setActiveTab(hash);
@@ -472,39 +474,42 @@ export default function SettingsPage() {
                                     Sign out of your account on this device.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="px-4 sm:px-6 pb-6">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <SettingsButton
-                                            variant="destructive"
-                                            wrapperClassName="w-full sm:w-auto"
-                                            beamColor="#ef4444"
-                                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0"
-                                        >
-                                            <LogOut className="w-4 h-4 mr-2" />
-                                            Log Out
-                                        </SettingsButton>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="bg-background border-border text-foreground">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-foreground">Are you sure you want to log out?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-muted-foreground">
-                                                You will be signed out of your account and redirected to the landing page.
-                                                Any unsaved changes will be lost.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent hover:text-accent-foreground">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={handleLogout}
-                                                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                                            >
-                                                Yes, Log Out
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </CardContent>
+                                <CardContent className="px-4 sm:px-6 pb-6">
+                                    {/* Render the logout dialog only after mount to avoid hydration ID mismatches */}
+                                    {isMounted && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <SettingsButton
+                                                    variant="destructive"
+                                                    wrapperClassName="w-full sm:w-auto"
+                                                    beamColor="#ef4444"
+                                                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0"
+                                                >
+                                                    <LogOut className="w-4 h-4 mr-2" />
+                                                    Log Out
+                                                </SettingsButton>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent className="bg-background border-border text-foreground">
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle className="text-foreground">Are you sure you want to log out?</AlertDialogTitle>
+                                                    <AlertDialogDescription className="text-muted-foreground">
+                                                        You will be signed out of your account and redirected to the landing page.
+                                                        Any unsaved changes will be lost.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent hover:text-accent-foreground">Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={handleLogout}
+                                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                                    >
+                                                        Yes, Log Out
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                </CardContent>
                         </Card>
                     </div>
                 )}

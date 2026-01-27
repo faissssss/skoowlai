@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Mic, Youtube, Brain, Layers, CheckCircle, Network, Sparkles, Menu, X, Upload, FileType, Headphones, Users, HelpCircle, Plus } from 'lucide-react';
+import { FileText, Mic, Youtube, Brain, Layers, CheckCircle, Network, Sparkles, Menu, X, Upload, Users, HelpCircle, Plus } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import Testimonials from '@/components/landing/Testimonials';
@@ -153,7 +153,7 @@ function FAQAccordion() {
               <motion.div
                 animate={{ rotate: openIndex === index ? 45 : 0 }}
                 transition={{ duration: 0.2 }}
-                className={`flex-shrink-0 ml-4 ${openIndex === index ? 'text-violet-400' : 'text-slate-400'
+                className={`shrink-0 ml-4 ${openIndex === index ? 'text-violet-400' : 'text-slate-400'
                   }`}
               >
                 <Plus className="w-5 h-5" />
@@ -182,11 +182,6 @@ function FAQAccordion() {
   );
 }
 
-
-// Hero visual - empty placeholder
-function HeroVisual() {
-  return null;
-}
 
 export default function LandingPage() {
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
@@ -245,7 +240,10 @@ export default function LandingPage() {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/15 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Glassmorphic Navigation */}
-      <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-7xl px-4 sm:px-6">
+      <nav
+        className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-7xl px-4 sm:px-6"
+        style={{ top: 'calc(var(--banner-h, 0px) + 1.5rem)' }}
+      >
         <div className="w-full px-6 py-4 rounded-2xl bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-lg relative">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -283,7 +281,7 @@ export default function LandingPage() {
                     Sign In
                   </Link>
                   <Link href="/sign-up">
-                    <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40">
+                    <button className="px-5 py-2.5 rounded-xl bg-linear-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40">
                       Get Started
                     </button>
                   </Link>
@@ -329,7 +327,7 @@ export default function LandingPage() {
                         Sign In
                       </Link>
                       <Link href="/sign-up" onClick={() => setIsMobileMenuOpen(false)}>
-                        <button className="w-full px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25">
+                        <button className="w-full px-5 py-2.5 rounded-xl bg-linear-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-500/25">
                           Get Started
                         </button>
                       </Link>
@@ -377,7 +375,7 @@ export default function LandingPage() {
             >
               <div className="group relative mx-auto flex items-center justify-center rounded-full px-4 py-1.5 shadow-[inset_0_-8px_10px_#8fdfff1f] transition-shadow duration-500 ease-out hover:shadow-[inset_0_-5px_10px_#8fdfff3f] bg-slate-900/50 backdrop-blur-sm">
                 <span
-                  className="animate-gradient absolute inset-0 block h-full w-full rounded-[inherit] bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:300%_100%] p-[1px]"
+                  className="animate-gradient absolute inset-0 block h-full w-full rounded-[inherit] bg-linear-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-size-[300%_100%] p-px"
                   style={{
                     WebkitMask:
                       "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
@@ -412,10 +410,10 @@ export default function LandingPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="relative px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-[length:200%_100%] text-white font-semibold text-lg shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all group overflow-hidden"
+                  className="relative px-8 py-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-size-[200%_100%] text-white font-semibold text-lg shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all group overflow-hidden"
                 >
                   <span className="relative z-10">Get Started for Free</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-linear-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </motion.button>
               </Link>
 
@@ -476,7 +474,7 @@ export default function LandingPage() {
                 <Users className="w-8 h-8 text-violet-400" />
               </div>
             </div>
-            <CountUpNumber value={100} duration={2.5} className="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+            <CountUpNumber value={100} duration={2.5} className="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400" />
             <p className="text-slate-400 text-lg mt-2">Students Learning</p>
           </motion.div>
 
@@ -494,7 +492,7 @@ export default function LandingPage() {
                   <FileText className="w-5 h-5 text-blue-400" />
                 </div>
               </div>
-              <CountUpNumber value={300} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <CountUpNumber value={300} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400" />
               <p className="text-slate-400 text-sm mt-1">Notes Created</p>
             </motion.div>
 
@@ -510,7 +508,7 @@ export default function LandingPage() {
                   <Layers className="w-5 h-5 text-emerald-400" />
                 </div>
               </div>
-              <CountUpNumber value={200} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <CountUpNumber value={200} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400" />
               <p className="text-slate-400 text-sm mt-1">Flashcards Made</p>
             </motion.div>
 
@@ -526,7 +524,7 @@ export default function LandingPage() {
                   <HelpCircle className="w-5 h-5 text-yellow-400" />
                 </div>
               </div>
-              <CountUpNumber value={500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <CountUpNumber value={500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400" />
               <p className="text-slate-400 text-sm mt-1">Quizzes Created</p>
             </motion.div>
 
@@ -542,7 +540,7 @@ export default function LandingPage() {
                   <Network className="w-5 h-5 text-pink-400" />
                 </div>
               </div>
-              <CountUpNumber value={100} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400" />
+              <CountUpNumber value={100} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-fuchsia-400" />
               <p className="text-slate-400 text-sm mt-1">Mind Maps</p>
             </motion.div>
           </div>
@@ -622,10 +620,10 @@ export default function LandingPage() {
                 whileHover={{ y: -8, scale: 1.02 }}
                 className="group relative"
               >
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
                 <div className="relative p-8 rounded-3xl bg-slate-900/60 backdrop-blur-xl border border-white/10 group-hover:border-blue-500/40 transition-all h-full">
                   {/* Step Number */}
-                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
+                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
                     1
                   </div>
 
@@ -633,7 +631,7 @@ export default function LandingPage() {
                   <div className="mb-6 flex items-center justify-center">
                     <div className="relative">
                       <div
-                        className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.4)]"
+                        className="w-20 h-20 rounded-2xl bg-linear-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.4)]"
                       >
                         <div className="flex items-center gap-1">
                           <FileText className="w-6 h-6 text-blue-400" />
@@ -663,19 +661,19 @@ export default function LandingPage() {
               >
                 {/* Enhanced purple glow for the "magic" step */}
                 <div
-                  className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/30 to-pink-500/20 blur-xl opacity-40"
+                  className="absolute inset-0 rounded-3xl bg-linear-to-br from-purple-500/30 to-pink-500/20 blur-xl opacity-40"
                 />
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
                 <div className="relative p-8 rounded-3xl bg-slate-900/70 backdrop-blur-xl border border-purple-500/30 group-hover:border-purple-400/60 transition-all h-full">
                   {/* Step Number */}
-                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/30">
+                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/30">
                     2
                   </div>
 
                   {/* AI Brain Icon */}
                   <div className="mb-6 flex items-center justify-center">
                     <div
-                      className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-400/40 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.5)]"
+                      className="relative w-20 h-20 rounded-2xl bg-linear-to-br from-purple-500/30 to-pink-500/20 border border-purple-400/40 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.5)]"
                     >
                       <Brain className="w-10 h-10 text-purple-400" />
                     </div>
@@ -697,17 +695,17 @@ export default function LandingPage() {
                 whileHover={{ y: -8, scale: 1.02 }}
                 className="group relative"
               >
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-cyan-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
                 <div className="relative p-8 rounded-3xl bg-slate-900/60 backdrop-blur-xl border border-white/10 group-hover:border-cyan-500/40 transition-all h-full">
                   {/* Step Number */}
-                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-cyan-500/30">
+                  <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-linear-to-br from-cyan-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-cyan-500/30">
                     3
                   </div>
 
                   {/* Output Tools Icon */}
                   <div className="mb-6 flex items-center justify-center">
                     <div
-                      className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.4)]"
+                      className="w-24 h-24 rounded-2xl bg-linear-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.4)]"
                     >
                       <div className="grid grid-cols-2 gap-2">
                         <FileText className="w-5 h-5 text-blue-400" />
@@ -733,7 +731,7 @@ export default function LandingPage() {
       <section id="features" className="relative py-16 overflow-hidden">
         {/* Glowing Thread Connector - Simplified */}
         <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 hidden lg:block">
-          <div className="h-full w-full bg-gradient-to-b from-transparent via-purple-500/20 to-transparent" />
+          <div className="h-full w-full bg-linear-to-b from-transparent via-purple-500/20 to-transparent" />
         </div>
 
         <div className="max-w-7xl mx-auto px-6">
@@ -808,7 +806,7 @@ export default function LandingPage() {
                     {/* Quote Block */}
                     <div className="border-l-4 border-purple-500 pl-4 py-2 bg-purple-500/5 rounded-r-lg">
                       <p className="text-slate-300 text-sm italic leading-relaxed">
-                        "This roadmap provides a high-level overview of robotics engineering, breaking it down into four core pillars."
+                        &quot;This roadmap provides a high-level overview of robotics engineering, breaking it down into four core pillars.&quot;
                       </p>
                     </div>
 
@@ -884,7 +882,7 @@ export default function LandingPage() {
                 Retention Engineered.
               </h3>
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
-                Forget rote memorization. Our Spaced Repetition System (SRS) predicts exactly when you're about to forget a card and surfaces it.
+                Forget rote memorization. Our Spaced Repetition System (SRS) predicts exactly when you&apos;re about to forget a card and surfaces it.
               </p>
               <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
                 Try flashcards →
@@ -931,7 +929,7 @@ export default function LandingPage() {
                     <span className="text-white font-medium">Question 3 of 10</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 h-2 rounded-full bg-slate-700">
-                        <div className="w-8 h-full rounded-full bg-gradient-to-r from-yellow-500 to-green-500" />
+                        <div className="w-8 h-full rounded-full bg-linear-to-r from-yellow-500 to-green-500" />
                       </div>
                       <span className="text-slate-400 text-sm">30%</span>
                     </div>
@@ -1075,7 +1073,7 @@ export default function LandingPage() {
                 Visualize the Complexity.
               </h3>
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
-                Don't just read linearly. See how concepts connect. Switch layouts from Radial to Tree to Fishbone instantly to fit your mental model.
+                Don&apos;t just read linearly. See how concepts connect. Switch layouts from Radial to Tree to Fishbone instantly to fit your mental model.
               </p>
               <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors">
                 Explore mind maps →
@@ -1121,7 +1119,7 @@ export default function LandingPage() {
             {/* Column 1: Brand & Mission */}
             <div className="lg:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <img src="/skoowl-logo.png" alt="skoowl ai" className="w-10 h-10" />
+                <Image src="/skoowl-logo.png" alt="skoowl ai" width={40} height={40} className="w-10 h-10" />
                 <span className="text-xl font-bold text-white">skoowl ai</span>
               </div>
               <p className="text-slate-400 max-w-sm">

@@ -82,7 +82,7 @@ async function findPreferredSubscriptionByCustomer(customerId: string): Promise<
  * - Backfills customerId if missing
  * - Optionally aligns status when a clear mapping exists
  */
-async function reconcileFromDodo(userClerkId: string) {
+export async function reconcileFromDodo(userClerkId: string) {
     const user = await db.user.findUnique({
         where: { clerkId: userClerkId },
         select: {
