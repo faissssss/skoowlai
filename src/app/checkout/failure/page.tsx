@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PaymentFailure } from "../../../components/billingsdk/payment-failure";
 
-export default function PaymentFailurePage() {
+function PaymentFailureContent() {
   const [isRetrying, setIsRetrying] = useState(false);
   const router = useRouter();
   const search = useSearchParams();
-
 
   // Prefer productId from query (?productId=...), otherwise fall back to env (monthly first).
   const productIdQuery = search?.get("productId") || "";
@@ -59,34 +58,36 @@ export default function PaymentFailurePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reason: failureMessage, plan: planParam }),
-    }).catch(() => {});
+    }).catch(() => { });
   }, [failureMessage, planParam]);
 
   return (
+    <PaymentFailure
+      isRetrying={isRetrying}
+      onRetry={canRetry ? handleRetry : undefined}
+      onSecondary={() => router.push("/dashboard")}
+      onTertiary={() => {
+        if (typeof window !== "undefined") {
+          window.location.href = "mailto:yourskoowlai@gmail.com";
+        }
+      }}
+      message={failureMessage}
+      reasons={[
+        "Insufficient funds in your account",
+        "Incorrect card details or expired card",
+        "Card declined by your bank",
+        "Network connection issues",
+      ]}
+    />
+  );
+}
+
+export default function PaymentFailurePage() {
+  return (
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
-      <PaymentFailure
-        isRetrying={isRetrying}
-        onRetry={canRetry ? handleRetry : undefined}
-        onSecondary={() => router.push("/dashboard")}
-        onTertiary={() => {
-          if (typeof window !== "undefined") {
-            window.location.href = "mailto:yourskoowlai@gmail.com";
-          }
-        }}
-        message={failureMessage}
-        reasons={[
-          "Insufficient funds in your account",
-          "Incorrect card details or expired card",
-          "Card declined by your bank",
-          "Network connection issues",
-        ]}
-        // Optional overrides (use defaults from BillingSDK template):
-        // title="Payment declined"
-        // subtitle="Your bank declined the transaction."
-        // retryButtonText="Retry Payment"
-        // secondaryButtonText="Go Home"
-        // tertiaryButtonText="Contact Support"
-      />
+      <Suspense fallback={<div>Loading...</div>}>
+        <PaymentFailureContent />
+      </Suspense>
     </div>
   );
 }
