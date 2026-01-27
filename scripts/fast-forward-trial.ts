@@ -34,7 +34,7 @@ async function main() {
     console.log('✅ Updated subscription:');
     console.log('  Email:', result.email);
     console.log('  Status:', result.subscriptionStatus);
-    console.log('  Plan:', result.plan);
+    console.log('  Plan:', result.subscriptionPlan);
     console.log('  Ends At:', result.subscriptionEndsAt?.toISOString());
     console.log('\n⏰ Trial will expire in 1 minute!');
     console.log('  Wait for Dodo webhook or manually trigger subscription.trial_ended');
