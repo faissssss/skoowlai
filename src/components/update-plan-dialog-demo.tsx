@@ -9,6 +9,7 @@ export function UpdatePlanDialogDemo() {
       <UpdatePlanDialog
         currentPlan={plans[1]}
         plans={plans}
+        currentInterval="monthly"
         onPlanChange={(planId) => {
           console.log(planId);
         }}
