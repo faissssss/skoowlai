@@ -20,6 +20,7 @@ export function SubscriptionManagementDemo() {
         updatePlan={{
           currentPlan: currentPlan.plan,
           plans: plans,
+          currentInterval: currentPlan.type,
           onPlanChange: (planId) => {
             console.log("update plan", planId);
           },
