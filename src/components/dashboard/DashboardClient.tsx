@@ -57,6 +57,7 @@ import EditWorkspaceModal from '@/components/dashboard/EditWorkspaceModal';
 import WorkspaceDetailModal from '@/components/dashboard/WorkspaceDetailModal';
 import WorkspaceCard from '@/components/dashboard/WorkspaceCard';
 import OptionsMenu from '@/components/dashboard/OptionsMenu';
+import { DraggableCardContainer, DraggableCardBody } from '@/components/ui/draggable-card';
 
 interface DashboardClientProps {
     decks: any[];
@@ -103,16 +104,13 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [showEditWorkspace, setShowEditWorkspace] = useState(false);
     const [showWorkspaceDetail, setShowWorkspaceDetail] = useState(false);
     const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
-    const [viewingWorkspace, setViewingWorkspace] = useState<any>(null);
+    const [viewingWorkspaceId, setViewingWorkspaceId] = useState<string | null>(null);
     const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
 
-    // Drag and drop / long-press state
+    // Drag and drop state
     const [draggingDeckId, setDraggingDeckId] = useState<string | null>(null);
     const [dragOverWorkspaceId, setDragOverWorkspaceId] = useState<string | null>(null);
-    const [dragEnabledDeckId, setDragEnabledDeckId] = useState<string | null>(null);
 
-    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const activePressDeckIdRef = useRef<string | null>(null);
     const dropSucceededRef = useRef(false);
 
     // Reusable function to fetch workspaces
@@ -269,77 +267,61 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     };
 
     // Long-press helpers for drag start
-    const cancelLongPress = () => {
-        if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
-        }
-        activePressDeckIdRef.current = null;
-        setDragEnabledDeckId(null);
-    };
 
-    const startLongPress = (deckId: string) => {
-        if (isSelectMode) return;
-        cancelLongPress();
-        activePressDeckIdRef.current = deckId;
-        longPressTimerRef.current = setTimeout(() => {
-            // Enable native dragging only after a long press
-            setDragEnabledDeckId(deckId);
-            setDraggingDeckId(deckId);
-            dropSucceededRef.current = false;
-        }, 400); // ~400ms long-press
-    };
 
     // Drag and drop handlers
-    const handleDragStart = (e: React.DragEvent, deckId: string) => {
-        // Only allow drag if long-press has enabled it
-        if (dragEnabledDeckId !== deckId) {
-            e.preventDefault();
-            return;
-        }
+    const handleDragStart = (deckId: string) => {
         setDraggingDeckId(deckId);
         dropSucceededRef.current = false;
-        e.dataTransfer.setData('text/plain', deckId);
-        e.dataTransfer.effectAllowed = 'move';
     };
 
-    const handleDragEnd = () => {
-        setDragOverWorkspaceId(null);
-        setDragEnabledDeckId(null);
-        setDraggingDeckId(null);
-        cancelLongPress();
+    const handleDragEnd = (event: any, info: any) => {
+        // Find if we're over a workspace card using coordinates
+        // We use info.point which is the absolute pointer position
+        const x = info.point.x;
+        const y = info.point.y;
 
-        // If no workspace handled the drop, gently guide the user
-        if (!dropSucceededRef.current) {
-            if (workspaces.length === 0) {
-                toast.info('Create a workspace to organize your decks');
-                setShowCreateWorkspace(true);
-            } else {
-                toast.info('Drag decks onto a workspace to move them');
+        // Temporarily disable pointer events on the dragging element so we can see what's under it
+        const draggingElement = event.target as HTMLElement;
+        const originalPointerEvents = draggingElement.style.pointerEvents;
+        draggingElement.style.pointerEvents = 'none';
+
+        const element = document.elementFromPoint(x, y);
+        const workspaceCard = element?.closest('[data-workspace-id]');
+        const workspaceId = workspaceCard?.getAttribute('data-workspace-id');
+
+        // Restore pointer events
+        draggingElement.style.pointerEvents = originalPointerEvents;
+
+        if (workspaceId && draggingDeckId) {
+            handleDropLogic(draggingDeckId, workspaceId);
+        } else {
+            // If no workspace handled the drop, notify the user gently
+            if (!dropSucceededRef.current) {
+                if (workspaces.length === 0) {
+                    toast.info('Create a workspace to organize your decks');
+                    setShowCreateWorkspace(true);
+                } else {
+                    toast.info('Drag decks onto a workspace to move them');
+                }
             }
         }
-    };
 
-    const handleDragOver = (e: React.DragEvent, workspaceId: string) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        setDragOverWorkspaceId(workspaceId);
-    };
-
-    const handleDragLeave = () => {
         setDragOverWorkspaceId(null);
+        setDraggingDeckId(null);
     };
 
-    const handleDrop = async (e: React.DragEvent, workspaceId: string) => {
-        e.preventDefault();
-        setDragOverWorkspaceId(null);
-        
-        const deckId = e.dataTransfer.getData('text/plain') || draggingDeckId;
-        if (!deckId) return;
-
+    const handleDropLogic = async (deckId: string, workspaceId: string) => {
         dropSucceededRef.current = true;
+        setDragOverWorkspaceId(null);
 
-        // Add deck to workspace
+        // Don't move if it's already in this workspace
+        const deck = decks.find(d => d.id === deckId);
+        if (deck?.workspaceId === workspaceId) {
+            toast.info('Deck is already in this workspace');
+            return;
+        }
+
         try {
             const res = await fetch(`/api/workspaces/${workspaceId}/decks`, {
                 method: 'POST',
@@ -349,22 +331,46 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
 
             if (res.ok) {
                 const workspace = workspaces.find(w => w.id === workspaceId);
-                toast.success(`Added to "${workspace?.name || 'workspace'}"`);
+                toast.success(`Moved to "${workspace?.name || 'workspace'}"`);
                 fetchWorkspaces();
                 router.refresh();
             } else {
-                toast.error('Failed to add to workspace');
+                toast.error('Failed to move deck');
                 dropSucceededRef.current = false;
             }
         } catch (error) {
-            toast.error('Failed to add to workspace');
+            console.error('Drop error:', error);
+            toast.error('Failed to move deck');
             dropSucceededRef.current = false;
-        } finally {
-            setDraggingDeckId(null);
-            setDragEnabledDeckId(null);
-            cancelLongPress();
         }
     };
+
+    const handleDrag = (event: any, info: any) => {
+        // Highlight workspace cards during drag
+        const x = info.point.x;
+        const y = info.point.y;
+
+        // Ignore the dragging element itself
+        const draggingElement = event.target as HTMLElement;
+        const originalPointerEvents = draggingElement.style.pointerEvents;
+        draggingElement.style.pointerEvents = 'none';
+
+        const element = document.elementFromPoint(x, y);
+        const workspaceCard = element?.closest('[data-workspace-id]');
+        const workspaceId = workspaceCard?.getAttribute('data-workspace-id');
+
+        // Restore
+        draggingElement.style.pointerEvents = originalPointerEvents;
+
+        if (workspaceId !== dragOverWorkspaceId) {
+            setDragOverWorkspaceId(workspaceId as string | null);
+        }
+    };
+
+    // Dummy handlers for WorkspaceCard props (logic is now in handleDrag/handleDragEnd)
+    const handleDragOverDummy = (e: React.DragEvent) => e.preventDefault();
+    const handleDragLeaveDummy = () => { };
+    const handleDropDummy = (e: React.DragEvent) => e.preventDefault();
 
     const filteredDecks = decks.filter(deck => {
         const deckSourceType = deck.sourceType || 'doc';
@@ -764,7 +770,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         transition={{ duration: 0.2 }}
                     >
                         {workspaces.length === 0 ? (
-                            <div 
+                            <div
                                 className={cn(
                                     "text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed transition-all",
                                     draggingDeckId
@@ -818,7 +824,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                         isDragOver={dragOverWorkspaceId === workspace.id}
                                         onClick={() => {
                                             if (!draggingDeckId) {
-                                                setViewingWorkspace(workspace);
+                                                setViewingWorkspaceId(workspace.id);
                                                 setShowWorkspaceDetail(true);
                                             }
                                         }}
@@ -834,9 +840,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                 description: 'Click on decks to select them, then confirm to add to workspace',
                                             });
                                         }}
-                                        onDragOver={(e) => handleDragOver(e, workspace.id)}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={(e) => handleDrop(e, workspace.id)}
+                                        onDragOver={handleDragOverDummy}
+                                        onDragLeave={handleDragLeaveDummy}
+                                        onDrop={handleDropDummy}
                                     />
                                 ))}
                             </div>
@@ -985,113 +991,111 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                             const SourceIcon = sourceInfo.icon;
                             const isSelected = selectedDeckIds.has(deck.id);
                             const isDragging = draggingDeckId === deck.id;
-                            const isDragEnabled = dragEnabledDeckId === deck.id;
                             return (
-                                <motion.div
-                                    key={deck.id}
-                                    draggable={!isSelectMode && isDragEnabled}
-                                    onPointerDown={() => startLongPress(deck.id)}
-                                    onPointerUp={cancelLongPress}
-                                    onPointerLeave={cancelLongPress}
-                                    onDragStart={(e) => handleDragStart(e as any, deck.id)}
-                                    onDragEnd={handleDragEnd}
-                                    whileHover={isDragging ? {} : { y: -3, scale: 1.02 }}
-                                    whileTap={isDragging ? {} : { scale: 0.98 }}
-                                    transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
-                                    onClick={(e) => {
-                                        if (isSelectMode) {
-                                            e.preventDefault();
-                                            toggleDeckSelection(deck.id);
-                                        }
-                                    }}
-                                    className={cn(
-                                        "group relative bg-white dark:bg-slate-900 rounded-xl border p-6 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-150 h-full flex flex-col",
-                                        isSelectMode ? "cursor-pointer" : isDragEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
-                                        isDragging && "opacity-60 scale-95 shadow-lg shadow-indigo-500/30",
-                                        isSelected
-                                            ? "border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20"
-                                            : "border-slate-200 dark:border-slate-800"
-                                    )}
-                                >
-                                    {!isSelectMode && !isDragging && (
-                                        <Link href={`/study/${deck.id}`} className="absolute inset-0 z-0" aria-label={`Open ${deck.title}`} />
-                                    )}
+                                <div key={deck.id} className="h-full">
+                                    <DraggableCardContainer
+                                        isDragging={isDragging}
+                                        className="h-full"
+                                    >
+                                        <DraggableCardBody
+                                            isDragging={isDragging}
+                                            drag={!isSelectMode}
+                                            onDragStart={() => handleDragStart(deck.id)}
+                                            onDrag={handleDrag}
+                                            onDragEnd={handleDragEnd}
+                                            onClick={(e) => {
+                                                if (isSelectMode) {
+                                                    e.preventDefault();
+                                                    toggleDeckSelection(deck.id);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "group relative p-6 h-full flex flex-col cursor-grab active:cursor-grabbing",
+                                                isSelectMode && "cursor-pointer",
+                                                isSelected && "ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500"
+                                            )}
+                                        >
+                                            {!isSelectMode && !isDragging && (
+                                                <Link href={`/study/${deck.id}`} className="absolute inset-0 z-0" aria-label={`Open ${deck.title}`} />
+                                            )}
 
-                                    {/* Selection checkbox overlay */}
-                                    {isSelectMode && (
-                                        <div className="absolute top-3 left-3 z-20">
-                                            {isSelected ? (
-                                                <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center">
-                                                    <CheckSquare className="w-4 h-4 text-white" />
+                                            {/* Selection checkbox overlay */}
+                                            {isSelectMode && (
+                                                <div className="absolute top-3 left-3 z-20">
+                                                    {isSelected ? (
+                                                        <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center">
+                                                            <CheckSquare className="w-4 h-4 text-white" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+                                                    )}
                                                 </div>
-                                            ) : (
-                                                <div className="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
                                             )}
-                                        </div>
-                                    )}
 
-                                    <div className="relative z-10 pointer-events-none flex flex-col h-full">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", sourceInfo.bgColor, sourceInfo.textColor)}>
-                                                <SourceIcon className="w-5 h-5" />
+                                            <div className="relative z-10 pointer-events-none flex flex-col h-full">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", sourceInfo.bgColor, sourceInfo.textColor)}>
+                                                        <SourceIcon className="w-5 h-5" />
+                                                    </div>
+                                                    {/* Three dots menu - always visible for mobile accessibility */}
+                                                    <div className="pointer-events-auto relative z-20">
+                                                        <DeckActionsMenu
+                                                            deckId={deck.id}
+                                                            currentWorkspaceId={deck.workspaceId}
+                                                            workspaces={workspaces}
+                                                            onWorkspaceChange={() => {
+                                                                fetchWorkspaces();
+                                                                router.refresh();
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                    {deck.title}
+                                                </h3>
+
+                                                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mb-6 space-x-3">
+                                                    <span className="flex items-center">
+                                                        <Clock className="w-3 h-3 mr-1" />
+                                                        {new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </span>
+                                                    {deck._count?.cards > 0 && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>{deck._count.cards} cards</span>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={cn("text-xs font-medium px-2 py-1 rounded-md", sourceInfo.bgColor, sourceInfo.textColor)}>
+                                                            {sourceInfo.label}
+                                                        </span>
+                                                        {deck.workspaceId && (() => {
+                                                            const workspace = workspaces.find(w => w.id === deck.workspaceId);
+                                                            if (workspace) {
+                                                                return (
+                                                                    <span
+                                                                        className="text-xs font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center gap-1"
+                                                                    >
+                                                                        <div
+                                                                            className="w-2 h-2 rounded-full"
+                                                                            style={{ backgroundColor: workspace.color }}
+                                                                        />
+                                                                        {workspace.name}
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            {/* Three dots menu - always visible for mobile accessibility */}
-                                            <div className="pointer-events-auto relative z-20">
-                                                <DeckActionsMenu
-                                                    deckId={deck.id}
-                                                    currentWorkspaceId={deck.workspaceId}
-                                                    workspaces={workspaces}
-                                                    onWorkspaceChange={() => {
-                                                        fetchWorkspaces();
-                                                        router.refresh();
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                            {deck.title}
-                                        </h3>
-
-                                        <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mb-6 space-x-3">
-                                            <span className="flex items-center">
-                                                <Clock className="w-3 h-3 mr-1" />
-                                                {new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                            </span>
-                                            {deck._count.cards > 0 && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span>{deck._count.cards} cards</span>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn("text-xs font-medium px-2 py-1 rounded-md", sourceInfo.bgColor, sourceInfo.textColor)}>
-                                                    {sourceInfo.label}
-                                                </span>
-                                                {deck.workspaceId && (() => {
-                                                    const workspace = workspaces.find(w => w.id === deck.workspaceId);
-                                                    if (workspace) {
-                                                        return (
-                                                            <span
-                                                                className="text-xs font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center gap-1"
-                                                            >
-                                                                <div
-                                                                    className="w-2 h-2 rounded-full"
-                                                                    style={{ backgroundColor: workspace.color }}
-                                                                />
-                                                                {workspace.name}
-                                                            </span>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })()}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                        </DraggableCardBody>
+                                    </DraggableCardContainer>
+                                </div>
                             );
                         })}
                     </div>
@@ -1141,10 +1145,12 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 isOpen={showWorkspaceDetail}
                 onClose={() => {
                     setShowWorkspaceDetail(false);
-                    setViewingWorkspace(null);
+                    setViewingWorkspaceId(null);
                 }}
-                workspace={viewingWorkspace}
+                workspace={workspaces.find(w => w.id === viewingWorkspaceId) || null}
+                workspaces={workspaces}
+                onWorkspaceChange={fetchWorkspaces}
             />
-        </div >
+        </div>
     );
 }

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { MorphingCardStack, CardData } from '@/components/ui/morphing-card-stack';
 import { useRouter } from 'next/navigation';
+import DeckActionsMenu from '@/components/dashboard/DeckActionsMenu';
 
 interface Deck {
     id: string;
@@ -29,6 +30,8 @@ interface WorkspaceDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     workspace: Workspace | null;
+    workspaces: any[];
+    onWorkspaceChange: () => void;
 }
 
 const getSourceInfo = (sourceType: string | null) => {
@@ -60,7 +63,9 @@ const getSourceInfo = (sourceType: string | null) => {
 export default function WorkspaceDetailModal({
     isOpen,
     onClose,
-    workspace
+    workspace,
+    workspaces,
+    onWorkspaceChange
 }: WorkspaceDetailModalProps) {
     const router = useRouter();
 
@@ -88,7 +93,15 @@ export default function WorkspaceDetailModal({
         title: deck.title,
         description: new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         icon: getDeckIcon(deck.sourceType),
-        color: getDeckColor(deck.sourceType)
+        color: getDeckColor(deck.sourceType),
+        actions: (
+            <DeckActionsMenu
+                deckId={deck.id}
+                currentWorkspaceId={workspace.id}
+                workspaces={workspaces}
+                onWorkspaceChange={onWorkspaceChange}
+            />
+        )
     }));
 
     const handleCardClick = (card: CardData) => {

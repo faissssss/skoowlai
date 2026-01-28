@@ -80,6 +80,13 @@ export default function OptionsMenu({
         }
     }, [isSelectMode, interactionState]);
 
+    // Auto-expand to bulk actions when select mode is triggered externally (e.g. from Add Decks)
+    useEffect(() => {
+        if (isSelectMode && interactionState === 'idle') {
+            setInteractionState('bulk_active');
+        }
+    }, [isSelectMode, interactionState]);
+
     // Define icons for categories
     const categoryIcons = {
         all: BookOpen,
@@ -91,7 +98,7 @@ export default function OptionsMenu({
     // Helper to get active label
     const getActiveLabel = () => {
         if (isSelectMode) return `${selectedCount} Selected`;
-        return 'All';
+        return 'Options';
     };
 
     // Helper to get active color

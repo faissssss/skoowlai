@@ -93,10 +93,11 @@ export default function WorkspaceCard({
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
+                data-workspace-id={workspace.id}
                 className={cn(
                     "relative bg-white dark:bg-slate-900 rounded-xl border p-6 cursor-pointer transition-all group h-full flex flex-col",
                     isDragOver
-                        ? "border-indigo-500 ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-500/20 scale-[1.02] bg-indigo-50/50 dark:bg-indigo-950/20"
+                        ? "border-indigo-500 ring-2 ring-indigo-500/40 shadow-[0_0_25px_rgba(99,102,241,0.25)] scale-[1.02] bg-indigo-50/50 dark:bg-indigo-950/20"
                         : isSelected
                             ? "border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg shadow-indigo-500/10"
                             : "border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10"

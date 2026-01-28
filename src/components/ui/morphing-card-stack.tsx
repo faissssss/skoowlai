@@ -13,6 +13,7 @@ export interface CardData {
     description: string
     icon?: ReactNode
     color?: string
+    actions?: ReactNode
 }
 
 export interface MorphingCardStackProps {
@@ -134,7 +135,7 @@ export function MorphingCardStack({
                 className="w-full max-w-3xl min-h-[320px] flex items-start justify-center overflow-y-auto overflow-x-hidden p-6"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-                <LayoutGroup>
+                <LayoutGroup id="morphing-card-stack">
                     <motion.div layout className={cn(containerStyles[layout], layout === "stack" ? "w-60 h-48" : "w-full")}>
                         <AnimatePresence mode="popLayout">
                             {displayCards.map((card) => {
@@ -153,12 +154,19 @@ export function MorphingCardStack({
                                             x: 0,
                                             ...styles,
                                         }}
-                                        exit={{ opacity: 0, scale: 0.8, x: -200 }}
+                                        exit={{
+                                            opacity: 0,
+                                            scale: 0.5,
+                                            rotate: -5,
+                                            y: 30,
+                                            transition: { duration: 0.25 }
+                                        }}
                                         transition={{
                                             type: "spring",
-                                            stiffness: 300,
-                                            damping: 25,
+                                            stiffness: 400,
+                                            damping: 30,
                                         }}
+                                        layout
                                         drag={isTopCard ? "x" : false}
                                         dragConstraints={{ left: 0, right: 0 }}
                                         dragElastic={0.7}
@@ -183,15 +191,24 @@ export function MorphingCardStack({
                                     >
                                         {/* Card Content - Only show on top card in stack mode */}
                                         <div className={cn(
-                                            "flex flex-col items-start text-left h-full",
+                                            "flex flex-col items-start text-left h-full w-full",
                                             layout === "stack" && !isTopCard && "opacity-0"
                                         )}>
-                                            {/* Icon */}
-                                            {card.icon && (
-                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 mb-3">
-                                                    {card.icon}
-                                                </div>
-                                            )}
+                                            {/* Header with Icon and Actions */}
+                                            <div className="flex justify-between items-start w-full mb-3">
+                                                {card.icon && (
+                                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700">
+                                                        {card.icon}
+                                                    </div>
+                                                )}
+
+                                                {card.actions && (
+                                                    <div className="relative z-30 ml-auto pt-1 pr-1">
+                                                        {card.actions}
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             {/* Title */}
                                             <h3 className={cn(
                                                 "font-semibold text-slate-900 dark:text-slate-100 mb-1",
