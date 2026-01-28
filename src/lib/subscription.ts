@@ -90,9 +90,20 @@ export async function getUserSubscription(): Promise<UserSubscription> {
             (user.subscriptionStatus === 'cancelled' && isWithinPaidPeriod) ||
             (user.subscriptionStatus === 'on_hold' && isWithinGracePeriod);
 
+        // Compute effective status for display purposes:
+        // - If cancelled/expired and subscription period has ended, effective status is 'free'
+        // - This ensures frontend displays correct state without complex logic duplication
+        const subscriptionEnded = 
+            (user.subscriptionStatus === 'cancelled' || user.subscriptionStatus === 'expired') && 
+            !isWithinPaidPeriod;
+        
+        const effectiveStatus: SubscriptionStatus = subscriptionEnded 
+            ? 'free' 
+            : (user.subscriptionStatus as SubscriptionStatus);
+
         return {
-            status: user.subscriptionStatus as SubscriptionStatus,
-            plan: user.subscriptionPlan as SubscriptionPlan,
+            status: effectiveStatus,
+            plan: subscriptionEnded ? null : (user.subscriptionPlan as SubscriptionPlan),
             isActive,
             isPro: isActive,
             customerId: user.customerId,
