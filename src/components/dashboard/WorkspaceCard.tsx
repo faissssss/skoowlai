@@ -88,7 +88,7 @@ export default function WorkspaceCard({
             <motion.div
                 whileHover={isDragOver ? {} : { y: -3, scale: 1.02 }}
                 whileTap={isDragOver ? {} : { scale: 0.98 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
                 onClick={onClick}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}

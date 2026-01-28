@@ -3,7 +3,7 @@
 import { useUser } from '@clerk/nextjs';
 
 import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -106,9 +106,14 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [viewingWorkspace, setViewingWorkspace] = useState<any>(null);
     const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
 
-    // Drag and drop state
+    // Drag and drop / long-press state
     const [draggingDeckId, setDraggingDeckId] = useState<string | null>(null);
     const [dragOverWorkspaceId, setDragOverWorkspaceId] = useState<string | null>(null);
+    const [dragEnabledDeckId, setDragEnabledDeckId] = useState<string | null>(null);
+
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const activePressDeckIdRef = useRef<string | null>(null);
+    const dropSucceededRef = useRef(false);
 
     // Reusable function to fetch workspaces
     const fetchWorkspaces = async () => {
@@ -263,16 +268,56 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         setShowBulkMoveAlert(true);
     };
 
+    // Long-press helpers for drag start
+    const cancelLongPress = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+        activePressDeckIdRef.current = null;
+        setDragEnabledDeckId(null);
+    };
+
+    const startLongPress = (deckId: string) => {
+        if (isSelectMode) return;
+        cancelLongPress();
+        activePressDeckIdRef.current = deckId;
+        longPressTimerRef.current = setTimeout(() => {
+            // Enable native dragging only after a long press
+            setDragEnabledDeckId(deckId);
+            setDraggingDeckId(deckId);
+            dropSucceededRef.current = false;
+        }, 400); // ~400ms long-press
+    };
+
     // Drag and drop handlers
     const handleDragStart = (e: React.DragEvent, deckId: string) => {
+        // Only allow drag if long-press has enabled it
+        if (dragEnabledDeckId !== deckId) {
+            e.preventDefault();
+            return;
+        }
         setDraggingDeckId(deckId);
+        dropSucceededRef.current = false;
         e.dataTransfer.setData('text/plain', deckId);
         e.dataTransfer.effectAllowed = 'move';
     };
 
     const handleDragEnd = () => {
-        setDraggingDeckId(null);
         setDragOverWorkspaceId(null);
+        setDragEnabledDeckId(null);
+        setDraggingDeckId(null);
+        cancelLongPress();
+
+        // If no workspace handled the drop, gently guide the user
+        if (!dropSucceededRef.current) {
+            if (workspaces.length === 0) {
+                toast.info('Create a workspace to organize your decks');
+                setShowCreateWorkspace(true);
+            } else {
+                toast.info('Drag decks onto a workspace to move them');
+            }
+        }
     };
 
     const handleDragOver = (e: React.DragEvent, workspaceId: string) => {
@@ -289,8 +334,10 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         e.preventDefault();
         setDragOverWorkspaceId(null);
         
-        const deckId = e.dataTransfer.getData('text/plain');
+        const deckId = e.dataTransfer.getData('text/plain') || draggingDeckId;
         if (!deckId) return;
+
+        dropSucceededRef.current = true;
 
         // Add deck to workspace
         try {
@@ -307,11 +354,15 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 router.refresh();
             } else {
                 toast.error('Failed to add to workspace');
+                dropSucceededRef.current = false;
             }
         } catch (error) {
             toast.error('Failed to add to workspace');
+            dropSucceededRef.current = false;
         } finally {
             setDraggingDeckId(null);
+            setDragEnabledDeckId(null);
+            cancelLongPress();
         }
     };
 
@@ -934,15 +985,19 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                             const SourceIcon = sourceInfo.icon;
                             const isSelected = selectedDeckIds.has(deck.id);
                             const isDragging = draggingDeckId === deck.id;
+                            const isDragEnabled = dragEnabledDeckId === deck.id;
                             return (
                                 <motion.div
                                     key={deck.id}
-                                    draggable={!isSelectMode}
+                                    draggable={!isSelectMode && isDragEnabled}
+                                    onPointerDown={() => startLongPress(deck.id)}
+                                    onPointerUp={cancelLongPress}
+                                    onPointerLeave={cancelLongPress}
                                     onDragStart={(e) => handleDragStart(e as any, deck.id)}
                                     onDragEnd={handleDragEnd}
                                     whileHover={isDragging ? {} : { y: -3, scale: 1.02 }}
                                     whileTap={isDragging ? {} : { scale: 0.98 }}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                    transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
                                     onClick={(e) => {
                                         if (isSelectMode) {
                                             e.preventDefault();
@@ -950,9 +1005,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                         }
                                     }}
                                     className={cn(
-                                        "group relative bg-white dark:bg-slate-900 rounded-xl border p-6 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-200 h-full flex flex-col",
-                                        isSelectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing",
-                                        isDragging && "opacity-50 scale-95",
+                                        "group relative bg-white dark:bg-slate-900 rounded-xl border p-6 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-150 h-full flex flex-col",
+                                        isSelectMode ? "cursor-pointer" : isDragEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+                                        isDragging && "opacity-60 scale-95 shadow-lg shadow-indigo-500/30",
                                         isSelected
                                             ? "border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20"
                                             : "border-slate-200 dark:border-slate-800"
