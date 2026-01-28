@@ -56,9 +56,8 @@ export default function OptionsMenu({
     isBulkMoving,
     onBulkDelete
 }: OptionsMenuProps) {
-    const [interactionState, setInteractionState] = useState<'idle' | 'hover' | 'workspace_active' | 'category_active' | 'bulk_active'>('idle');
+    const [interactionState, setInteractionState] = useState<'idle' | 'expanded' | 'workspace_active' | 'category_active' | 'bulk_active'>('idle');
     const containerRef = useRef<HTMLDivElement>(null);
-    const [isHovering, setIsHovering] = useState(false);
 
     // Reset to idle on click outside
     useEffect(() => {
@@ -66,7 +65,6 @@ export default function OptionsMenu({
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 if (interactionState !== 'idle' && !isSelectMode) {
                     setInteractionState('idle');
-                    setIsHovering(false);
                 }
             }
         }
@@ -90,25 +88,10 @@ export default function OptionsMenu({
         audio: Mic
     };
 
-    // Handle mouse interactions for hover state
-    const handleMouseEnter = () => {
-        setIsHovering(true);
-        if (interactionState === 'idle') {
-            setInteractionState('hover');
-        }
-    };
-
-    const handleMouseLeave = () => {
-        setIsHovering(false);
-        if (interactionState === 'hover') {
-            setInteractionState('idle');
-        }
-    };
-
     // Helper to get active label
     const getActiveLabel = () => {
         if (isSelectMode) return `${selectedCount} Selected`;
-        return 'Options';
+        return 'All';
     };
 
     // Helper to get active color
@@ -124,16 +107,19 @@ export default function OptionsMenu({
 
     const handleCancel = () => {
         onToggleSelectMode();
-        // Redirect to options button (unhovered/idle)
+        // Redirect to options button (idle)
         setInteractionState('idle');
+    };
+
+    // Handle click to expand options (no hover)
+    const handleExpandClick = () => {
+        setInteractionState('expanded');
     };
 
     return (
         <div
             ref={containerRef}
             className="relative z-50 h-8 md:h-9 flex items-center justify-end"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
         >
             <motion.div
                 layout
@@ -148,25 +134,25 @@ export default function OptionsMenu({
                 transition={{ type: "spring", bounce: 0, duration: 0.3 }}
             >
                 <AnimatePresence mode="wait" initial={false}>
-                    {/* Default State: "Options" Button */}
+                    {/* Default State: "All" Button - Click to expand */}
                     {interactionState === 'idle' && (
                         <motion.button
                             key="idle"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setInteractionState('hover')}
-                            className="flex items-center px-3 gap-2 text-sm font-medium whitespace-nowrap h-full w-full justify-center flex-row-reverse"
+                            onClick={handleExpandClick}
+                            className="flex items-center px-3 gap-2 text-sm font-medium whitespace-nowrap h-full w-full justify-center flex-row-reverse active:scale-95 transition-transform"
                         >
                             <Settings2 className="w-4 h-4" />
                             <span>{getActiveLabel()}</span>
                         </motion.button>
                     )}
 
-                    {/* Hover State: 3 Icons */}
-                    {interactionState === 'hover' && (
+                    {/* Expanded State: 3 Icons with Labels - Click only (no hover) */}
+                    {interactionState === 'expanded' && (
                         <motion.div
-                            key="hover"
+                            key="expanded"
                             initial={{ opacity: 0, x: 10 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 10 }}
@@ -178,10 +164,10 @@ export default function OptionsMenu({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setInteractionState('idle')}
-                                className="h-8 w-8 md:h-9 md:w-9 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-l border-slate-200 dark:border-slate-700 ml-1"
-                                title="Close"
+                                className="h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-l border-slate-200 dark:border-slate-700 ml-1 gap-1.5 active:scale-95 transition-transform"
                             >
                                 <X className="w-4 h-4" />
+                                <span className="text-xs font-medium">Cancel</span>
                             </Button>
 
                             <Button
@@ -189,12 +175,12 @@ export default function OptionsMenu({
                                 size="sm"
                                 onClick={() => setInteractionState('workspace_active')}
                                 className={cn(
-                                    "h-8 w-8 md:h-9 md:w-9 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800",
+                                    "h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5 active:scale-95 transition-transform",
                                     workspaceFilter && "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
                                 )}
-                                title="Filter by Workspace"
                             >
                                 <FolderOpen className="w-4 h-4" />
+                                <span className="text-xs font-medium hidden sm:inline">Workspace</span>
                             </Button>
 
                             <Button
@@ -202,12 +188,12 @@ export default function OptionsMenu({
                                 size="sm"
                                 onClick={() => setInteractionState('category_active')}
                                 className={cn(
-                                    "h-8 w-8 md:h-9 md:w-9 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800",
+                                    "h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5 active:scale-95 transition-transform",
                                     filter !== 'all' && "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
                                 )}
-                                title="Filter by Category"
                             >
                                 <LayoutGrid className="w-4 h-4" />
+                                <span className="text-xs font-medium hidden sm:inline">Category</span>
                             </Button>
 
                             <Button
@@ -219,12 +205,12 @@ export default function OptionsMenu({
                                     if (!isSelectMode) onToggleSelectMode();
                                 }}
                                 className={cn(
-                                    "h-8 w-8 md:h-9 md:w-9 p-0 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800",
+                                    "h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5 active:scale-95 transition-transform",
                                     isSelectMode && "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
                                 )}
-                                title="Bulk Actions"
                             >
                                 <CheckSquare className="w-4 h-4" />
+                                <span className="text-xs font-medium hidden sm:inline">Bulk</span>
                             </Button>
                         </motion.div>
                     )}
@@ -242,8 +228,8 @@ export default function OptionsMenu({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setInteractionState('hover')}
-                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600"
+                                onClick={() => setInteractionState('expanded')}
+                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
@@ -294,8 +280,8 @@ export default function OptionsMenu({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setInteractionState('hover')}
-                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600"
+                                onClick={() => setInteractionState('expanded')}
+                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
@@ -334,8 +320,8 @@ export default function OptionsMenu({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setInteractionState('hover')}
-                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600"
+                                onClick={() => setInteractionState('expanded')}
+                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </Button>

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { FolderOpen, MoreHorizontal, Trash2, Edit2 } from 'lucide-react';
+import { FolderOpen, MoreHorizontal, Trash2, Edit2, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -43,17 +44,27 @@ interface Workspace {
 interface WorkspaceCardProps {
     workspace: Workspace;
     isSelected?: boolean;
+    isDragOver?: boolean;
     onClick?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
+    onAddDecks?: () => void;
+    onDragOver?: (e: React.DragEvent) => void;
+    onDragLeave?: () => void;
+    onDrop?: (e: React.DragEvent) => void;
 }
 
 export default function WorkspaceCard({
     workspace,
     isSelected,
+    isDragOver,
     onClick,
     onEdit,
-    onDelete
+    onDelete,
+    onAddDecks,
+    onDragOver,
+    onDragLeave,
+    onDrop
 }: WorkspaceCardProps) {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -67,18 +78,28 @@ export default function WorkspaceCard({
         onDelete?.();
     };
 
+    const handleAddDecksClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onAddDecks?.();
+    };
+
     return (
         <>
             <motion.div
-                whileHover={{ y: -3, scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={isDragOver ? {} : { y: -3, scale: 1.02 }}
+                whileTap={isDragOver ? {} : { scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 onClick={onClick}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
                 className={cn(
-                    "relative bg-white dark:bg-slate-900 rounded-xl border p-6 cursor-pointer transition-colors group h-full flex flex-col",
-                    isSelected
-                        ? "border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg shadow-indigo-500/10"
-                        : "border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10"
+                    "relative bg-white dark:bg-slate-900 rounded-xl border p-6 cursor-pointer transition-all group h-full flex flex-col",
+                    isDragOver
+                        ? "border-indigo-500 ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-500/20 scale-[1.02] bg-indigo-50/50 dark:bg-indigo-950/20"
+                        : isSelected
+                            ? "border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg shadow-indigo-500/10"
+                            : "border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10"
                 )}
             >
                 {/* Header with icon and actions */}
@@ -90,20 +111,25 @@ export default function WorkspaceCard({
                         <FolderOpen className="w-5 h-5 text-white" />
                     </div>
 
-                    {/* Actions dropdown */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Actions dropdown - always visible for mobile accessibility */}
+                    <div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-8 w-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={handleAddDecksClick}>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Decks
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit?.(); }}>
                                     <Edit2 className="w-4 h-4 mr-2" />
                                     Edit

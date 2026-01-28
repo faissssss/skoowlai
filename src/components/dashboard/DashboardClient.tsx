@@ -106,6 +106,10 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [viewingWorkspace, setViewingWorkspace] = useState<any>(null);
     const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
 
+    // Drag and drop state
+    const [draggingDeckId, setDraggingDeckId] = useState<string | null>(null);
+    const [dragOverWorkspaceId, setDragOverWorkspaceId] = useState<string | null>(null);
+
     // Reusable function to fetch workspaces
     const fetchWorkspaces = async () => {
         try {
@@ -257,6 +261,58 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         if (selectedDeckIds.size === 0) return;
         setPendingBulkMoveWorkspaceId(workspaceId);
         setShowBulkMoveAlert(true);
+    };
+
+    // Drag and drop handlers
+    const handleDragStart = (e: React.DragEvent, deckId: string) => {
+        setDraggingDeckId(deckId);
+        e.dataTransfer.setData('text/plain', deckId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragEnd = () => {
+        setDraggingDeckId(null);
+        setDragOverWorkspaceId(null);
+    };
+
+    const handleDragOver = (e: React.DragEvent, workspaceId: string) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverWorkspaceId(workspaceId);
+    };
+
+    const handleDragLeave = () => {
+        setDragOverWorkspaceId(null);
+    };
+
+    const handleDrop = async (e: React.DragEvent, workspaceId: string) => {
+        e.preventDefault();
+        setDragOverWorkspaceId(null);
+        
+        const deckId = e.dataTransfer.getData('text/plain');
+        if (!deckId) return;
+
+        // Add deck to workspace
+        try {
+            const res = await fetch(`/api/workspaces/${workspaceId}/decks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deckIds: [deckId] })
+            });
+
+            if (res.ok) {
+                const workspace = workspaces.find(w => w.id === workspaceId);
+                toast.success(`Added to "${workspace?.name || 'workspace'}"`);
+                fetchWorkspaces();
+                router.refresh();
+            } else {
+                toast.error('Failed to add to workspace');
+            }
+        } catch (error) {
+            toast.error('Failed to add to workspace');
+        } finally {
+            setDraggingDeckId(null);
+        }
     };
 
     const filteredDecks = decks.filter(deck => {
@@ -657,12 +713,49 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         transition={{ duration: 0.2 }}
                     >
                         {workspaces.length === 0 ? (
-                            <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                                <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <FolderOpen className="w-6 h-6 text-slate-400" />
+                            <div 
+                                className={cn(
+                                    "text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed transition-all",
+                                    draggingDeckId
+                                        ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20"
+                                        : "border-slate-200 dark:border-slate-800"
+                                )}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'none';
+                                }}
+                            >
+                                <div className={cn(
+                                    "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3",
+                                    draggingDeckId
+                                        ? "bg-indigo-100 dark:bg-indigo-900/40"
+                                        : "bg-slate-100 dark:bg-slate-800"
+                                )}>
+                                    <FolderOpen className={cn(
+                                        "w-6 h-6",
+                                        draggingDeckId ? "text-indigo-500" : "text-slate-400"
+                                    )} />
                                 </div>
-                                <p className="text-slate-500 dark:text-slate-400">No workspaces yet</p>
-                                <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Create a workspace to group your study decks</p>
+                                {draggingDeckId ? (
+                                    <>
+                                        <p className="text-indigo-600 dark:text-indigo-400 font-medium">Create a workspace first</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">You need a workspace to organize decks</p>
+                                        <Button
+                                            onClick={() => setShowCreateWorkspace(true)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-4 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                                        >
+                                            <FolderPlus className="w-4 h-4 mr-2" />
+                                            Create Workspace
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-slate-500 dark:text-slate-400">No workspaces yet</p>
+                                        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Create a workspace to group your study decks</p>
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -671,12 +764,28 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                         key={workspace.id}
                                         workspace={workspace}
                                         isSelected={selectedWorkspace === workspace.id}
+                                        isDragOver={dragOverWorkspaceId === workspace.id}
                                         onClick={() => {
-                                            setViewingWorkspace(workspace);
-                                            setShowWorkspaceDetail(true);
+                                            if (!draggingDeckId) {
+                                                setViewingWorkspace(workspace);
+                                                setShowWorkspaceDetail(true);
+                                            }
                                         }}
                                         onEdit={() => handleEditWorkspace(workspace)}
                                         onDelete={() => handleDeleteWorkspace(workspace.id)}
+                                        onAddDecks={() => {
+                                            // Activate bulk select mode and set the target workspace
+                                            setIsSelectMode(true);
+                                            setPendingBulkMoveWorkspaceId(workspace.id);
+                                            // Scroll to study sets section
+                                            document.getElementById('study-sets-section')?.scrollIntoView({ behavior: 'smooth' });
+                                            toast.info(`Select decks to add to "${workspace.name}"`, {
+                                                description: 'Click on decks to select them, then confirm to add to workspace',
+                                            });
+                                        }}
+                                        onDragOver={(e) => handleDragOver(e, workspace.id)}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, workspace.id)}
                                     />
                                 ))}
                             </div>
@@ -686,7 +795,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             </div>
 
             {/* Recent Sets */}
-            <div className="space-y-6">
+            <div id="study-sets-section" className="space-y-6 scroll-mt-20">
                 {/* Title Row */}
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -824,11 +933,15 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                             const sourceInfo = getSourceInfo(deck.sourceType || 'doc');
                             const SourceIcon = sourceInfo.icon;
                             const isSelected = selectedDeckIds.has(deck.id);
+                            const isDragging = draggingDeckId === deck.id;
                             return (
                                 <motion.div
                                     key={deck.id}
-                                    whileHover={{ y: -3, scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
+                                    draggable={!isSelectMode}
+                                    onDragStart={(e) => handleDragStart(e as any, deck.id)}
+                                    onDragEnd={handleDragEnd}
+                                    whileHover={isDragging ? {} : { y: -3, scale: 1.02 }}
+                                    whileTap={isDragging ? {} : { scale: 0.98 }}
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                     onClick={(e) => {
                                         if (isSelectMode) {
@@ -837,13 +950,15 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                         }
                                     }}
                                     className={cn(
-                                        "group relative bg-white dark:bg-slate-900 rounded-xl border p-6 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10 transition-colors duration-200 h-full flex flex-col cursor-pointer",
+                                        "group relative bg-white dark:bg-slate-900 rounded-xl border p-6 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-200 h-full flex flex-col",
+                                        isSelectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing",
+                                        isDragging && "opacity-50 scale-95",
                                         isSelected
                                             ? "border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20"
                                             : "border-slate-200 dark:border-slate-800"
                                     )}
                                 >
-                                    {!isSelectMode && (
+                                    {!isSelectMode && !isDragging && (
                                         <Link href={`/study/${deck.id}`} className="absolute inset-0 z-0" aria-label={`Open ${deck.title}`} />
                                     )}
 
@@ -865,7 +980,8 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                             <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", sourceInfo.bgColor, sourceInfo.textColor)}>
                                                 <SourceIcon className="w-5 h-5" />
                                             </div>
-                                            <div className="pointer-events-auto relative z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                            {/* Three dots menu - always visible for mobile accessibility */}
+                                            <div className="pointer-events-auto relative z-20">
                                                 <DeckActionsMenu
                                                     deckId={deck.id}
                                                     currentWorkspaceId={deck.workspaceId}
