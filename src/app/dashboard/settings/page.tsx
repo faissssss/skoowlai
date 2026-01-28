@@ -187,47 +187,55 @@ function SubscriptionCard() {
             ? subscription.isActive
             : (subscription?.status === 'active' || isTrial || (isCancelled && endsAtMs !== null && endsAtMs > nowMs));
 
-    // Immediate end (trial cancelled now or cancelled with no remaining access)
-    const isImmediateEnd = isCancelled && (endsAtMs === null || endsAtMs <= nowMs + 1000);
+    // Check if the subscription period has ended (cancelled and past end date)
+    const hasSubscriptionEnded = isCancelled && (endsAtMs === null || endsAtMs <= nowMs);
 
     // Display status badge rules:
-    // - Show 'cancelled' badge whenever status is cancelled (even if access remains until period end)
+    // - If subscription period has ended (cancelled + past end date), show 'free'
+    // - Show 'cancelled' badge only if cancelled but still within paid period
     // - Else show 'trialing' during trial, 'active' when active, or 'free'
     const displayStatus: 'trialing' | 'active' | 'cancelled' | 'free' =
-        isCancelled ? 'cancelled' : (isTrial ? 'trialing' : (isActive ? 'active' : 'free'));
+        hasSubscriptionEnded ? 'free' :
+        (isCancelled ? 'cancelled' : (isTrial ? 'trialing' : (isActive ? 'active' : 'free')));
 
     console.log('[Settings] Subscription data:', {
         apiStatus: subscription?.status,
         isCancelled,
         isTrial,
         isActive,
+        hasSubscriptionEnded,
         displayStatus,
         subscriptionEndsAt: subscription?.subscriptionEndsAt
     });
 
     // Determine the plan card to display:
-    // - Show Free when not active AND (not cancelled OR cancelled with immediate end)
+    // - Show Free when not active AND subscription has ended
     // - Keep Pro card when paid cancellation scheduled at period end (still active until end)
-    const showProCard = isActive || (isCancelled && endsAtMs !== null && endsAtMs > nowMs);
+    const showProCard = isActive && !hasSubscriptionEnded;
     const currentPlanData: Plan = showProCard ? plans[1] : plans[0];
 
     // UI helper for trigger text
     const isFreeUI = !showProCard;
 
-    const endDate = subscription?.subscriptionEndsAt ? new Date(subscription.subscriptionEndsAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }) : 'N/A';
+    // For Free plan users (after subscription ended), don't show the old end date
+    const endDate = (showProCard && subscription?.subscriptionEndsAt) 
+        ? new Date(subscription.subscriptionEndsAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }) 
+        : 'N/A';
 
     // Build CurrentPlan object for SubscriptionManagement
     const currentInterval = (subscription?.plan as 'monthly' | 'yearly') || 'monthly';
     const currentPlan: CurrentPlanType = {
         plan: currentPlanData,
         type: currentInterval,
-        price: subscription?.plan === 'yearly' ? '$39.99/year' : '$4.99/month',
+        // Show $0/month for Free plan, otherwise show actual price
+        price: isFreeUI ? '$0/month' : (subscription?.plan === 'yearly' ? '$39.99/year' : '$4.99/month'),
         nextBillingDate: endDate,
-        paymentMethod: (isTrial || (isCancelled && isTrial)) ? 'None' : 'Credit Card', // Show None for trials (even converted to cancel)
+        // Show 'None' for free users or trialing users
+        paymentMethod: (isFreeUI || isTrial) ? 'None' : 'Credit Card',
         status: displayStatus,
     };
 
@@ -241,11 +249,12 @@ function SubscriptionCard() {
                 updatePlan={{
                     currentPlan: currentPlanData,
                     plans: plans,
-                    triggerText: isCancelled ? "Resubscribe (no trial)" : (isFreeUI ? "Upgrade to Pro" : "Update Plan"),
+                    // If subscription ended, show "Upgrade to Pro"; if cancelled but still active, show "Resubscribe"
+                    triggerText: hasSubscriptionEnded ? "Upgrade to Pro" : (isCancelled ? "Resubscribe (no trial)" : (isFreeUI ? "Upgrade to Pro" : "Update Plan")),
                     onPlanChange: async () => {
                         try {
-                            // Prefer direct session checkout for cancelled users to avoid connector/currency issues
-                            if (isCancelled) {
+                            // For users who cancelled but still have active access, use direct session checkout
+                            if (isCancelled && !hasSubscriptionEnded) {
                                 const yearlyNoTrial = process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID || "";
                                 const target = yearlyNoTrial
                                   ? `/api/checkout/session?productId=${encodeURIComponent(yearlyNoTrial)}`

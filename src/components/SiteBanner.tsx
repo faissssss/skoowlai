@@ -4,8 +4,8 @@ import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
 import { useUser } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import Link from 'next/link';
+import { X, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 // Helper to safely check if we're on the client
 const useIsMounted = () => useSyncExternalStore(
@@ -14,18 +14,32 @@ const useIsMounted = () => useSyncExternalStore(
   () => false
 );
 
+// Track if animation has played this session to prevent re-animation on navigation
+const animationPlayedKey = 'banner-animated-session';
+
 // Inner component keyed by storageKey so it re-initializes on auth changes (login/sign-up)
 function BannerInner({ storageKey }: { storageKey: string }) {
   const isMounted = useIsMounted();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Start with null to indicate "not yet determined" - prevents flash
   const [show, setShow] = useState<boolean | null>(null);
+  
+  // Check if animation already played this session
+  const [hasAnimated, setHasAnimated] = useState(false);
 
   // Read from localStorage only after mount to avoid hydration issues
   useEffect(() => {
     try {
       const dismissed = localStorage.getItem(storageKey) === '1';
+      const alreadyAnimated = sessionStorage.getItem(animationPlayedKey) === '1';
+      setHasAnimated(alreadyAnimated);
       setShow(!dismissed);
+      // Mark animation as played after first render
+      if (!dismissed && !alreadyAnimated) {
+        sessionStorage.setItem(animationPlayedKey, '1');
+      }
     } catch {
       setShow(true);
     }
@@ -69,6 +83,12 @@ function BannerInner({ storageKey }: { storageKey: string }) {
     setShow(false);
   };
 
+  const handleStartTrial = () => {
+    setIsLoading(true);
+    // Use router.push for smoother client-side navigation
+    router.push('/dashboard?billing=1');
+  };
+
   // Don't render anything until we've determined the show state
   if (!isMounted || show === null) return null;
 
@@ -77,7 +97,8 @@ function BannerInner({ storageKey }: { storageKey: string }) {
       {show && (
         <motion.div
           ref={bannerRef}
-          initial={{ y: -50, opacity: 0 }}
+          // Only animate on first appearance, not on subsequent navigations
+          initial={hasAnimated ? false : { y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -50, opacity: 0 }}
           transition={{
@@ -86,6 +107,7 @@ function BannerInner({ storageKey }: { storageKey: string }) {
             damping: 30,
             mass: 1
           }}
+          layout="position"
           className="fixed top-0 inset-x-0 z-60"
         >
           <div className="bg-linear-to-r from-indigo-600 via-purple-600 to-pink-500 text-white">
@@ -104,12 +126,17 @@ function BannerInner({ storageKey }: { storageKey: string }) {
 
                 {/* Right: Button + Close */}
                 <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href="/dashboard?billing=1"
-                    className="inline-flex items-center justify-center rounded-full bg-white text-indigo-600 px-4 py-1.5 text-sm font-semibold hover:bg-white/90 transition-colors shadow-sm"
+                  <button
+                    onClick={handleStartTrial}
+                    disabled={isLoading}
+                    className="inline-flex items-center justify-center rounded-full bg-white text-indigo-600 px-4 py-1.5 text-sm font-semibold hover:bg-white/90 transition-colors shadow-sm disabled:opacity-70 min-w-[120px]"
                   >
-                    Start Free Trial
-                  </Link>
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      'Start Free Trial'
+                    )}
+                  </button>
                   <button
                     aria-label="Close banner"
                     onClick={onClose}

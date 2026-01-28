@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { PricingTableFour } from '@/components/billingsdk/pricing-table-four';
 import { plans } from '@/lib/billingsdk-config';
 
@@ -22,6 +23,8 @@ interface PricingModalProps {
 export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
     const { user } = useUser();
+    const { isSignedIn } = useAuth();
+    const router = useRouter();
 
     // Subscription state for UI logic
     const [subscriptionData, setSubscriptionData] = useState<{
@@ -67,6 +70,20 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 // Basic sanity check; real IDs begin with pdt_
                 console.error('Invalid or missing productId:', productId);
                 alert('Product is not configured. Please contact support.');
+                return;
+            }
+
+            // Redirect unauthenticated users to sign-up first
+            // This ensures the subscription is linked to their Clerk ID
+            if (!isSignedIn) {
+                // Store the intended checkout in sessionStorage so we can resume after sign-up
+                sessionStorage.setItem('pending-checkout', JSON.stringify({
+                    productId,
+                    plan: planParam,
+                }));
+                // Redirect to sign-up with return URL to dashboard billing
+                router.push('/sign-up?redirect_url=/dashboard?billing=1');
+                onClose();
                 return;
             }
 
