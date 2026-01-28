@@ -1,5 +1,11 @@
 'use client';
 
+// Force dynamic rendering for all dashboard routes - required because:
+// 1. useSearchParams() needs runtime context (no search params at build time)
+// 2. Dashboard pages require authentication (cookies/session)
+// 3. Child pages access browser APIs like window.location
+export const dynamic = "force-dynamic";
+
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { LayoutDashboard, Settings, Menu, Crown } from 'lucide-react';
