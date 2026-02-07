@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Moon, Sun } from "lucide-react"
 import { flushSync } from "react-dom"
 import { AnimatedDockButton } from "@/components/ui/animated-dock-button"
+import { Button } from "@/components/ui/button"
 
 import { cn } from "@/lib/utils"
 
@@ -73,24 +74,20 @@ export const AnimatedThemeToggler = ({
 
   return (
     <AnimatedDockButton>
-      <button
+      <Button
         ref={buttonRef}
         onClick={toggleTheme}
         data-theme-toggler
+        variant="outline"
+        size="icon"
         className={cn(
-          "inline-flex items-center justify-center size-9 rounded-md p-0 bg-transparent",
-          "text-slate-500 dark:text-slate-400 hover:text-accent-foreground dark:hover:text-accent-foreground",
-          "border border-white/20 dark:border-slate-700",
-          "hover:border-indigo-500/50 hover:text-indigo-500 transition-colors",
-          "active:border-indigo-500 active:text-indigo-500 focus:border-indigo-500",
-          "hover:bg-accent dark:hover:bg-accent/50",
           className
         )}
         {...props}
       >
         {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         <span className="sr-only">Toggle theme</span>
-      </button>
+      </Button>
     </AnimatedDockButton>
   )
 }

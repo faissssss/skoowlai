@@ -81,12 +81,12 @@ export function SubscriptionManagement({
                         className={cn(
                           "text-xs shadow-sm backdrop-blur-sm sm:text-sm",
                           currentPlan.status === "trialing"
-                            ? "border-amber-600/50 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            ? "border-(--brand-accent)/50 bg-(--brand-accent)/10 text-(--brand-accent)"
                             : currentPlan.status === "active"
-                              ? "border-emerald-600/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              ? "border-emerald/50 bg-emerald/10 text-emerald"
                               : currentPlan.status === "cancelled"
-                                ? "border-red-600/50 bg-red-500/10 text-red-600 dark:text-red-400"
-                                : "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300"
+                                ? "border-destructive/50 bg-destructive/10 text-destructive"
+                                : "border-border bg-muted text-muted-foreground"
                         )}
                       >
                         {currentPlan.status === "trialing" ? "trial" : currentPlan.status}
@@ -103,7 +103,7 @@ export function SubscriptionManagement({
             </div>
           </div>
 
-          <Separator className="via-border my-4 bg-gradient-to-r from-transparent to-transparent sm:my-6" />
+          <Separator className="via-border my-4 bg-linear-to-r from-transparent to-transparent sm:my-6" />
 
           <div className="space-y-3 sm:space-y-4">
             <h4 className="flex items-center gap-2 text-base font-medium sm:text-lg text-foreground">
@@ -138,7 +138,7 @@ export function SubscriptionManagement({
             </div>
           </div>
 
-          <Separator className="via-border my-4 bg-gradient-to-r from-transparent to-transparent sm:my-6" />
+          <Separator className="via-border my-4 bg-linear-to-r from-transparent to-transparent sm:my-6" />
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <UpdatePlanDialog
@@ -164,7 +164,7 @@ export function SubscriptionManagement({
                   key={index}
                   className="group border-border bg-card hover:border-violet-500/30 hover:bg-violet-600/5 flex items-center gap-2 rounded-lg border p-2 transition-all duration-200 sm:p-2"
                 >
-                  <div className="bg-violet-500 group-hover:bg-violet-500 h-1 w-1 flex-shrink-0 rounded-full transition-all duration-200 group-hover:scale-125 sm:h-1.5 sm:w-1.5"></div>
+                  <div className="bg-violet-500 group-hover:bg-violet-500 h-1 w-1 shrink-0 rounded-full transition-all duration-200 group-hover:scale-125 sm:h-1.5 sm:w-1.5"></div>
                   <span className="text-muted-foreground group-hover:text-foreground text-xs transition-colors duration-200 sm:text-sm">
                     {feature.name}
                   </span>

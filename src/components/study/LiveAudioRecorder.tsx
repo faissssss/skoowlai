@@ -13,10 +13,52 @@ interface LiveAudioRecorderProps {
     onCancel?: () => void;
 }
 
+interface SpeechRecognitionEvent extends Event {
+    resultIndex: number;
+    results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+    length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+    isFinal: boolean;
+    [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+    transcript: string;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    maxAlternatives: number;
+    onstart: ((event: Event) => void) | null;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+    onend: ((event: Event) => void) | null;
+    start(): void;
+    stop(): void;
+}
+
+interface WindowWithSpeechRecognition extends Window {
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+}
+
 const getBrowserInfo = () => {
     if (typeof window === 'undefined') return { name: 'unknown', supportsNativeSpeech: false };
     const ua = navigator.userAgent;
-    const w = window as any;
+    const w = window as WindowWithSpeechRecognition;
     const hasSpeechRecognition = !!(w.SpeechRecognition || w.webkitSpeechRecognition);
 
     if (ua.includes('Chrome') && !ua.includes('Edg')) return { name: 'Chrome', supportsNativeSpeech: hasSpeechRecognition };
@@ -40,7 +82,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
-    const recognitionRef = useRef<any>(null);
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -107,7 +149,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
 
     // Start browser speech recognition
     const startSpeechRecognition = useCallback(() => {
-        const w = window as any;
+        const w = window as WindowWithSpeechRecognition;
         const SpeechRecognitionAPI = w.SpeechRecognition || w.webkitSpeechRecognition;
 
         if (!SpeechRecognitionAPI) {
@@ -126,7 +168,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             setTranscriptionActive(true);
         };
 
-        recognition.onresult = (event: any) => {
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
             let interim = '';
             let final = '';
 
@@ -147,7 +189,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             }
         };
 
-        recognition.onerror = (event: any) => {
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             console.warn('Speech recognition error:', event.error);
             if (event.error === 'no-speech') {
                 // Restart on no-speech error
@@ -331,17 +373,17 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
         <div className="w-full space-y-6">
             {/* Browser info */}
             {state === 'idle' && !browserInfo.supportsNativeSpeech && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-400">
+                <div className="flex items-center gap-2 p-3 bg-(--brand-accent)/10 border border-(--brand-accent)/20 rounded-lg text-sm text-(--brand-accent)">
                     <Globe className="w-4 h-4" />
-                    <span><strong>{browserInfo.name}</strong> doesn't support live transcription. Recording will still work - transcript will be generated after.</span>
+                    <span><strong>{browserInfo.name}</strong> doesn&apos;t support live transcription. Recording will still work - transcript will be generated after.</span>
                 </div>
             )}
 
             {/* Status badge */}
             {(state === 'recording' || state === 'paused') && (
                 <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
-                    transcriptionActive ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400" : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400")}>
-                    <div className={cn("w-2 h-2 rounded-full", transcriptionActive ? "bg-green-500" : "bg-amber-500 animate-pulse")} />
+                    transcriptionActive ? "bg-emerald/10 text-emerald" : "bg-(--brand-accent)/10 text-(--brand-accent)")}>
+                    <div className={cn("w-2 h-2 rounded-full", transcriptionActive ? "bg-emerald" : "bg-(--brand-accent) animate-pulse")} />
                     {transcriptionActive ? 'Live Transcription Active' : 'Recording (no live preview)'}
                 </div>
             )}
@@ -349,27 +391,27 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             {/* Audio Level */}
             {(state === 'recording' || state === 'paused') && (
                 <div className="space-y-1">
-                    <div className="flex justify-between text-xs text-slate-500">
+                    <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Audio Level</span>
-                        <span className={cn(audioLevel < 10 ? "text-red-500" : audioLevel < 30 ? "text-amber-500" : "text-green-500")}>
+                        <span className={cn(audioLevel < 10 ? "text-destructive" : audioLevel < 30 ? "text-(--brand-accent)" : "text-emerald")}>
                             {audioLevel < 10 ? '🔇 Too quiet' : audioLevel < 30 ? '🔉 Low' : '🔊 Good'}
                         </span>
                     </div>
-                    <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className={cn("h-full transition-all rounded-full", audioLevel < 10 ? "bg-red-500" : audioLevel < 30 ? "bg-amber-500" : "bg-green-500")} style={{ width: `${audioLevel}%` }} />
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={cn("h-full transition-all rounded-full", audioLevel < 10 ? "bg-destructive" : audioLevel < 30 ? "bg-(--brand-accent)" : "bg-emerald")} style={{ width: `${audioLevel}%` }} />
                     </div>
                 </div>
             )}
 
             {/* Waveform */}
-            <div className="relative h-24 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 rounded-xl overflow-hidden border border-indigo-100 dark:border-indigo-900/50">
+            <div className="relative h-24 bg-linear-to-r from-(--brand-primary)/10 to-(--brand-secondary)/10 rounded-xl overflow-hidden border border-(--brand-primary)/20">
                 <canvas ref={canvasRef} className="w-full h-full" width={600} height={96} />
-                {state === 'idle' && (<div className="absolute inset-0 flex items-center justify-center"><div className="flex items-center gap-2 text-slate-400"><Volume2 className="w-5 h-5" /><span className="text-sm">Ready to record</span></div></div>)}
-                {state === 'paused' && (<div className="absolute inset-0 flex items-center justify-center bg-slate-100/60 dark:bg-slate-800/60"><div className="flex items-center gap-2 text-slate-500"><Pause className="w-6 h-6" /><span>Paused</span></div></div>)}
-                {state === 'processing' && (<div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 dark:bg-slate-800/80"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin" /></div>)}
-                {state === 'complete' && (<div className="absolute inset-0 flex items-center justify-center bg-green-50/80 dark:bg-green-900/20"><CheckCircle2 className="w-8 h-8 text-green-500" /></div>)}
+                {state === 'idle' && (<div className="absolute inset-0 flex items-center justify-center"><div className="flex items-center gap-2 text-muted-foreground"><Volume2 className="w-5 h-5" /><span className="text-sm">Ready to record</span></div></div>)}
+                {state === 'paused' && (<div className="absolute inset-0 flex items-center justify-center bg-muted/60"><div className="flex items-center gap-2 text-muted-foreground"><Pause className="w-6 h-6" /><span>Paused</span></div></div>)}
+                {state === 'processing' && (<div className="absolute inset-0 flex items-center justify-center bg-muted/80"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>)}
+                {state === 'complete' && (<div className="absolute inset-0 flex items-center justify-center bg-emerald/10"><CheckCircle2 className="w-8 h-8 text-emerald" /></div>)}
                 {(state === 'recording' || state === 'paused') && (
-                    <div className={cn("absolute top-2 right-2 flex items-center gap-2 px-3 py-1 rounded-full text-sm font-mono text-white", state === 'paused' ? "bg-slate-500" : "bg-red-500")}>
+                    <div className={cn("absolute top-2 right-2 flex items-center gap-2 px-3 py-1 rounded-full text-sm font-mono text-white", state === 'paused' ? "bg-muted-foreground" : "bg-destructive")}>
                         {state === 'recording' && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />}
                         {formatTime(recordingTime)}
                     </div>
@@ -379,38 +421,38 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             {/* Transcript */}
             {(state === 'recording' || state === 'paused' || state === 'processing' || finalTranscript) && (
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        {(state === 'recording' || state === 'paused') && (<><div className={cn("w-2 h-2 rounded-full", state === 'paused' ? "bg-slate-400" : "bg-red-500 animate-pulse")} />Live Transcript</>)}
+                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        {(state === 'recording' || state === 'paused') && (<><div className={cn("w-2 h-2 rounded-full", state === 'paused' ? "bg-muted-foreground" : "bg-destructive animate-pulse")} />Live Transcript</>)}
                         {state === 'processing' && 'Processing...'}
-                        {finalTranscript && state === 'complete' && (<><CheckCircle2 className="w-4 h-4 text-green-500" />Final Transcript</>)}
+                        {finalTranscript && state === 'complete' && (<><CheckCircle2 className="w-4 h-4 text-emerald" />Final Transcript</>)}
                     </label>
-                    <div ref={transcriptBoxRef} className={cn("h-32 overflow-y-auto p-4 rounded-xl border text-sm", state === 'processing' ? "bg-slate-50 dark:bg-slate-800/50 animate-pulse" : "bg-white dark:bg-slate-900")}>
-                        {state === 'processing' ? (<div className="flex items-center gap-2 text-slate-500"><Loader2 className="w-4 h-4 animate-spin" />Perfecting transcript & generating notes...</div>)
-                            : finalTranscript ? (<p className="text-slate-700 dark:text-slate-300">{finalTranscript}</p>)
+                    <div ref={transcriptBoxRef} className={cn("h-32 overflow-y-auto p-4 rounded-xl border text-sm", state === 'processing' ? "bg-muted/50 animate-pulse" : "bg-card")}>
+                        {state === 'processing' ? (<div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Perfecting transcript & generating notes...</div>)
+                            : finalTranscript ? (<p className="text-foreground">{finalTranscript}</p>)
                                 : (liveTranscript || interimTranscript) ? (
-                                    <p className="text-slate-700 dark:text-slate-300">
+                                    <p className="text-foreground">
                                         {liveTranscript}
-                                        <span className="text-slate-400">{interimTranscript}</span>
+                                        <span className="text-muted-foreground">{interimTranscript}</span>
                                     </p>
                                 )
-                                    : (<p className="text-slate-400 italic">Start speaking... your words will appear here.</p>)}
+                                    : (<p className="text-muted-foreground italic">Start speaking... your words will appear here.</p>)}
                     </div>
                 </div>
             )}
 
-            {error && (<div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-red-600 dark:text-red-400">{error}</p></div>)}
+            {error && (<div className="p-3 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 dark:border-destructive/30 rounded-lg flex items-center gap-2"><AlertCircle className="w-4 h-4 text-destructive" /><p className="text-sm text-destructive">{error}</p></div>)}
 
             {/* Buttons */}
             <div className="flex gap-3">
-                {state === 'idle' && (<Button onClick={startRecording} className="flex-1 h-14 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-lg"><Mic className="w-6 h-6 mr-3" />Start Recording</Button>)}
-                {state === 'recording' && (<><Button onClick={pauseRecording} variant="outline" className="h-14 px-6"><Pause className="w-5 h-5" /></Button><Button onClick={stopRecording} className="flex-1 h-14 bg-red-500 hover:bg-red-600 text-white text-lg"><Square className="w-6 h-6 mr-3 fill-current" />Stop Recording</Button></>)}
-                {state === 'paused' && (<><Button onClick={resumeRecording} className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white text-lg"><Play className="w-6 h-6 mr-3 fill-current" />Resume</Button><Button onClick={stopRecording} variant="outline" className="h-14 px-6 text-red-600"><Square className="w-5 h-5 fill-current" /></Button></>)}
-                {state === 'processing' && (<Button disabled className="flex-1 h-14 bg-slate-200 dark:bg-slate-700 text-slate-500"><Loader2 className="w-6 h-6 mr-3 animate-spin" />Processing...</Button>)}
-                {state === 'error' && (<Button onClick={handleReset} className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 text-white text-lg">Try Again</Button>)}
+                {state === 'idle' && (<Button onClick={startRecording} className="flex-1 h-14 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white text-lg"><Mic className="w-6 h-6 mr-3" />Start Recording</Button>)}
+                {state === 'recording' && (<><Button onClick={pauseRecording} variant="outline" className="h-14 px-6"><Pause className="w-5 h-5" /></Button><Button onClick={stopRecording} className="flex-1 h-14 bg-destructive hover:bg-destructive/90 text-white text-lg"><Square className="w-6 h-6 mr-3 fill-current" />Stop Recording</Button></>)}
+                {state === 'paused' && (<><Button onClick={resumeRecording} className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white text-lg"><Play className="w-6 h-6 mr-3 fill-current" />Resume</Button><Button onClick={stopRecording} variant="outline" className="h-14 px-6 text-destructive"><Square className="w-5 h-5 fill-current" /></Button></>)}
+                {state === 'processing' && (<Button disabled className="flex-1 h-14 bg-muted text-muted-foreground"><Loader2 className="w-6 h-6 mr-3 animate-spin" />Processing...</Button>)}
+                {state === 'error' && (<Button onClick={handleReset} className="flex-1 h-14 bg-primary hover:bg-primary/90 text-white text-lg">Try Again</Button>)}
                 {state === 'complete' && (<Button onClick={handleReset} variant="outline" className="flex-1 h-14 text-lg">Record Another</Button>)}
             </div>
 
-            {state === 'idle' && (<p className="text-xs text-slate-400 text-center">🎙️ Max 60 minutes • Use Chrome or Edge for live transcription</p>)}
+            {state === 'idle' && (<p className="text-xs text-muted-foreground text-center">🎙️ Max 60 minutes • Use Chrome or Edge for live transcription</p>)}
         </div>
     );
 }

@@ -8,6 +8,7 @@ import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 
 export const maxDuration = 120;
+export const runtime = 'edge'; // Use Edge runtime for faster cold starts
 
 // Schema for mind map nodes and edges
 const mindMapSchema = z.object({
@@ -374,7 +375,7 @@ function convertToReactFlowFormat(
     const edgeConfig = getEdgeConfig(layout, colorTheme);
 
     // Create React Flow nodes with color theme
-    const nodes = data.nodes.map((node, idx) => {
+    const nodes = data.nodes.map((node) => {
         const level = levelMap.get(node.id) || 0;
         // Assign colors based on level
         const nodeColor = node.isRoot ? colors.primary : (level === 1 ? colors.secondary : colors.tertiary);
@@ -557,6 +558,7 @@ export async function POST(req: NextRequest) {
             model: google('gemini-2.5-flash'),
             schema: mindMapSchema,
             messages: [{ role: 'user', content: prompt }],
+            temperature: 0.4, // Balanced creativity for diverse mind map structures
         });
 
         // Convert to React Flow format with color theme

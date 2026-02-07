@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -50,6 +56,12 @@ export const metadata: Metadata = {
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     images: [
       {
+        url: "https://skoowlai.com/skoowl-logo.png",
+        width: 512,
+        height: 512,
+        alt: "Skoowl AI - AI-Powered Study Assistant",
+      },
+      {
         url: "https://skoowlai.com/twitter-card.png",
         width: 1200,
         height: 630,
@@ -85,7 +97,8 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icon.png' },
+      { url: '/skoowl-logo.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon.png', sizes: 'any' },
       { url: '/icon.ico', sizes: 'any' }
     ],
     apple: '/apple-icon.png',
@@ -107,36 +120,35 @@ export default function RootLayout({
     <ClerkProvider
       appearance={{
         variables: {
-          colorPrimary: "#8b5cf6",
-          colorBackground: "#0f172a",
+          colorPrimary: "#5B4DFF",
+          colorBackground: "#0B0D14",
           colorInputBackground: "#1e293b",
           colorInputText: "#f8fafc",
           colorText: "#f8fafc",
           colorTextSecondary: "#94a3b8",
           borderRadius: "0.75rem",
-          // Clerk Billing - bright yellow checkmarks
-          colorSuccess: "#fbbf24",
+          colorSuccess: "#10b981",
         },
         elements: {
-          formButtonPrimary: "bg-violet-600 hover:bg-violet-500",
-          card: "bg-slate-900 border border-white/10",
-          headerTitle: "text-white",
-          headerSubtitle: "text-slate-400",
-          socialButtonsBlockButton: "bg-slate-800 border-white/10 hover:bg-slate-700",
-          formFieldInput: "bg-slate-800 border-white/10",
-          footerActionLink: "text-violet-400 hover:text-violet-300",
+          formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90",
+          card: "bg-card border border-border",
+          headerTitle: "text-foreground",
+          headerSubtitle: "text-muted-foreground",
+          socialButtonsBlockButton: "bg-secondary border-border hover:bg-secondary/80",
+          formFieldInput: "bg-background border-border",
+          footerActionLink: "text-primary hover:text-primary/80",
           // UserButton dropdown styling
-          userButtonPopoverCard: "bg-slate-900 border border-white/10",
-          userButtonPopoverActionButton: "text-slate-300 hover:bg-slate-800",
-          userButtonPopoverActionButtonText: "text-slate-300",
-          userButtonPopoverActionButtonIcon: "text-slate-400",
+          userButtonPopoverCard: "bg-card border border-border",
+          userButtonPopoverActionButton: "text-foreground hover:bg-accent",
+          userButtonPopoverActionButtonText: "text-foreground",
+          userButtonPopoverActionButtonIcon: "text-muted-foreground",
           userButtonPopoverFooter: "hidden",
-          userPreviewMainIdentifier: "text-white",
-          userPreviewSecondaryIdentifier: "text-slate-400",
+          userPreviewMainIdentifier: "text-foreground",
+          userPreviewSecondaryIdentifier: "text-muted-foreground",
           // Clerk Billing - Pricing Table & Checkout styling
-          pricingTableFeatureListItem: "text-slate-300",
-          pricingTableFeatureListItemIcon: "text-yellow-400",
-          badge: "bg-amber-500 text-slate-900 font-semibold",
+          pricingTableFeatureListItem: "text-foreground",
+          pricingTableFeatureListItemIcon: "text-primary",
+          badge: "bg-primary text-primary-foreground font-semibold",
           // Checkout modal z-index fix
           modalContent: "z-[99999]",
           modalBackdrop: "z-[99998]",
@@ -145,7 +157,7 @@ export default function RootLayout({
     >
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${inter.variable} ${poppins.variable} ${jetbrainsMono.variable} antialiased`}
         >
           <ThemeProvider
             attribute="class"

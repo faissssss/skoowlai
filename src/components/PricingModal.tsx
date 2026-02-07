@@ -56,6 +56,18 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
         }
     }, [isOpen]);
 
+    // Configure via env vars (client safe)
+    // These must be Dodo product IDs like `pdt_...`
+    const monthlyProductId = process.env.NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID || '';
+    const yearlyProductId = process.env.NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID || '';
+    
+    // Debug: log if product IDs are missing
+    useEffect(() => {
+        if (!monthlyProductId || !yearlyProductId) {
+            console.error('Missing Dodo product IDs:', { monthlyProductId, yearlyProductId });
+        }
+    }, [monthlyProductId, yearlyProductId]);
+
     if (!isOpen) return null;
 
     const handleBackdropClick = (e: React.MouseEvent) => {
@@ -66,22 +78,28 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
     const startCheckout = async (productId: string, planParam?: 'monthly' | 'yearly') => {
         try {
-            if (!productId || productId.startsWith('pdt_') === false) {
-                // Basic sanity check; real IDs begin with pdt_
-                console.error('Invalid or missing productId:', productId);
-                alert('Product is not configured. Please contact support.');
+            // Validate productId is configured
+            if (!monthlyProductId || !yearlyProductId) {
+                console.error('Product IDs not configured:', { monthlyProductId, yearlyProductId });
+                alert('Checkout is not properly configured. Please contact support.');
+                return;
+            }
+
+            // Use the correct product ID based on interval
+            const actualProductId = planParam === 'yearly' ? yearlyProductId : monthlyProductId;
+            
+            if (!actualProductId || !actualProductId.startsWith('pdt_')) {
+                console.error('Invalid product ID:', actualProductId);
+                alert('Invalid product configuration. Please contact support.');
                 return;
             }
 
             // Redirect unauthenticated users to sign-up first
-            // This ensures the subscription is linked to their Clerk ID
             if (!isSignedIn) {
-                // Store the intended checkout in sessionStorage so we can resume after sign-up
                 sessionStorage.setItem('pending-checkout', JSON.stringify({
-                    productId,
+                    productId: actualProductId,
                     plan: planParam,
                 }));
-                // Redirect to sign-up with return URL to dashboard billing
                 router.push('/sign-up?redirect_url=/dashboard?billing=1');
                 onClose();
                 return;
@@ -90,7 +108,7 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
             setLoadingPlan(productId);
 
             const url = new URL('/api/checkout', window.location.origin);
-            url.searchParams.set('productId', productId);
+            url.searchParams.set('productId', actualProductId);
 
             // Attach identity hints so Dodo links back to this user
             // 1) Prefer existing customer_id to avoid duplications
@@ -113,25 +131,39 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
             // Dodo Checkout handler returns JSON { checkout_url }
             const res = await fetch(url.toString(), { method: 'GET' });
+            
+            // Check for non-OK response
             if (!res.ok) {
-                const bodyText = await res.text().catch(() => 'Unknown error');
-                console.error('Failed to start checkout:', bodyText);
+                const errorText = await res.text().catch(() => 'Unknown error');
+                console.error('Checkout API error:', res.status, errorText);
+                
+                // If it's a 500 error, the API key or product ID might be misconfigured
+                if (res.status === 500) {
+                    alert('Checkout service is temporarily unavailable. Please try again later or contact support.');
+                    setLoadingPlan(null);
+                    return;
+                }
+                
                 const failure = new URL('/checkout/failure', window.location.origin);
-                failure.searchParams.set('productId', productId);
+                failure.searchParams.set('productId', actualProductId);
                 if (planParam) failure.searchParams.set('plan', planParam);
-                failure.searchParams.set('m', (bodyText || 'Request failed').slice(0, 200));
+                failure.searchParams.set('m', (errorText || 'Request failed').slice(0, 200));
                 failure.searchParams.set('block', '1');
                 window.location.href = failure.toString();
                 return;
             }
 
             const data = await res.json();
-            if (data.checkout_url) {
+            
+            if (data.checkout_url && typeof data.checkout_url === 'string') {
                 window.location.href = data.checkout_url;
+            } else if (data.url && typeof data.url === 'string') {
+                // Fallback for different response format
+                window.location.href = data.url;
             } else {
-                // Route user to a consistent Payment Failure page (block retry by default)
+                console.error('No checkout URL in response:', data);
                 const failure = new URL('/checkout/failure', window.location.origin);
-                failure.searchParams.set('productId', productId);
+                failure.searchParams.set('productId', actualProductId);
                 if (planParam) failure.searchParams.set('plan', planParam);
                 failure.searchParams.set('m', 'Checkout link not available');
                 failure.searchParams.set('block', '1');
@@ -152,11 +184,6 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
         }
     };
 
-    // Configure via env vars (client safe)
-    // These must be Dodo product IDs like `pdt_...`
-    const monthlyProductId = process.env.NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID || '';
-    const yearlyProductId = process.env.NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID || '';
-
     const modalContent = (
         <div
             className="fixed inset-0 z-9999 overflow-y-auto"
@@ -176,15 +203,15 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
-                    className="relative w-full max-w-[95vw] sm:max-w-2xl bg-slate-900 rounded-xl shadow-2xl border border-slate-700/50 overflow-hidden"
+                    className="relative w-full max-w-[95vw] sm:max-w-2xl bg-card rounded-xl shadow-2xl border border-border overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Close Button */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-slate-800/80 hover:bg-slate-700 transition-colors"
+                        className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-secondary/80 hover:bg-secondary transition-colors"
                     >
-                        <X className="w-4 h-4 text-slate-400" />
+                        <X className="w-4 h-4 text-muted-foreground" />
                     </button>
 
                     <PricingTableFour
@@ -206,18 +233,24 @@ export default function PricingModal({ isOpen, onClose }: PricingModalProps) {
                                 onClose();
                                 return;
                             }
-                            const productId = interval === 'yearly' ? yearlyProductId : monthlyProductId;
-                            if (!productId) {
-                                alert('Product ID not configured. Set NEXT_PUBLIC_DODO_MONTHLY_PRODUCT_ID and NEXT_PUBLIC_DODO_YEARLY_PRODUCT_ID (and optional *_NO_TRIAL variants) in .env');
+                            const selectedProductId = interval === 'yearly' ? yearlyProductId : monthlyProductId;
+                            if (!selectedProductId) {
+                                alert('Checkout is not configured. Please contact support.');
+                                console.error('Missing product ID for interval:', interval);
                                 return;
                             }
-                            startCheckout(productId, interval);
+                            if (!selectedProductId.startsWith('pdt_')) {
+                                alert('Invalid product configuration. Please contact support.');
+                                console.error('Invalid product ID format:', selectedProductId);
+                                return;
+                            }
+                            startCheckout(selectedProductId, interval);
                         }}
                     />
 
                     {/* Footer - Minimal */}
                     <div className="px-4 pb-3 text-center">
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-[10px] text-muted-foreground">
                             Cancel anytime · No hidden fees · Secure checkout
                         </p>
                     </div>

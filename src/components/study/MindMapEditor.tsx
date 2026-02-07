@@ -17,16 +17,17 @@ import {
     NodeProps,
     Handle,
     Position,
+    ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Plus, Save, Trash2, Settings, Loader2, X, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
+import { Pencil, Plus, Save, Trash2, Loader2, X, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 
 interface MindMapEditorProps {
-    deckId: string;
     initialNodes?: Node[];
     initialEdges?: Edge[];
     onSave?: (nodes: Node[], edges: Edge[]) => Promise<void>;
@@ -78,7 +79,7 @@ function EditableNode({ id, data, selected }: NodeProps) {
     } : {};
 
     // Common handle style - visible and interactive
-    const handleClass = "!w-3 !h-3 !border-2 !border-white dark:!border-slate-800 !opacity-70 hover:!opacity-100 !transition-opacity";
+    const handleClass = "!w-3 !h-3 !border-2 !border-background !opacity-70 hover:!opacity-100 !transition-opacity";
 
     return (
         <div
@@ -86,27 +87,27 @@ function EditableNode({ id, data, selected }: NodeProps) {
                 "px-4 py-2 rounded-xl border-2 shadow-lg transition-all duration-200 min-w-[100px] max-w-[180px] text-center",
                 isRoot
                     ? "text-white"
-                    : "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100",
-                !nodeColor && isRoot && "bg-gradient-to-br from-indigo-500 to-purple-600 border-indigo-300",
-                !nodeColor && !isRoot && "border-slate-200 dark:border-slate-700",
-                selected && "ring-2 ring-offset-2 dark:ring-offset-slate-900",
-                nodeColor ? `ring-[${nodeColor}]` : "ring-indigo-500"
+                    : "bg-card text-foreground",
+                !nodeColor && isRoot && "bg-linear-to-br from-indigo-500 to-purple-600 border-indigo-300",
+                !nodeColor && !isRoot && "border-border",
+                selected && "ring-2 ring-offset-2 ring-offset-background",
+                nodeColor ? `ring-[${nodeColor}]` : "ring-primary"
             )}
             style={nodeStyle}
             onDoubleClick={handleDoubleClick}
         >
             {/* 4 directional handles - both source and target for flexibility */}
             <Handle type="source" position={Position.Top} id="top" className={handleClass} style={{ background: handleColor }} />
-            <Handle type="target" position={Position.Top} id="target-top" className={`${handleClass} !opacity-0`} style={{ background: handleColor, top: 0 }} />
+            <Handle type="target" position={Position.Top} id="target-top" className={`${handleClass} opacity-0!`} style={{ background: handleColor, top: 0 }} />
 
             <Handle type="source" position={Position.Bottom} id="bottom" className={handleClass} style={{ background: handleColor }} />
-            <Handle type="target" position={Position.Bottom} id="target-bottom" className={`${handleClass} !opacity-0`} style={{ background: handleColor, bottom: 0 }} />
+            <Handle type="target" position={Position.Bottom} id="target-bottom" className={`${handleClass} opacity-0!`} style={{ background: handleColor, bottom: 0 }} />
 
             <Handle type="source" position={Position.Left} id="left" className={handleClass} style={{ background: handleColor }} />
-            <Handle type="target" position={Position.Left} id="target-left" className={`${handleClass} !opacity-0`} style={{ background: handleColor, left: 0 }} />
+            <Handle type="target" position={Position.Left} id="target-left" className={`${handleClass} opacity-0!`} style={{ background: handleColor, left: 0 }} />
 
             <Handle type="source" position={Position.Right} id="right" className={handleClass} style={{ background: handleColor }} />
-            <Handle type="target" position={Position.Right} id="target-right" className={`${handleClass} !opacity-0`} style={{ background: handleColor, right: 0 }} />
+            <Handle type="target" position={Position.Right} id="target-right" className={`${handleClass} opacity-0!`} style={{ background: handleColor, right: 0 }} />
 
             {isEditing ? (
                 <Input
@@ -118,7 +119,7 @@ function EditableNode({ id, data, selected }: NodeProps) {
                     className="h-6 text-sm text-center bg-transparent border-none focus:ring-0 p-0"
                 />
             ) : (
-                <span className="text-sm font-medium break-words">{label}</span>
+                <span className="text-sm font-medium wrap-break-word">{label}</span>
             )}
         </div>
     );
@@ -129,7 +130,6 @@ const nodeTypes = {
 };
 
 export default function MindMapEditor({
-    deckId,
     initialNodes = [],
     initialEdges = [],
     onSave,
@@ -141,6 +141,8 @@ export default function MindMapEditor({
     const [isToolbarExpanded, setIsToolbarExpanded] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
 
     // Toggle fullscreen
     const toggleFullscreen = useCallback(() => {
@@ -253,7 +255,7 @@ export default function MindMapEditor({
     }, [nodes, edges, onSave]);
 
     // Handle initialNodes/Edges updates (e.g. from regeneration)
-    const [rfInstance, setRfInstance] = useState<any>(null);
+    const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
 
     useEffect(() => {
         if (initialNodes && initialNodes.length > 0) {
@@ -273,7 +275,7 @@ export default function MindMapEditor({
         <div
             ref={containerRef}
             className={cn(
-                "w-full bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800",
+                "w-full bg-muted rounded-2xl overflow-hidden border border-border",
                 isFullscreen ? "h-screen rounded-none" : "h-[calc(100dvh-220px)] min-h-[400px]"
             )}
         >
@@ -286,8 +288,8 @@ export default function MindMapEditor({
                     box-shadow: none !important;
                 }
                 .react-flow__controls-button {
-                    background: white !important;
-                    border: 1px solid #e2e8f0 !important;
+                    background: hsl(var(--background)) !important;
+                    border: 1px solid hsl(var(--border)) !important;
                     border-radius: 8px !important;
                     margin: 2px !important;
                     width: 28px !important;
@@ -295,29 +297,15 @@ export default function MindMapEditor({
                     transition: all 0.2s ease !important;
                 }
                 .react-flow__controls-button:hover {
-                    background: #f1f5f9 !important;
+                    background: hsl(var(--muted)) !important;
                     position: relative;
                 }
                 .react-flow__controls-button svg {
-                    fill: #475569 !important;
-                }
-                .dark .react-flow__controls-button {
-                    background: #1e293b !important;
-                    border-color: #334155 !important;
-                }
-                .dark .react-flow__controls-button:hover {
-                    background: #334155 !important;
-                }
-                .dark .react-flow__controls-button svg {
-                    fill: #94a3b8 !important;
+                    fill: hsl(var(--foreground)) !important;
                 }
                 /* Hide React Flow attribution/watermark */
                 .react-flow__attribution {
                     display: none !important;
-                }
-                /* MiniMap styling for dark mode */
-                .dark .react-flow__minimap {
-                    background: #1e293b !important;
                 }
             `}</style>
             <ReactFlow
@@ -333,9 +321,9 @@ export default function MindMapEditor({
                 panOnScroll
                 panOnDrag
                 zoomOnScroll
-                className="bg-slate-50 dark:bg-slate-950"
+                className="bg-background"
                 defaultEdgeOptions={{
-                    style: { stroke: '#6366f1', strokeWidth: 2 },
+                    style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
                     animated: true,
                 }}
                 proOptions={{ hideAttribution: true }}
@@ -344,20 +332,30 @@ export default function MindMapEditor({
                 <Controls
                     position="top-left"
                     showInteractive={false}
-                    className="!bg-transparent !border-none !shadow-none !rounded-xl !m-2"
+                    className="bg-transparent! border-none! shadow-none! rounded-xl! m-2!"
                 />
 
                 {/* MiniMap - Bottom Right */}
                 <MiniMap
                     position="bottom-right"
-                    className="!bg-white dark:!bg-slate-800 !border-slate-200 dark:!border-slate-700 !rounded-xl !shadow-lg"
-                    nodeColor={(node) => node.data.isRoot ? '#6366f1' : '#94a3b8'}
-                    maskColor="rgba(0, 0, 0, 0.1)"
+                    className="bg-card! border-border! rounded-xl! shadow-lg!"
+                    nodeColor={(node) => {
+                        const isRoot = node.data.isRoot;
+                        if (isDark) return isRoot ? '#ffffff' : '#dddddd';
+                        return isRoot ? '#111827' : '#9ca3af';
+                    }}
+                    maskColor={isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(255, 255, 255, 0.6)"}
                     pannable
                     zoomable
                 />
 
-                <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="!bg-slate-50 dark:!bg-slate-950" color="#94a3b8" />
+                <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={20}
+                    size={1}
+                    className="bg-background! dark:bg-[#111827]!"
+                    color={isDark ? "#888888" : "#e5e7eb"}
+                />
 
                 {/* Floating Edit Toolbar - Top Right */}
                 <Panel position="top-right" className="m-2">
@@ -375,7 +373,7 @@ export default function MindMapEditor({
                                     <Button
                                         onClick={addNode}
                                         size="icon"
-                                        className="w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg rounded-xl"
+                                        className="w-10 h-10 bg-primary hover:bg-primary/90 text-white shadow-lg rounded-xl"
                                         title="Add Node"
                                     >
                                         <Plus className="w-5 h-5" />
@@ -386,10 +384,10 @@ export default function MindMapEditor({
                                         onClick={deleteSelectedNodes}
                                         size="icon"
                                         variant="outline"
-                                        className="w-10 h-10 bg-white dark:bg-slate-800 shadow-lg border-slate-200 dark:border-slate-700 rounded-xl"
+                                        className="w-10 h-10 bg-card shadow-lg border-border rounded-xl"
                                         title="Delete Selected"
                                     >
-                                        <Trash2 className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                        <Trash2 className="w-5 h-5 text-muted-foreground" />
                                     </Button>
 
                                     {/* Save */}
@@ -401,8 +399,8 @@ export default function MindMapEditor({
                                             className={cn(
                                                 "w-10 h-10 shadow-lg rounded-xl",
                                                 hasChanges
-                                                    ? "bg-green-600 hover:bg-green-700 text-white"
-                                                    : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
+                                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                    : "bg-muted text-muted-foreground"
                                             )}
                                             title="Save"
                                         >
@@ -415,7 +413,7 @@ export default function MindMapEditor({
                                     )}
 
                                     {/* Divider */}
-                                    <div className="w-px h-8 bg-slate-300 dark:bg-slate-600 mx-1" />
+                                    <div className="w-px h-8 bg-border mx-1" />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -427,8 +425,8 @@ export default function MindMapEditor({
                             className={cn(
                                 "w-12 h-12 shadow-lg rounded-xl transition-all",
                                 isToolbarExpanded
-                                    ? "bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800"
-                                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    ? "bg-foreground text-background"
+                                    : "bg-primary hover:bg-primary/90 text-white"
                             )}
                         >
                             {isToolbarExpanded ? (
@@ -443,21 +441,21 @@ export default function MindMapEditor({
                             onClick={toggleFullscreen}
                             size="icon"
                             variant="outline"
-                            className="w-12 h-12 bg-white dark:bg-slate-800 shadow-lg border-slate-200 dark:border-slate-700 rounded-xl"
+                            className="w-12 h-12 bg-card shadow-lg border-border rounded-xl"
                             title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                         >
                             {isFullscreen ? (
-                                <Minimize2 className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                <Minimize2 className="w-5 h-5 text-muted-foreground" />
                             ) : (
-                                <Maximize2 className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                <Maximize2 className="w-5 h-5 text-muted-foreground" />
                             )}
                         </Button>
                     </div>
                 </Panel>
 
                 {/* Instructions Panel */}
-                <Panel position="bottom-left" className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 m-2">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                <Panel position="bottom-left" className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-border m-2">
+                    <p className="text-xs text-muted-foreground">
                         <strong>Tips:</strong> Double-click to edit • Drag to move • Scroll to pan
                     </p>
                 </Panel>

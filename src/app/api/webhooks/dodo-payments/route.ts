@@ -8,6 +8,7 @@ import { logStateTransition } from '@/lib/subscriptionState';
 import { SubscriptionStatus } from '@/lib/subscription';
 import { DISABLE_PAYMENTS } from '@/lib/config';
 import { dodoClient } from '@/lib/dodo';
+import { syncSubscriptionToClerk, clearClerkSubscription } from '@/lib/clerkSync';
 
 /**
  * Dodo Payments Webhook Handler
@@ -309,6 +310,17 @@ async function handleSubscriptionCreated(data: any, webhookId: string) {
             ...(user.trialUsedAt ? {} : { trialUsedAt: new Date() }),
         }
     });
+
+    // Sync to Clerk metadata so UserProfile billing shows correct data
+    if (user.clerkId) {
+        await syncSubscriptionToClerk(user.clerkId, {
+            status: 'trialing',
+            plan: plan,
+            subscriptionId: subscriptionId,
+            customerId: customerId,
+            subscriptionEndsAt: trialEndDate,
+        });
+    }
 
     // Send trial welcome email (idempotent per subscription)
     await sendEmailWithIdempotency(
@@ -670,6 +682,17 @@ async function handlePaymentSucceeded(data: any, webhookId: string) {
         }
     });
 
+    // Sync to Clerk metadata so UserProfile billing shows correct data
+    if (user.clerkId) {
+        await syncSubscriptionToClerk(user.clerkId, {
+            status: 'active',
+            plan: plan,
+            subscriptionId: subscriptionId,
+            customerId: customerId || user.customerId,
+            subscriptionEndsAt: nextBillingDate,
+        });
+    }
+
     // Send emails (idempotent by subscription/period)
     if (user.email) {
         // For no-trial products: send Pro Welcome immediately; For trial conversion: send after real charge
@@ -800,6 +823,17 @@ async function handleSubscriptionCancelled(data: any, webhookId: string) {
             ;
     }
 
+    // Sync to Clerk metadata so UserProfile billing shows correct data
+    if (user.clerkId) {
+        await syncSubscriptionToClerk(user.clerkId, {
+            status: 'cancelled',
+            plan: user.subscriptionPlan,
+            subscriptionId: subscriptionId,
+            customerId: user.customerId,
+            subscriptionEndsAt: user.subscriptionEndsAt,
+        });
+    }
+
     // Send cancellation email (idempotent per webhook)
     if (user.email && user.subscriptionPlan && user.subscriptionEndsAt) {
         await sendEmailWithIdempotency(
@@ -862,6 +896,11 @@ async function handleTrialEnded(data: any, _webhookId: string) {
             subscriptionEndsAt: new Date(),
         }
     });
+
+    // Sync to Clerk metadata so UserProfile billing shows correct data
+    if (user.clerkId) {
+        await clearClerkSubscription(user.clerkId);
+    }
 
     // Send expiration email to notify user
     if (user.email) {
@@ -1146,6 +1185,17 @@ async function handleSubscriptionRenewed(data: any, webhookId: string) {
             subscriptionEndsAt: nextBillingDate,
         }
     });
+
+    // Sync to Clerk metadata so UserProfile billing shows correct data
+    if (user.clerkId) {
+        await syncSubscriptionToClerk(user.clerkId, {
+            status: 'active',
+            plan: plan,
+            subscriptionId: subscriptionId,
+            customerId: user.customerId,
+            subscriptionEndsAt: nextBillingDate,
+        });
+    }
 
     if (user.email) {
         await sendEmailWithIdempotency(

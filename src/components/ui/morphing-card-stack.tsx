@@ -108,7 +108,7 @@ export function MorphingCardStack({
         <div className={cn("flex flex-col items-center w-full", className)}>
             {/* Layout Toggle */}
             {cards.length > 0 && (
-                <div className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 dark:bg-slate-800 p-1 w-fit mb-6">
+                <div className="flex items-center justify-center gap-1 rounded-lg bg-muted/80 p-1 w-fit mb-6">
                     {(Object.keys(layoutIcons) as LayoutMode[]).map((mode) => {
                         const Icon = layoutIcons[mode]
                         return (
@@ -118,8 +118,8 @@ export function MorphingCardStack({
                                 className={cn(
                                     "rounded-md p-2.5 transition-all",
                                     layout === mode
-                                        ? "bg-slate-100 text-slate-900 shadow-sm"
-                                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-700/50",
+                                        ? "bg-background text-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                                 )}
                                 aria-label={`Switch to ${mode} layout`}
                             >
@@ -180,13 +180,13 @@ export function MorphingCardStack({
                                         }}
                                         className={cn(
                                             "cursor-pointer rounded-xl border p-5 shadow-lg",
-                                            "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
-                                            "hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors",
+                                            "bg-card border-border",
+                                            "hover:border-primary/50 transition-colors",
                                             layout === "stack" && "absolute w-60 h-48",
                                             layout === "stack" && isTopCard && "cursor-grab active:cursor-grabbing",
                                             layout === "grid" && "w-full min-w-[140px] min-h-[160px]",
                                             layout === "list" && "w-full",
-                                            isExpanded && "ring-2 ring-indigo-500",
+                                            isExpanded && "ring-2 ring-primary",
                                         )}
                                     >
                                         {/* Card Content - Only show on top card in stack mode */}
@@ -197,7 +197,7 @@ export function MorphingCardStack({
                                             {/* Header with Icon and Actions */}
                                             <div className="flex justify-between items-start w-full mb-3">
                                                 {card.icon && (
-                                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700">
+                                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted">
                                                         {card.icon}
                                                     </div>
                                                 )}
@@ -211,20 +211,20 @@ export function MorphingCardStack({
 
                                             {/* Title */}
                                             <h3 className={cn(
-                                                "font-semibold text-slate-900 dark:text-slate-100 mb-1",
+                                                "font-semibold text-foreground mb-1",
                                                 layout === "stack" ? "truncate max-w-full" : "line-clamp-2"
                                             )}>
                                                 {card.title}
                                             </h3>
                                             {/* Date */}
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            <p className="text-xs text-muted-foreground">
                                                 {card.description}
                                             </p>
                                         </div>
 
                                         {isTopCard && layout === "stack" && (
                                             <div className="absolute bottom-3 left-0 right-0 text-center">
-                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-medium">Swipe</span>
+                                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Swipe</span>
                                             </div>
                                         )}
                                     </motion.div>
@@ -243,7 +243,7 @@ export function MorphingCardStack({
                             onClick={(e) => { e.stopPropagation(); setActiveIndex(index); }}
                             className={cn(
                                 "h-1.5 rounded-full transition-all",
-                                index === activeIndex ? "w-4 bg-indigo-500" : "w-1.5 bg-slate-600 hover:bg-slate-500",
+                                index === activeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50",
                             )}
                             aria-label={`Go to card ${index + 1}`}
                         />

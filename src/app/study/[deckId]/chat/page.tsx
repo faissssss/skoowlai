@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import DocumentViewer from '@/components/study/DocumentViewer';
 import EmbeddedChat from '@/components/study/EmbeddedChat';
@@ -12,9 +12,9 @@ interface PageProps {
 export default async function AIChatboxPage({ params }: PageProps) {
     const { deckId } = await params;
 
-    const deck = await db.deck.findUnique({
+    const deck = await withRetry(() => db.deck.findUnique({
         where: { id: deckId },
-    });
+    }));
 
     if (!deck) {
         notFound();

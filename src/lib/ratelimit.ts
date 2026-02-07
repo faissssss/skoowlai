@@ -18,8 +18,8 @@ function getRatelimit(requests: number, duration: string): Ratelimit | null {
     if (!limiters.has(key)) {
         limiters.set(key, new Ratelimit({
             redis,
-            limiter: Ratelimit.slidingWindow(requests, duration as any),
-            analytics: true,
+            limiter: Ratelimit.slidingWindow(requests, duration as `${number} s` | `${number} m` | `${number} h` | `${number} d`),
+            analytics: false, // Disabled to reduce API usage
             prefix: `@upstash/ratelimit/${key}`,
             ephemeralCache: cache,
         }));
@@ -68,25 +68,31 @@ export async function checkRateLimit(
         return null;
     }
 
-    const { success, limit, reset, remaining } = await limiter.limit(identifier);
+    try {
+        const { success, limit, reset, remaining } = await limiter.limit(identifier);
 
-    if (!success) {
-        return NextResponse.json(
-            {
-                error: 'Too many requests',
-                details: 'You\'re making requests too quickly. Please wait a moment and try again.',
-                retryAfter: Math.ceil((reset - Date.now()) / 1000),
-            },
-            {
-                status: 429,
-                headers: {
-                    'X-RateLimit-Limit': limit.toString(),
-                    'X-RateLimit-Remaining': remaining.toString(),
-                    'X-RateLimit-Reset': reset.toString(),
-                    'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+        if (!success) {
+            return NextResponse.json(
+                {
+                    error: 'Too many requests',
+                    details: 'You\'re making requests too quickly. Please wait a moment and try again.',
+                    retryAfter: Math.ceil((reset - Date.now()) / 1000),
                 },
-            }
-        );
+                {
+                    status: 429,
+                    headers: {
+                        'X-RateLimit-Limit': limit.toString(),
+                        'X-RateLimit-Remaining': remaining.toString(),
+                        'X-RateLimit-Reset': reset.toString(),
+                        'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+                    },
+                }
+            );
+        }
+    } catch (error) {
+        console.error('❌ Redis rate limit check failed:', error);
+        // Graceful degradation: allow request when Redis fails
+        return null;
     }
 
     return null;

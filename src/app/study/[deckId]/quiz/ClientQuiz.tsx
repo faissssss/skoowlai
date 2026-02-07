@@ -83,6 +83,7 @@ export default function ClientQuiz({
                 clearInterval(timerRef.current);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timerActive]);
 
     useEffect(() => {
@@ -155,7 +156,8 @@ export default function ClientQuiz({
         }
     };
 
-    const handleGenerated = (timerSetting: string, count: number) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const handleGenerated = (timerSetting: string, _count: number) => {
         setTimer(timerSetting);
         setScore(0);
         setResults([]);
@@ -174,8 +176,10 @@ export default function ClientQuiz({
 
     const getScoreColor = () => {
         const percentage = (score / quizzes.length) * 100;
-        if (percentage >= 80) return 'text-green-600';
-        if (percentage >= 60) return 'text-yellow-600';
+        if (percentage >= 90) return 'text-yellow-500';
+        if (percentage >= 70) return 'text-yellow-600';
+        if (percentage >= 50) return 'text-orange-500';
+        if (percentage >= 30) return 'text-orange-600';
         return 'text-red-600';
     };
 
@@ -310,8 +314,8 @@ export default function ClientQuiz({
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400 mb-4" />
-                <p className="text-slate-500 dark:text-slate-400">Loading quiz...</p>
+                <Loader2 className="w-8 h-8 animate-spin text-emerald mb-4" />
+                <p className="text-muted-foreground">Loading quiz...</p>
             </div>
         );
     }
@@ -330,12 +334,12 @@ export default function ClientQuiz({
         return (
             <>
                 <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <ClipboardCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                    <div className="w-16 h-16 bg-yellow-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <ClipboardCheck className="w-8 h-8 text-yellow-500" />
                     </div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">No Quiz Yet</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-4">Generate a quiz from your notes</p>
-                    <Button onClick={() => setShowConfig(true)} className="bg-violet-600 hover:bg-violet-700 text-white">
+                    <h2 className="text-xl font-bold text-foreground mb-2">No Quiz Yet</h2>
+                    <p className="text-muted-foreground mb-4">Generate a quiz from your notes</p>
+                    <Button onClick={() => setShowConfig(true)} className="bg-purple-600 hover:bg-purple-700 text-white">
                         <ClipboardCheck className="w-4 h-4 mr-2" /> Create Quiz
                     </Button>
                 </div>
@@ -353,12 +357,12 @@ export default function ClientQuiz({
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-linear-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center">
                                 <ClipboardCheck className="w-5 h-5 text-white" strokeWidth={1.5} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Quiz</h2>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                <h2 className="text-xl font-bold text-foreground">Quiz</h2>
+                                <p className="text-sm text-muted-foreground">
                                     {quizzes.length} questions • Test your knowledge
                                 </p>
                             </div>
@@ -368,7 +372,7 @@ export default function ClientQuiz({
                                 <Button
                                     variant="outline"
                                     onClick={handleStartEdit}
-                                    className="gap-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                                    className="gap-2 border-border hover:border-primary/50 hover:text-primary active:border-primary transition-colors"
                                 >
                                     <Edit3 className="w-4 h-4" strokeWidth={1.5} /> Edit
                                 </Button>
@@ -376,7 +380,7 @@ export default function ClientQuiz({
                             <AnimatedDockButton>
                                 <Button
                                     onClick={handleStartPlay}
-                                    className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25 border border-transparent hover:border-violet-400 active:border-violet-300 transition-colors"
+                                    className="gap-2 bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white shadow-lg shadow-purple-600/25 border border-transparent hover:border-purple-500 transition-colors"
                                 >
                                     <PlayCircle className="w-4 h-4" strokeWidth={1.5} /> Play
                                 </Button>
@@ -389,22 +393,22 @@ export default function ClientQuiz({
                         {quizzes.slice(0, 5).map((quiz, index) => (
                             <div
                                 key={quiz.id}
-                                className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+                                className="p-4 bg-card rounded-xl border border-border"
                             >
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-slate-900 dark:text-slate-100">{quiz.question}</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                        <p className="font-medium text-foreground">{quiz.question}</p>
+                                        <p className="text-sm text-muted-foreground mt-1">
                                             {quiz.options.length} options
-                                            {quiz.hint && <span className="ml-2 text-amber-500">💡 Has hint</span>}
+                                            {quiz.hint && <span className="ml-2 text-amber">💡 Has hint</span>}
                                         </p>
                                     </div>
-                                    <span className="text-xs text-slate-400 ml-4">#{index + 1}</span>
+                                    <span className="text-xs text-muted-foreground ml-4">#{index + 1}</span>
                                 </div>
                             </div>
                         ))}
                         {quizzes.length > 5 && (
-                            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                            <p className="text-center text-sm text-muted-foreground">
                                 +{quizzes.length - 5} more questions
                             </p>
                         )}
@@ -414,7 +418,7 @@ export default function ClientQuiz({
                         <Button
                             variant="ghost"
                             onClick={handleRegenerate}
-                            className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            className="text-muted-foreground hover:text-emerald transition-colors"
                         >
                             <RefreshCw className="w-4 h-4 mr-2" />
                             Regenerate with different settings
@@ -434,12 +438,12 @@ export default function ClientQuiz({
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-                            <Edit3 className="w-5 h-5 text-white" />
+                        <div className="w-10 h-10 bg-linear-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <Edit3 className="w-5 h-5 text-primary-foreground" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Edit Quiz</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                            <h2 className="text-xl font-bold text-foreground">Edit Quiz</h2>
+                            <p className="text-sm text-muted-foreground">
                                 {activeQuizzes.length} questions
                             </p>
                         </div>
@@ -450,7 +454,7 @@ export default function ClientQuiz({
                                 variant="outline"
                                 onClick={handleCancelEdit}
                                 disabled={isSaving}
-                                className="border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                                className="border-border hover:border-primary/50 hover:text-primary active:border-primary transition-colors"
                             >
                                 <X className="w-4 h-4 mr-2" /> Cancel
                             </Button>
@@ -459,7 +463,7 @@ export default function ClientQuiz({
                             <Button
                                 onClick={handleSaveEdit}
                                 disabled={isSaving}
-                                className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-transparent hover:border-emerald-400 active:border-emerald-300 transition-colors"
+                                className="gap-2 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-primary-foreground border border-transparent hover:border-emerald/50 active:border-emerald/30 transition-colors"
                             >
                                 {isSaving ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -481,15 +485,15 @@ export default function ClientQuiz({
                         return (
                             <div
                                 key={quiz.id}
-                                className="p-5 bg-slate-800 rounded-xl border border-white/10 space-y-4"
+                                className="p-5 bg-card rounded-xl border border-border space-y-4"
                             >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-slate-400">Question #{qIndex + 1}</span>
+                                    <span className="text-xs font-medium text-muted-foreground">Question #{qIndex + 1}</span>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleDeleteQuiz(qIndex)}
-                                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
@@ -497,19 +501,19 @@ export default function ClientQuiz({
 
                                 {/* Question */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Question</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">Question</label>
                                     <textarea
                                         value={quiz.question}
                                         onChange={(e) => handleUpdateQuiz(qIndex, 'question', e.target.value)}
                                         rows={2}
-                                        className="w-full px-4 py-3 rounded-lg bg-slate-900 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 resize-none"
+                                        className="w-full px-4 py-3 rounded-lg bg-muted border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 resize-none"
                                         placeholder="Enter question..."
                                     />
                                 </div>
 
                                 {/* Options */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Options</label>
+                                    <label className="block text-sm font-medium text-foreground mb-2">Options</label>
                                     <div className="space-y-2">
                                         {quiz.options.map((option, oIndex) => (
                                             <div key={oIndex} className="flex gap-2">
@@ -517,7 +521,7 @@ export default function ClientQuiz({
                                                     type="text"
                                                     value={option}
                                                     onChange={(e) => handleUpdateOption(qIndex, oIndex, e.target.value)}
-                                                    className="flex-1 px-4 py-2 rounded-lg bg-slate-900 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50"
+                                                    className="flex-1 px-4 py-2 rounded-lg bg-muted border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50"
                                                     placeholder={`Option ${oIndex + 1}`}
                                                 />
                                                 {quiz.options.length > 2 && (
@@ -525,7 +529,7 @@ export default function ClientQuiz({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleRemoveOption(qIndex, oIndex)}
-                                                        className="text-slate-400 hover:text-red-400"
+                                                        className="text-muted-foreground hover:text-destructive"
                                                     >
                                                         <X className="w-4 h-4" />
                                                     </Button>
@@ -536,7 +540,7 @@ export default function ClientQuiz({
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => handleAddOption(qIndex)}
-                                            className="text-slate-400 hover:text-violet-400"
+                                            className="text-muted-foreground hover:text-primary"
                                         >
                                             <Plus className="w-4 h-4 mr-1" /> Add Option
                                         </Button>
@@ -546,12 +550,12 @@ export default function ClientQuiz({
                                 {/* Correct Answer (Embedded - Read Only) */}
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
-                                        <label className="text-sm font-medium text-slate-300">Correct Answer</label>
+                                        <label className="text-sm font-medium text-foreground">Correct Answer</label>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => toggleRevealAnswer(qIndex)}
-                                            className="text-slate-400 hover:text-violet-400"
+                                            className="text-muted-foreground hover:text-primary"
                                         >
                                             {isRevealed ? (
                                                 <><EyeOff className="w-4 h-4 mr-1" /> Hide</>
@@ -561,12 +565,12 @@ export default function ClientQuiz({
                                         </Button>
                                     </div>
                                     {isRevealed ? (
-                                        <div className="px-4 py-3 rounded-lg bg-green-500/10 border-2 border-green-500/40 text-green-300 font-medium flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                        <div className="px-4 py-3 rounded-lg bg-emerald/10 border-2 border-emerald/40 text-emerald font-medium flex items-center gap-2">
+                                            <CheckCircle className="w-4 h-4 text-emerald shrink-0" />
                                             <span>{quiz.answer || 'No answer set'}</span>
                                         </div>
                                     ) : (
-                                        <div className="px-4 py-2 rounded-lg bg-slate-900 border border-white/10 text-slate-500 italic">
+                                        <div className="px-4 py-2 rounded-lg bg-muted border border-border text-muted-foreground italic">
                                             Hidden - click Reveal to view
                                         </div>
                                     )}
@@ -574,14 +578,14 @@ export default function ClientQuiz({
 
                                 {/* Hint */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                                        Hint <span className="text-slate-500">(Optional)</span>
+                                    <label className="block text-sm font-medium text-foreground mb-1">
+                                        Hint <span className="text-muted-foreground">(Optional)</span>
                                     </label>
                                     <input
                                         type="text"
                                         value={quiz.hint || ''}
                                         onChange={(e) => handleUpdateQuiz(qIndex, 'hint', e.target.value)}
-                                        className="w-full px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 placeholder-amber-400/50 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
+                                        className="w-full px-4 py-2 rounded-lg bg-amber/10 border border-amber/30 text-amber placeholder-amber/50 focus:outline-none focus:ring-2 focus:ring-amber/50 focus:border-amber/50"
                                         placeholder="💡 Think about the laws of thermodynamics..."
                                     />
                                 </div>
@@ -594,7 +598,7 @@ export default function ClientQuiz({
                 <Button
                     variant="outline"
                     onClick={handleAddQuiz}
-                    className="w-full gap-2 border-dashed border-white/20 text-slate-400 hover:text-white hover:border-violet-500/50"
+                    className="w-full gap-2 border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                 >
                     <Plus className="w-4 h-4" /> Add New Question
                 </Button>
@@ -608,29 +612,29 @@ export default function ClientQuiz({
         if (showReview) {
             return (
                 <div className="max-w-2xl mx-auto">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 mb-6">
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">Quiz Review</h3>
+                    <div className="bg-card rounded-2xl border border-border p-8 mb-6">
+                        <h3 className="text-xl font-bold text-foreground mb-6">Quiz Review</h3>
                         <div className="space-y-4">
                             {results.map((result, index) => (
                                 <div
                                     key={index}
                                     className={`p-4 rounded-xl border-2 ${result.isCorrect
-                                        ? 'border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30'
-                                        : 'border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30'
+                                        ? 'border-yellow-500/30 bg-yellow-500/10'
+                                        : 'border-red-500/30 bg-red-500/10'
                                         }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         {result.isCorrect ? (
-                                            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                                            <CheckCircle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
                                         ) : (
-                                            <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                                            <XCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                                         )}
                                         <div className="flex-1">
-                                            <p className="font-medium text-slate-900 dark:text-slate-100 mb-1">
+                                            <p className="font-medium text-foreground mb-1">
                                                 Q{index + 1}: {result.question}
                                             </p>
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                                Correct answer: <span className="font-semibold text-green-700 dark:text-green-400">{result.correctAnswer}</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                Correct answer: <span className="font-semibold text-yellow-500">{result.correctAnswer}</span>
                                             </p>
                                         </div>
                                     </div>
@@ -642,7 +646,7 @@ export default function ClientQuiz({
                         <Button onClick={() => setShowReview(false)} variant="outline">
                             Back to Results
                         </Button>
-                        <Button onClick={handleRestart} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Button onClick={handleRestart} className="bg-purple-600 hover:bg-purple-700 text-white">
                             <RotateCcw className="w-4 h-4 mr-2" /> Try Again
                         </Button>
                         <Button onClick={handleBackToView} variant="outline">
@@ -656,21 +660,21 @@ export default function ClientQuiz({
         return (
             <>
                 {configModal}
-                <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 max-w-lg mx-auto">
+                <div className="text-center py-12 bg-card rounded-2xl border border-border max-w-lg mx-auto">
                     {timeExpired ? (
                         <>
-                            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <AlertTriangle className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+                            <div className="w-20 h-20 bg-amber/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertTriangle className="w-10 h-10 text-amber" />
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Time's Up!</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-6">You answered {results.length} of {quizzes.length} questions</p>
+                            <h3 className="text-2xl font-bold text-foreground mb-2">Time&apos;s Up!</h3>
+                            <p className="text-muted-foreground mb-6">You answered {results.length} of {quizzes.length} questions</p>
                         </>
                     ) : (
                         <>
-                            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Trophy className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                            <div className="w-20 h-20 bg-emerald/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trophy className="w-10 h-10 text-emerald" />
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Quiz Completed!</h3>
+                            <h3 className="text-2xl font-bold text-foreground mb-2">Quiz Completed!</h3>
                         </>
                     )}
 
@@ -678,26 +682,26 @@ export default function ClientQuiz({
                         <div className={`text-5xl font-bold ${getScoreColor()} mb-2`}>
                             {score}/{quizzes.length}
                         </div>
-                        <p className="text-lg text-slate-600 dark:text-slate-300">
+                        <p className="text-lg text-muted-foreground">
                             {Math.round((score / quizzes.length) * 100)}% correct
                         </p>
-                        <p className="text-slate-500 dark:text-slate-400 mt-2">{getScoreMessage()}</p>
+                        <p className="text-muted-foreground mt-2">{getScoreMessage()}</p>
                     </div>
 
                     <div className="flex flex-col gap-3 px-8">
                         <Button onClick={() => setShowReview(true)} variant="outline" className="w-full">
                             Review Answers
                         </Button>
-                        <Button onClick={handleRestart} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Button onClick={handleRestart} variant="outline" className="w-full border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-white">
                             <RotateCcw className="w-4 h-4 mr-2" /> Restart Quiz
                         </Button>
-                        <Button variant="ghost" onClick={handleBackToView} className="w-full text-slate-500">
+                        <Button variant="outline" onClick={handleBackToView} className="w-full">
                             <List className="w-4 h-4 mr-2" /> View All Questions
                         </Button>
                         <Button
                             variant="ghost"
                             onClick={handleRegenerate}
-                            className="w-full text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            className="w-full text-muted-foreground hover:text-emerald"
                         >
                             <RefreshCw className="w-4 h-4 mr-2" />
                             Regenerate with different settings
@@ -714,12 +718,12 @@ export default function ClientQuiz({
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-linear-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center">
                         <ClipboardCheck className="w-5 h-5 text-white" strokeWidth={1.5} />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Quiz</h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <h2 className="text-xl font-bold text-foreground">Quiz</h2>
+                        <p className="text-sm text-muted-foreground">
                             Test your knowledge
                         </p>
                     </div>
@@ -728,7 +732,7 @@ export default function ClientQuiz({
                     <Button
                         variant="outline"
                         onClick={handleBackToView}
-                        className="gap-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 hover:text-indigo-500 active:border-indigo-500 transition-colors"
+                        className="gap-2 border-border hover:border-primary/50 hover:text-primary active:border-primary transition-colors"
                     >
                         <List className="w-4 h-4" /> View All
                     </Button>
@@ -739,8 +743,8 @@ export default function ClientQuiz({
             {timer !== 'none' && timerActive && (
                 <div className="mb-6 flex justify-center">
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-mono text-lg font-bold ${timeRemaining <= 60
-                        ? 'bg-red-100 text-red-700 animate-pulse'
-                        : 'bg-slate-100 text-slate-700'
+                        ? 'bg-destructive/20 text-destructive animate-pulse'
+                        : 'bg-muted text-foreground'
                         }`}>
                         <Clock className="w-5 h-5" />
                         {formatTime(timeRemaining)}
@@ -748,8 +752,8 @@ export default function ClientQuiz({
                 </div>
             )}
 
-            <div className="mb-4 flex justify-between items-center text-sm text-slate-500 dark:text-slate-400">
-                <span className="font-medium text-slate-900 dark:text-slate-200">Question {currentIndex + 1}</span>
+            <div className="mb-4 flex justify-between items-center text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Question {currentIndex + 1}</span>
                 <span>Score: {score}/{currentIndex}</span>
             </div>
 

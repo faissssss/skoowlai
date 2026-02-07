@@ -4,14 +4,13 @@ import { useUser } from '@clerk/nextjs';
 
 import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence, Variants, PanInfo } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
-    CheckSquare, Square, Share2, MoreVertical,
-    BookOpen, BookCopy, Mic, Youtube, FileText,
-    Library, ChevronRight, Upload,
+    CheckSquare, BookOpen, Mic, Youtube, FileText,
+    Library, Upload,
     Search, FolderPlus, FolderOpen, X, Clock
 } from 'lucide-react';
 import FileUpload from '@/components/study/FileUpload';
@@ -34,16 +33,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+// These dropdown imports are reserved for future use
+// import {
+//     DropdownMenu,
+//     DropdownMenuContent,
+//     DropdownMenuItem,
+//     DropdownMenuSeparator,
+//     DropdownMenuSub,
+//     DropdownMenuSubContent,
+//     DropdownMenuSubTrigger,
+//     DropdownMenuTrigger,
+// } from '@/components/ui/dropdown-menu';
 import DeckActionsMenu from '@/components/dashboard/DeckActionsMenu';
 import { cn } from '@/lib/utils';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
@@ -59,8 +59,59 @@ import WorkspaceCard from '@/components/dashboard/WorkspaceCard';
 import OptionsMenu from '@/components/dashboard/OptionsMenu';
 import { DraggableCardContainer, DraggableCardBody } from '@/components/ui/draggable-card';
 
+interface WorkspaceDeck {
+    id: string;
+    title: string;
+    sourceType: string | null;
+    createdAt: string;
+}
+
+interface Workspace {
+    id: string;
+    name: string;
+    description?: string | null;
+    color: string;
+    decks: WorkspaceDeck[];
+    _count: {
+        decks: number;
+    };
+}
+
+// Type for the update payload which doesn't include decks
+interface WorkspaceUpdate {
+    id: string;
+    name: string;
+    description?: string | null;
+    color: string;
+    _count: {
+        decks: number;
+    };
+}
+
+// Type for creation payload (no decks)
+interface WorkspaceCreate {
+    id: string;
+    name: string;
+    description?: string | null;
+    color: string;
+    _count: {
+        decks: number;
+    };
+}
+
+interface Deck {
+    id: string;
+    title: string;
+    sourceType?: string;
+    workspaceId?: string | null;
+    createdAt: string;
+    _count?: {
+        cards: number;
+    };
+}
+
 interface DashboardClientProps {
-    decks: any[];
+    decks: Deck[];
 }
 
 export default function DashboardClient({ decks }: DashboardClientProps) {
@@ -98,12 +149,17 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const { startLoading, stopLoading } = useGlobalLoader();
 
     // Workspace state
-    const [workspaces, setWorkspaces] = useState<any[]>([]);
+    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [isWorkspacesLoading, setIsWorkspacesLoading] = useState(true);
     const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
     const [showEditWorkspace, setShowEditWorkspace] = useState(false);
     const [showWorkspaceDetail, setShowWorkspaceDetail] = useState(false);
-    const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
+    const [editingWorkspace, setEditingWorkspace] = useState<{
+        id: string;
+        name: string;
+        description?: string | null;
+        color: string;
+    } | null>(null);
     const [viewingWorkspaceId, setViewingWorkspaceId] = useState<string | null>(null);
     const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
 
@@ -133,7 +189,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         fetchWorkspaces();
     }, []);
 
-    const handleWorkspaceCreated = (workspace: any) => {
+    const handleWorkspaceCreated = (workspace: WorkspaceCreate) => {
         // New workspace has no decks, ensure decks array exists
         setWorkspaces(prev => [{ ...workspace, decks: [] }, ...prev]);
     };
@@ -160,17 +216,17 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 // Refresh to update deck workspaceId fields
                 router.refresh();
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to delete workspace');
         }
     };
 
-    const handleEditWorkspace = (workspace: any) => {
+    const handleEditWorkspace = (workspace: Workspace) => {
         setEditingWorkspace(workspace);
         setShowEditWorkspace(true);
     };
 
-    const handleWorkspaceUpdated = (updatedWorkspace: any) => {
+    const handleWorkspaceUpdated = (updatedWorkspace: WorkspaceUpdate) => {
         // Preserve existing decks array when updating workspace metadata
         setWorkspaces(prev => prev.map(w =>
             w.id === updatedWorkspace.id
@@ -250,7 +306,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             } else {
                 toast.error('Failed to add decks to workspace');
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to add decks to workspace');
         } finally {
             setIsBulkMoving(false);
@@ -275,7 +331,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         dropSucceededRef.current = false;
     };
 
-    const handleDragEnd = (event: any, info: any) => {
+    const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         // Find if we're over a workspace card using coordinates
         // We use info.point which is the absolute pointer position
         const x = info.point.x;
@@ -345,7 +401,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         }
     };
 
-    const handleDrag = (event: any, info: any) => {
+    const handleDrag = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         // Highlight workspace cards during drag
         const x = info.point.x;
         const y = info.point.y;
@@ -387,22 +443,22 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 return {
                     icon: Youtube,
                     label: 'YouTube',
-                    bgColor: 'bg-red-50 dark:bg-red-900/20',
-                    textColor: 'text-red-600 dark:text-red-400'
+                    bgColor: 'bg-destructive/10',
+                    textColor: 'text-destructive'
                 };
             case 'audio':
                 return {
                     icon: Mic,
                     label: 'Audio',
-                    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-                    textColor: 'text-purple-600 dark:text-purple-400'
+                    bgColor: 'bg-(--brand-secondary)/10',
+                    textColor: 'text-(--brand-secondary)'
                 };
             default:
                 return {
                     icon: FileText,
                     label: 'Document',
-                    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
-                    textColor: 'text-indigo-600 dark:text-indigo-400'
+                    bgColor: 'bg-primary/10',
+                    textColor: 'text-primary'
                 };
         }
     };
@@ -519,25 +575,25 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         }
     };
 
-    const QuickCreateCard = ({ icon: Icon, title, description, color, onClick, disabled }: any) => (
+    const QuickCreateCard = ({ icon: Icon, title, description, color, onClick, disabled }: { icon: React.ElementType; title: string; description: string; color: string; onClick?: () => void; disabled?: boolean }) => (
         <motion.div
             onClick={disabled ? undefined : onClick}
             whileHover={disabled ? {} : { scale: 1.02, y: -3 }}
             whileTap={disabled ? {} : { scale: 0.98 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
             className={cn(
-                "relative overflow-hidden group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 transition-colors duration-300",
-                disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-700"
+                "relative overflow-hidden group p-6 bg-card rounded-2xl border border-border transition-colors duration-300",
+                disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-xl hover:shadow-primary/10 hover:border-primary/50"
             )}
         >
-            {/* Icon container */}
+            {/* Icon container with color background */}
             <div
-                className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors relative", color)}
+                className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors relative overflow-hidden", color)}
             >
                 <Icon className="w-6 h-6 text-white relative z-10" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">{title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
+            <h3 className="text-lg font-bold text-foreground mb-1">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
         </motion.div>
     );
 
@@ -553,6 +609,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const itemVariants: Variants = {
         hidden: { opacity: 0, y: 10 },
         visible: {
@@ -576,17 +633,17 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
             >
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                    <h1 className="font-heading text-3xl font-bold text-foreground">
                         Welcome, {user?.firstName || 'there'}! 👋
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">What would you like to study today?</p>
+                    <p className="text-muted-foreground mt-1">What would you like to study today?</p>
                 </div>
             </motion.div>
 
             {/* Quick Create Section with staggered entrance */}
             <div className="space-y-4">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Upload className="w-5 h-5 text-slate-400" />
+                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <Upload className="w-5 h-5 text-muted-foreground" />
                     Import Materials
                 </h2>
                 <motion.div
@@ -645,9 +702,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                         placeholder="https://youtube.com/watch?v=..."
                                         value={youtubeUrl}
                                         onChange={(e) => setYoutubeUrl(e.target.value)}
-                                        className="w-full p-2 border rounded-md dark:bg-slate-950 dark:border-slate-800"
+                                        className="w-full p-2 border rounded-md bg-background border-border"
                                     />
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    <p className="text-xs text-muted-foreground">
                                         ⏱️ Max 60 minutes • Works with or without captions
                                     </p>
                                 </div>
@@ -655,9 +712,19 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                     <Button
                                         onClick={handleYoutubeClickGenerate}
                                         disabled={isYoutubeLoading || !youtubeUrl}
-                                        className="w-full bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40"
+                                        className="w-full h-11 bg-linear-to-r from-red-600 to-rose-500 hover:from-red-700 hover:to-rose-600 text-white font-medium rounded-xl shadow-lg shadow-red-500/25 transition-all"
                                     >
-                                        {isYoutubeLoading ? 'Processing...' : 'Generate Notes'}
+                                        {isYoutubeLoading ? (
+                                            <>
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                                                <span className="text-white">Processing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Youtube className="w-5 h-5 mr-2 text-white" />
+                                                <span className="text-white">Generate Notes</span>
+                                            </>
+                                        )}
                                     </Button>
                                 </AnimatedDockButton>
                             </div>
@@ -710,7 +777,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmBulkDelete}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-destructive hover:bg-destructive/90 text-white"
                         >
                             {isBulkMoving ? 'Deleting...' : 'Delete Decks'}
                         </AlertDialogAction>
@@ -723,14 +790,14 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Move decks to workspace?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to move the {selectedDeckIds.size} selected decks to "{workspaces.find(w => w.id === pendingBulkMoveWorkspaceId)?.name || 'workspace'}"?
+                            Are you sure you want to move the {selectedDeckIds.size} selected decks to &quot;{workspaces.find(w => w.id === pendingBulkMoveWorkspaceId)?.name || 'workspace'}&quot;?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmBulkMove}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                            className="bg-primary hover:bg-primary/90 text-white"
                         >
                             {isBulkMoving ? 'Moving...' : 'Move Decks'}
                         </AlertDialogAction>
@@ -740,9 +807,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
 
             {/* Workspaces Section */}
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <FolderOpen className="w-5 h-5 text-slate-400" />
+                <div className="flex justify-between items-center">
+                    <h2 className="font-heading text-xl font-bold text-foreground flex items-center gap-2">
+                        <FolderOpen className="w-5 h-5 text-muted-foreground" />
                         Workspaces
                     </h2>
                     <AnimatedDockButton>
@@ -750,7 +817,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                             onClick={() => setShowCreateWorkspace(true)}
                             variant="outline"
                             size="sm"
-                            className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 gap-2 h-8 md:h-9 px-3 transition-colors shadow-sm flex-row-reverse"
+                            className="bg-background border-border text-foreground hover:bg-muted gap-2 h-8 md:h-9 px-3 transition-colors shadow-sm flex-row-reverse"
                         >
                             <FolderPlus className="w-4 h-4" />
                             <span className="hidden md:inline">Create Workspace</span>
@@ -761,7 +828,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 {isWorkspacesLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {/* Skeleton placeholder */}
-                        <div className="h-[180px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/50 animate-pulse" />
+                        <div className="h-[180px] rounded-xl border border-border bg-muted animate-pulse" />
                     </div>
                 ) : (
                     <motion.div
@@ -772,10 +839,10 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                         {workspaces.length === 0 ? (
                             <div
                                 className={cn(
-                                    "text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed transition-all",
+                                    "text-center py-12 bg-card rounded-2xl border border-dashed transition-all",
                                     draggingDeckId
-                                        ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20"
-                                        : "border-slate-200 dark:border-slate-800"
+                                        ? "border-primary bg-primary/5 dark:bg-primary/10"
+                                        : "border-border"
                                 )}
                                 onDragOver={(e) => {
                                     e.preventDefault();
@@ -785,23 +852,23 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                 <div className={cn(
                                     "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3",
                                     draggingDeckId
-                                        ? "bg-indigo-100 dark:bg-indigo-900/40"
-                                        : "bg-slate-100 dark:bg-slate-800"
+                                        ? "bg-primary/10 dark:bg-primary/20"
+                                        : "bg-muted"
                                 )}>
                                     <FolderOpen className={cn(
                                         "w-6 h-6",
-                                        draggingDeckId ? "text-indigo-500" : "text-slate-400"
+                                        draggingDeckId ? "text-primary" : "text-muted-foreground"
                                     )} />
                                 </div>
                                 {draggingDeckId ? (
                                     <>
-                                        <p className="text-indigo-600 dark:text-indigo-400 font-medium">Create a workspace first</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">You need a workspace to organize decks</p>
+                                        <p className="text-primary font-medium">Create a workspace first</p>
+                                        <p className="text-sm text-muted-foreground mt-1">You need a workspace to organize decks</p>
                                         <Button
                                             onClick={() => setShowCreateWorkspace(true)}
                                             variant="outline"
                                             size="sm"
-                                            className="mt-4 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                                            className="mt-4 border-primary text-primary hover:bg-primary/5"
                                         >
                                             <FolderPlus className="w-4 h-4 mr-2" />
                                             Create Workspace
@@ -809,8 +876,8 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                     </>
                                 ) : (
                                     <>
-                                        <p className="text-slate-500 dark:text-slate-400">No workspaces yet</p>
-                                        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Create a workspace to group your study decks</p>
+                                        <p className="text-muted-foreground">No workspaces yet</p>
+                                        <p className="text-sm text-muted-foreground/70 mt-1">Create a workspace to group your study decks</p>
                                     </>
                                 )}
                             </div>
@@ -855,8 +922,8 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             <div id="study-sets-section" className="space-y-6 scroll-mt-20">
                 {/* Title Row */}
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Library className="w-5 h-5 text-slate-400" />
+                    <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                        <Library className="w-5 h-5 text-muted-foreground" />
                         Study Sets
                     </h2>
 
@@ -877,7 +944,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                 clearSelection();
                                                 setIsSelectMode(false);
                                             }}
-                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors whitespace-nowrap"
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
                                         >
                                             <CheckSquare className="w-3.5 h-3.5" />
                                             {selectedDeckIds.size} Selected
@@ -897,7 +964,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                 exit={{ opacity: 0, scale: 0.8, x: -10 }}
                                                 transition={{ type: "spring", bounce: 0, duration: 0.3 }}
                                                 onClick={() => setWorkspaceFilter(null)}
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border whitespace-nowrap"
                                             >
                                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ws.color }} />
                                                 {ws.name}
@@ -920,7 +987,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                 exit={{ opacity: 0, scale: 0.8, x: -10 }}
                                                 transition={{ type: "spring", bounce: 0, duration: 0.3 }}
                                                 onClick={() => setFilter('all')}
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors border border-border whitespace-nowrap"
                                             >
                                                 <Icon className="w-3.5 h-3.5" />
                                                 {labels[filter as keyof typeof labels] || filter}
@@ -954,33 +1021,31 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                             }}
                             selectedCount={selectedDeckIds.size}
                             onSelectAll={selectAllDecks}
-                            onClearSelection={clearSelection}
                             onBulkAdd={handleBulkAddToWorkspace}
-                            isBulkMoving={isBulkMoving}
                             onBulkDelete={handleBulkDelete}
                         />
                     </div>
 
                     {/* Search Bar - bottom on mobile, left on desktop */}
                     <div className="relative w-full md:w-auto md:min-w-[200px] md:max-w-[280px] order-2 md:order-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                             type="text"
                             placeholder="Search your sets..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-4 h-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            className="w-full pl-9 pr-4 h-9 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                     </div>
                 </div>
 
                 {filteredDecks.length === 0 ? (
-                    <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                        <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <BookOpen className="w-6 h-6 text-slate-400" />
+                    <div className="text-center py-12 bg-card rounded-2xl border border-dashed border-border">
+                        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                            <BookOpen className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400">No study sets found</p>
-                        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
+                        <p className="text-muted-foreground">No study sets found</p>
+                        <p className="text-sm text-muted-foreground/70 mt-1">
                             Try adjusting your filters or create a new set to get started.
                         </p>
                     </div>
@@ -1012,7 +1077,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                             className={cn(
                                                 "group relative p-6 h-full flex flex-col cursor-grab active:cursor-grabbing",
                                                 isSelectMode && "cursor-pointer",
-                                                isSelected && "ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500"
+                                                isSelected && "ring-2 ring-primary/30 bg-primary/5 dark:bg-primary/10 border-primary"
                                             )}
                                         >
                                             {!isSelectMode && !isDragging && (
@@ -1023,11 +1088,11 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                             {isSelectMode && (
                                                 <div className="absolute top-3 left-3 z-20">
                                                     {isSelected ? (
-                                                        <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center">
-                                                            <CheckSquare className="w-4 h-4 text-white" />
+                                                        <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                                                            <CheckSquare className="w-4 h-4 text-primary-foreground" />
                                                         </div>
                                                     ) : (
-                                                        <div className="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+                                                        <div className="w-6 h-6 rounded-md border-2 border-border bg-background" />
                                                     )}
                                                 </div>
                                             )}
@@ -1051,16 +1116,16 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                     </div>
                                                 </div>
 
-                                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">
                                                     {deck.title}
                                                 </h3>
 
-                                                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mb-6 space-x-3">
+                                                <div className="flex items-center text-xs text-muted-foreground mb-6 space-x-3">
                                                     <span className="flex items-center">
                                                         <Clock className="w-3 h-3 mr-1" />
-                                                        {new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                        {new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace('20260', '2026')}
                                                     </span>
-                                                    {deck._count?.cards > 0 && (
+                                                    {deck._count?.cards && deck._count.cards > 0 && (
                                                         <>
                                                             <span>•</span>
                                                             <span>{deck._count.cards} cards</span>
@@ -1068,7 +1133,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                     )}
                                                 </div>
 
-                                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                                <div className="mt-auto pt-4 border-t border-border flex justify-between items-center">
                                                     <div className="flex items-center gap-2">
                                                         <span className={cn("text-xs font-medium px-2 py-1 rounded-md", sourceInfo.bgColor, sourceInfo.textColor)}>
                                                             {sourceInfo.label}
@@ -1078,7 +1143,7 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                                                             if (workspace) {
                                                                 return (
                                                                     <span
-                                                                        className="text-xs font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center gap-1"
+                                                                        className="text-xs font-medium px-2 py-1 rounded-md bg-muted text-muted-foreground flex items-center gap-1"
                                                                     >
                                                                         <div
                                                                             className="w-2 h-2 rounded-full"

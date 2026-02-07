@@ -22,24 +22,24 @@ function BannerInner({ storageKey }: { storageKey: string }) {
   const searchParams = useSearchParams();
 
   // Start with null to indicate "not yet determined" - prevents flash
-  const [show, setShow] = useState<boolean | null>(null);
+  const [show, setShow] = useState<boolean | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const dismissed = localStorage.getItem(storageKey) === '1';
+      return !dismissed;
+    } catch {
+      return true;
+    }
+  });
   
   // Track initial render for animation
   const [isInitialRender, setIsInitialRender] = useState(true);
 
-  // Read from localStorage only after mount to avoid hydration issues
+  // After first mount, mark as not initial render for future navigations
   useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem(storageKey) === '1';
-      setShow(!dismissed);
-    } catch {
-      setShow(true);
-    }
-    
-    // After first mount, mark as not initial render for future navigations
     const timer = setTimeout(() => setIsInitialRender(false), 600);
     return () => clearTimeout(timer);
-  }, [storageKey]);
+  }, []);
 
   // Expose the current banner height via CSS variable so fixed elements can offset
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -102,7 +102,7 @@ function BannerInner({ storageKey }: { storageKey: string }) {
           }}
           className="fixed top-0 inset-x-0 z-60"
         >
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white">
+          <div className="bg-[#F9FAFB] text-gray-900 border-b border-gray-200">
             <div className="container mx-auto px-4">
               <div className="py-2.5 flex items-center justify-between gap-4">
                 {/* Left: Text Content */}
@@ -110,7 +110,7 @@ function BannerInner({ storageKey }: { storageKey: string }) {
                   <span className="text-lg">🎉</span>
                   <div className="min-w-0">
                     <span className="font-medium text-sm sm:text-base">Start your 14‑day free trial!</span>
-                    <span className="hidden sm:inline text-white/80 text-sm ml-2">
+                    <span className="hidden sm:inline text-gray-600 text-sm ml-2">
                       Get 14 days of full access to all premium features
                     </span>
                   </div>
@@ -120,10 +120,10 @@ function BannerInner({ storageKey }: { storageKey: string }) {
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
                     href="/dashboard?billing=1"
-                    className={`inline-flex items-center justify-center rounded-full bg-white text-indigo-600 px-4 py-1.5 text-sm font-semibold shadow-sm transition-all duration-200 min-w-[120px] ${
+                    className={`inline-flex items-center justify-center rounded-full bg-indigo-600 text-white px-4 py-1.5 text-sm font-semibold shadow-sm transition-all duration-200 min-w-[120px] ${
                       isOnBilling 
                         ? 'opacity-70 cursor-default' 
-                        : 'hover:bg-white/90 hover:scale-105 active:scale-95'
+                        : 'hover:bg-indigo-700 hover:scale-105 active:scale-95'
                     }`}
                     onClick={(e) => {
                       // If already on billing, prevent navigation and just scroll/focus
@@ -137,7 +137,7 @@ function BannerInner({ storageKey }: { storageKey: string }) {
                   <button
                     aria-label="Close banner"
                     onClick={onClose}
-                    className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                    className="p-1.5 rounded-full hover:bg-gray-200 transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>

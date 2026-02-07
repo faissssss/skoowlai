@@ -1,13 +1,13 @@
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import ClientFlashcardDeck from './ClientFlashcardDeck';
 
 export default async function FlashcardsPage({ params }: { params: Promise<{ deckId: string }> }) {
     const { deckId } = await params;
-    const deck = await db.deck.findUnique({
+    const deck = await withRetry(() => db.deck.findUnique({
         where: { id: deckId },
         include: { cards: true },
-    });
+    }));
 
     if (!deck) {
         notFound();

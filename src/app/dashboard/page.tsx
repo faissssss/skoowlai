@@ -2,7 +2,7 @@ import { db, withRetry } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import DashboardClient from '@/components/dashboard/DashboardClient';
 import { getAuthenticatedUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,39 +48,40 @@ export default async function Dashboard() {
             } else {
                 errorDetails = "Clerk userId is null (not signed in?)";
             }
-        } catch (e: any) {
-            errorDetails = `Connection/Query Error: ${e.message || JSON.stringify(e)}`;
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : JSON.stringify(e);
+            errorDetails = `Connection/Query Error: ${errorMessage}`;
         }
 
         console.error("Dashboard Access Denied:", errorDetails);
 
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-slate-50 dark:bg-slate-950">
+            <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-background">
                 <div className="max-w-2xl space-y-6">
                     <h1 className="text-3xl font-bold text-red-500">Access Error Diagnostics</h1>
 
-                    <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 text-left overflow-hidden shadow-2xl">
-                        <div className="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+                    <div className="p-6 rounded-xl bg-card border border-border text-left overflow-hidden shadow-2xl">
+                        <div className="flex items-center gap-2 mb-4 border-b border-border/60 pb-2">
                             <div className="w-3 h-3 rounded-full bg-red-500" />
-                            <span className="font-mono text-slate-400 text-sm">System Diagnostics</span>
+                            <span className="font-mono text-muted-foreground text-sm">System Diagnostics</span>
                         </div>
 
-                        <div className="space-y-3 font-mono text-xs md:text-sm text-slate-300">
+                        <div className="space-y-3 font-mono text-xs md:text-sm text-foreground/80">
                             <div>
-                                <span className="text-slate-500">Timestamp:</span>
-                                <span className="ml-2 text-indigo-400">{new Date().toISOString()}</span>
+                                <span className="text-muted-foreground">Timestamp:</span>
+                                <span className="ml-2 text-primary">{new Date().toISOString()}</span>
                             </div>
                             <div>
-                                <span className="text-slate-500">Status:</span>
+                                <span className="text-muted-foreground">Status:</span>
                                 <span className="ml-2 text-emerald-400">Authenticated (Clerk)</span>
                             </div>
                             <div>
-                                <span className="text-slate-500">Database:</span>
+                                <span className="text-muted-foreground">Database:</span>
                                 <span className="ml-2 text-red-400">Connection Failed / Query Error</span>
                             </div>
 
-                            <div className="mt-4 pt-4 border-t border-slate-700">
-                                <span className="text-slate-500 block mb-2">Detailed Error Log:</span>
+                            <div className="mt-4 pt-4 border-t border-border/60">
+                                <span className="text-muted-foreground block mb-2">Detailed Error Log:</span>
                                 <pre className="p-3 rounded bg-black/50 text-red-300 whitespace-pre-wrap break-all border border-red-900/30">
                                     {errorDetails}
                                 </pre>
@@ -88,14 +89,14 @@ export default async function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
+                    <div className="text-muted-foreground max-w-lg mx-auto">
                         <p className="mb-2"><strong>Likely Cause:</strong> Missing or incorrect Production Environment Variables.</p>
                         <p className="text-sm">Please check your Vercel Project Settings &gt; Environment Variables.</p>
                     </div>
 
-                    <a href="/" className="inline-block px-6 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
+                    <Link href="/" className="inline-block px-6 py-3 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors">
                         Return to Home
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
@@ -119,5 +120,11 @@ export default async function Dashboard() {
         console.error("Failed to fetch decks:", error);
     }
 
-    return <DashboardClient decks={decks} />;
+    // Serialize dates to strings for client component compatibility
+    const serializedDecks = decks.map(deck => ({
+        ...deck,
+        createdAt: deck.createdAt.toISOString(),
+    }));
+
+    return <DashboardClient decks={serializedDecks} />;
 }

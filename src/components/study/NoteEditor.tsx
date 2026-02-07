@@ -1,88 +1,29 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
 import { marked } from 'marked';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
-import { Color } from '@tiptap/extension-color';
-import FontFamily from '@tiptap/extension-font-family';
+import { cn } from '@/lib/utils';
 import Highlight from '@tiptap/extension-highlight';
-import { Extension } from '@tiptap/core';
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Bold, Italic, Underline as UnderlineIcon,
     Heading1, Heading2, Heading3,
     List, ListOrdered,
-    Save, Edit2, X, Loader2,
-    Palette, Highlighter
+    Palette, Highlighter,
+    Bot, Send
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { updateNotes } from '@/actions/updateNotes';
 import { toast } from 'sonner';
+import { updateNotes } from '@/actions/updateNotes';
 import { useEditorContext } from './EditorContext';
-import { motion, AnimatePresence } from 'framer-motion';
 
-interface NoteEditorProps {
-    deckId: string;
-    initialContent: string;
-    isEditing?: boolean;
-    onEditingChange?: (editing: boolean) => void;
-}
-
-export interface NoteEditorHandle {
-    save: () => Promise<boolean>;
-    cancel: () => void;
-}
-
-// Custom FontSize extension
-const FontSize = Extension.create({
-    name: 'fontSize',
-    addOptions() {
-        return {
-            types: ['textStyle'],
-        };
-    },
-    addGlobalAttributes() {
-        return [
-            {
-                types: this.options.types,
-                attributes: {
-                    fontSize: {
-                        default: null,
-                        parseHTML: element => element.style.fontSize || null,
-                        renderHTML: attributes => {
-                            if (!attributes.fontSize) {
-                                return {};
-                            }
-                            return {
-                                style: `font-size: ${attributes.fontSize}`,
-                            };
-                        },
-                    },
-                },
-            },
-        ];
-    },
-    addCommands() {
-        return {
-            setFontSize: (fontSize: string) => ({ chain }) => {
-                return chain()
-                    .setMark('textStyle', { fontSize })
-                    .run();
-            },
-            unsetFontSize: () => ({ chain }) => {
-                return chain()
-                    .setMark('textStyle', { fontSize: null })
-                    .removeEmptyTextStyle()
-                    .run();
-            },
-        };
-    },
-});
-
-const COLOR_PALETTE = [
+// Color palette for text and highlight pickers
+const COLOR_PALETTE: string[][] = [
     ['#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff'],
     ['#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff'],
     ['#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc'],
@@ -90,19 +31,23 @@ const COLOR_PALETTE = [
     ['#cc4125', '#e06666', '#f6b26b', '#ffd966', '#93c47d', '#76a5af', '#6d9eeb', '#6fa8dc', '#8e7cc3', '#c27ba0'],
 ];
 
-const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
+interface NoteEditorProps {
+    deckId: string;
+    initialContent: string;
+    isEditing?: boolean;
+    onEditingChange?: (isEditing: boolean) => void;
+}
+
+interface NoteEditorRef {
+    save: () => Promise<boolean>;
+    cancel: () => void;
+}
+
+const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     deckId,
     initialContent,
-    isEditing: externalIsEditing,
-    onEditingChange
+    isEditing = false
 }, ref) => {
-    const { setEditor } = useEditorContext();
-    // Use external editing state if provided, otherwise use internal
-    const [internalIsEditing, setInternalIsEditing] = useState(false);
-    const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
-    const setIsEditing = onEditingChange || setInternalIsEditing;
-
-    const [isSaving, setIsSaving] = useState(false);
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [showHighlightPicker, setShowHighlightPicker] = useState(false);
 
@@ -120,12 +65,9 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
         extensions: [
             StarterKit,
             Underline,
+            TextAlign,
             TextStyle,
-            FontSize,
             Color,
-            FontFamily.configure({
-                types: ['textStyle'],
-            }),
             Highlight.configure({
                 multicolor: true,
             }),
@@ -140,13 +82,9 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
         immediatelyRender: false,
     });
 
-    useEffect(() => {
-        if (editor) {
-            editor.setEditable(isEditing);
-        }
-    }, [isEditing, editor]);
+    const { setEditor } = useEditorContext();
 
-    // Expose editor to parent via context
+    // Register editor with context for rewrite feature
     useEffect(() => {
         if (editor) {
             setEditor(editor);
@@ -154,21 +92,24 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
         return () => setEditor(null);
     }, [editor, setEditor]);
 
+    useEffect(() => {
+        if (editor) {
+            editor.setEditable(isEditing);
+        }
+    }, [isEditing, editor]);
+
     // Expose save and cancel methods via ref
     useImperativeHandle(ref, () => ({
         save: async () => {
             if (!editor) return false;
-            setIsSaving(true);
             const html = editor.getHTML();
             const result = await updateNotes(deckId, html);
             if (result.success) {
                 toast.success('Notes saved successfully');
                 setSavedContent(html);
-                setIsSaving(false);
                 return true;
             } else {
                 toast.error('Failed to save notes');
-                setIsSaving(false);
                 return false;
             }
         },
@@ -179,25 +120,13 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
         }
     }), [editor, deckId, savedContent]);
 
-    const handleSave = async (): Promise<boolean> => {
-        if (!editor) return false;
+    // AI Chat & Send Functions
+    const handleAskAI = () => {
+        toast.info('AI Chat feature coming soon!');
+    };
 
-        setIsSaving(true);
-        const html = editor.getHTML();
-
-        const result = await updateNotes(deckId, html);
-
-        if (result.success) {
-            toast.success('Notes saved successfully');
-            setSavedContent(html);
-            setIsEditing(false);
-            setIsSaving(false);
-            return true;
-        } else {
-            toast.error('Failed to save notes');
-            setIsSaving(false);
-            return false;
-        }
+    const handleSend = () => {
+        toast.info('Send feature coming soon!');
     };
 
     if (!editor) {
@@ -207,12 +136,12 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
     return (
         <div className="relative">
             {isEditing && (
-                <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-2 flex flex-wrap gap-2 items-center mb-4 rounded-t-lg">
+                <div className="sticky top-0 z-10 bg-background border-b border-border p-2 flex flex-wrap gap-2 items-center justify-center mb-4 rounded-t-lg">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleBold().run()}
-                        className={cn(editor.isActive('bold') && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('bold') && 'bg-muted')}
                     >
                         <Bold className="w-4 h-4" />
                     </Button>
@@ -220,7 +149,7 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleItalic().run()}
-                        className={cn(editor.isActive('italic') && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('italic') && 'bg-muted')}
                     >
                         <Italic className="w-4 h-4" />
                     </Button>
@@ -228,18 +157,18 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleUnderline().run()}
-                        className={cn(editor.isActive('underline') && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('underline') && 'bg-muted')}
                     >
                         <UnderlineIcon className="w-4 h-4" />
                     </Button>
 
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+                    <div className="w-px h-6 bg-border" />
 
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                        className={cn(editor.isActive('heading', { level: 1 }) && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('heading', { level: 1 }) && 'bg-muted')}
                     >
                         <Heading1 className="w-4 h-4" />
                     </Button>
@@ -247,7 +176,7 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                        className={cn(editor.isActive('heading', { level: 2 }) && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('heading', { level: 2 }) && 'bg-muted')}
                     >
                         <Heading2 className="w-4 h-4" />
                     </Button>
@@ -255,18 +184,18 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                        className={cn(editor.isActive('heading', { level: 3 }) && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('heading', { level: 3 }) && 'bg-muted')}
                     >
                         <Heading3 className="w-4 h-4" />
                     </Button>
 
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+                    <div className="w-px h-6 bg-border" />
 
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleBulletList().run()}
-                        className={cn(editor.isActive('bulletList') && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('bulletList') && 'bg-muted')}
                     >
                         <List className="w-4 h-4" />
                     </Button>
@@ -274,51 +203,12 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                         variant="ghost"
                         size="sm"
                         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                        className={cn(editor.isActive('orderedList') && 'bg-slate-100 dark:bg-slate-800')}
+                        className={cn(editor.isActive('orderedList') && 'bg-muted')}
                     >
                         <ListOrdered className="w-4 h-4" />
                     </Button>
 
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-                    <select
-                        onChange={(e) => {
-                            const font = e.target.value;
-                            if (font) {
-                                editor.chain().focus().setFontFamily(font).run();
-                            } else {
-                                editor.chain().focus().unsetFontFamily().run();
-                            }
-                        }}
-                        className="text-sm border border-slate-200 dark:border-slate-700 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                    >
-                        <option value="">Font</option>
-                        <option value="Arial" style={{ fontFamily: 'Arial' }}>Arial</option>
-                        <option value="'Times New Roman'" style={{ fontFamily: 'Times New Roman' }}>Times New Roman</option>
-                        <option value="'Courier New'" style={{ fontFamily: 'Courier New' }}>Courier New</option>
-                        <option value="Georgia" style={{ fontFamily: 'Georgia' }}>Georgia</option>
-                        <option value="Verdana" style={{ fontFamily: 'Verdana' }}>Verdana</option>
-                    </select>
-
-                    <select
-                        onChange={(e) => {
-                            const size = e.target.value;
-                            if (size) {
-                                editor.chain().focus().setFontSize(size + 'px').run();
-                            }
-                        }}
-                        className="text-sm border border-slate-200 dark:border-slate-700 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                    >
-                        <option value="">Size</option>
-                        <option value="12">12</option>
-                        <option value="14">14</option>
-                        <option value="16">16</option>
-                        <option value="18">18</option>
-                        <option value="20">20</option>
-                        <option value="24">24</option>
-                        <option value="28">28</option>
-                        <option value="32">32</option>
-                    </select>
+                    <div className="w-px h-6 bg-border" />
 
                     <div className="relative">
                         <button
@@ -326,32 +216,32 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                                 setShowColorPicker(!showColorPicker);
                                 setShowHighlightPicker(false);
                             }}
-                            className="flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="flex items-center gap-1 border border-border rounded px-2 py-1 hover:bg-muted"
                         >
                             <Palette className="w-4 h-4" />
-                            <div className="w-6 h-6 rounded border border-slate-300" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }} />
+                            <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }} />
                         </button>
                         {showColorPicker && (
-                            <div className="absolute top-full mt-1 p-2 bg-slate-900 rounded-lg shadow-lg z-20" style={{ width: '240px' }}>
+                            <div className="absolute top-full mt-1 p-2 bg-card rounded-lg shadow-lg z-20 border border-border" style={{ width: '240px' }}>
                                 <button
                                     onClick={() => {
                                         editor.chain().focus().unsetColor().run();
                                         setShowColorPicker(false);
                                     }}
-                                    className="w-full mb-2 px-2 py-1 text-sm bg-slate-800 hover:bg-slate-700 rounded text-white"
+                                    className="w-full mb-2 px-2 py-1 text-sm bg-muted hover:bg-muted/80 rounded text-foreground"
                                 >
                                     Default Color
                                 </button>
-                                {COLOR_PALETTE.map((row, i) => (
+                                {COLOR_PALETTE.map((row: string[], i: number) => (
                                     <div key={i} className="flex gap-1 mb-1">
-                                        {row.map((color) => (
+                                        {row.map((color: string) => (
                                             <button
                                                 key={color}
                                                 onClick={() => {
                                                     editor.chain().focus().setColor(color).run();
                                                     setShowColorPicker(false);
                                                 }}
-                                                className="w-5 h-5 rounded cursor-pointer hover:scale-110 transition-transform border border-slate-700"
+                                                className="w-5 h-5 rounded cursor-pointer hover:scale-110 transition-transform border border-border"
                                                 style={{ backgroundColor: color }}
                                                 title={color}
                                             />
@@ -368,33 +258,33 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
                                 setShowHighlightPicker(!showHighlightPicker);
                                 setShowColorPicker(false);
                             }}
-                            className="flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="flex items-center gap-1 border border-border rounded px-2 py-1 hover:bg-muted"
                         >
                             <Highlighter className="w-4 h-4" />
-                            <div className="w-6 h-6 rounded border border-slate-300" style={{ backgroundColor: editor.getAttributes('highlight').color || 'transparent' }} />
+                            <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: editor.getAttributes('highlight').color || 'transparent' }} />
                             <span className="text-xs">None</span>
                         </button>
                         {showHighlightPicker && (
-                            <div className="absolute top-full mt-1 p-2 bg-slate-900 rounded-lg shadow-lg z-20" style={{ width: '240px' }}>
+                            <div className="absolute top-full mt-1 p-2 bg-card rounded-lg shadow-lg z-20 border border-border" style={{ width: '240px' }}>
                                 <button
                                     onClick={() => {
                                         editor.chain().focus().unsetHighlight().run();
                                         setShowHighlightPicker(false);
                                     }}
-                                    className="w-full mb-2 px-2 py-1 text-sm bg-slate-800 hover:bg-slate-700 rounded text-white"
+                                    className="w-full mb-2 px-2 py-1 text-sm bg-muted hover:bg-muted/80 rounded text-foreground"
                                 >
                                     Clear Highlight
                                 </button>
-                                {COLOR_PALETTE.map((row, i) => (
+                                {COLOR_PALETTE.map((row: string[], i: number) => (
                                     <div key={i} className="flex gap-1 mb-1">
-                                        {row.map((color) => (
+                                        {row.map((color: string) => (
                                             <button
                                                 key={color}
                                                 onClick={() => {
                                                     editor.chain().focus().setHighlight({ color }).run();
                                                     setShowHighlightPicker(false);
                                                 }}
-                                                className="w-5 h-5 rounded cursor-pointer hover:scale-110 transition-transform border border-slate-700"
+                                                className="w-5 h-5 rounded cursor-pointer hover:scale-110 transition-transform border border-border"
                                                 style={{ backgroundColor: color }}
                                                 title={color}
                                             />
@@ -409,11 +299,11 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
 
             <div className={cn(
                 "min-h-[500px] rounded-lg transition-all",
-                isEditing && "border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm"
+                isEditing && "border border-border bg-background shadow-sm"
             )}>
                 <EditorContent editor={editor} />
             </div>
-        </div>
+        </div >
     );
 });
 

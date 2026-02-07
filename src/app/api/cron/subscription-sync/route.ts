@@ -125,3 +125,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Vercel Cron configuration
+export const runtime = 'nodejs';
+export const maxDuration = 60; // 60 second timeout for subscription sync
+
+

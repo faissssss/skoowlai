@@ -9,7 +9,13 @@ import { toast } from 'sonner';
 interface CreateWorkspaceModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreated: (workspace: any) => void;
+    onCreated: (workspace: {
+        id: string;
+        name: string;
+        description?: string;
+        color: string;
+        _count: { decks: number };
+    }) => void;
 }
 
 const COLORS = [
@@ -84,7 +90,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose, onCreated }: Cre
                         exit={{ scale: 0.95, opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+                        className="w-full max-w-md bg-card rounded-2xl shadow-xl border border-border overflow-hidden"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
@@ -96,8 +102,8 @@ export default function CreateWorkspaceModal({ isOpen, onClose, onCreated }: Cre
                                     <FolderPlus className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Create Workspace</h2>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Group your study decks</p>
+                                    <h2 className="text-lg font-bold text-foreground">Create Workspace</h2>
+                                    <p className="text-sm text-muted-foreground">Group your study decks</p>
                                 </div>
                             </div>
                             <Button variant="ghost" size="icon" onClick={handleClose}>
@@ -109,42 +115,42 @@ export default function CreateWorkspaceModal({ isOpen, onClose, onCreated }: Cre
                         <div className="p-6 space-y-5">
                             {/* Name */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                    Workspace Name <span className="text-red-500">*</span>
+                                <label className="text-sm font-medium text-foreground">
+                                    Workspace Name <span className="text-destructive">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="e.g., Biology 101, Exam Prep"
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
 
                             {/* Description */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                    Description <span className="text-slate-400">(optional)</span>
+                                <label className="text-sm font-medium text-foreground">
+                                    Description <span className="text-muted-foreground">(optional)</span>
                                 </label>
                                 <textarea
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="What's this workspace for?"
                                     rows={2}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+                                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                                 />
                             </div>
 
                             {/* Color Picker */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-900 dark:text-slate-100">Color</label>
+                                <label className="text-sm font-medium text-foreground">Color</label>
                                 <div className="flex gap-2 flex-wrap">
                                     {COLORS.map((c) => (
                                         <button
                                             key={c}
                                             onClick={() => setColor(c)}
                                             className={`w-8 h-8 rounded-lg transition-all ${color === c
-                                                    ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-slate-900 dark:ring-white scale-110'
+                                                    ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground scale-110'
                                                     : 'hover:scale-105'
                                                 }`}
                                             style={{ backgroundColor: c }}
@@ -155,27 +161,29 @@ export default function CreateWorkspaceModal({ isOpen, onClose, onCreated }: Cre
                         </div>
 
                         {/* Footer */}
-                        <div className="flex justify-end gap-3 p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800">
+                        <div className="flex justify-between gap-3 p-6 bg-muted/50 border-t border-border">
                             <Button variant="outline" onClick={handleClose} disabled={isLoading}>
                                 Cancel
                             </Button>
-                            <Button
-                                onClick={handleCreate}
-                                disabled={isLoading || !name.trim()}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Creating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FolderPlus className="w-4 h-4 mr-2" />
-                                        Create Workspace
-                                    </>
-                                )}
-                            </Button>
+                            <div className="flex justify-end">
+                                <Button
+                                    onClick={handleCreate}
+                                    disabled={isLoading || !name.trim()}
+                                    className="bg-primary hover:bg-primary/90 text-white"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FolderPlus className="w-4 h-4 mr-2" />
+                                            Create Workspace
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                     </motion.div>
                 </motion.div>

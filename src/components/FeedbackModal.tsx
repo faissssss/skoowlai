@@ -19,25 +19,25 @@ const feedbackTypes = {
         label: "New Feature Idea",
         icon: Lightbulb,
         emoji: "💡",
-        color: "text-yellow-400",
-        bg: "bg-yellow-500/20",
-        border: "border-yellow-500/30",
+        color: "text-primary",
+        bg: "bg-primary/20",
+        border: "border-primary/30",
     },
     improvement: {
         label: "Improvement",
         icon: Heart,
         emoji: "❤️",
-        color: "text-pink-400",
-        bg: "bg-pink-500/20",
-        border: "border-pink-500/30",
+        color: "text-(--brand-accent)",
+        bg: "bg-(--brand-accent)/15",
+        border: "border-(--brand-accent)/25",
     },
     general: {
         label: "General Feedback",
         icon: MessageCircle,
         emoji: "💬",
-        color: "text-blue-400",
-        bg: "bg-blue-500/20",
-        border: "border-blue-500/30",
+        color: "text-muted-foreground",
+        bg: "bg-secondary/40",
+        border: "border-border/40",
     },
 };
 
@@ -169,21 +169,21 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-slate-900 border border-emerald-500/30 shadow-2xl shadow-emerald-500/10 transition-all max-h-[85vh] flex flex-col">
+                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-card border border-primary/30 shadow-2xl shadow-black/20 transition-all max-h-[85vh] flex flex-col">
                                 {/* Header */}
-                                <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
+                                <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 shrink-0">
                                     <Dialog.Title className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                                            <Lightbulb className="w-4 h-4 text-emerald-400" />
+                                        <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+                                            <Lightbulb className="w-4 h-4 text-primary" />
                                         </div>
                                         <div>
-                                            <h2 className="text-base font-semibold text-white">Share Your Ideas</h2>
-                                            <p className="text-xs text-slate-400">Help us build Skoowl AI</p>
+                                            <h2 className="text-base font-semibold text-foreground font-heading">Share Your Ideas</h2>
+                                            <p className="text-xs text-muted-foreground">Help us build Skoowl AI</p>
                                         </div>
                                     </Dialog.Title>
                                     <button
                                         onClick={handleClose}
-                                        className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                                        className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -194,14 +194,14 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                                     <form onSubmit={handleSubmit} className="space-y-4">
                                         {/* Error Message */}
                                         {error && (
-                                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
                                                 {error}
                                             </div>
                                         )}
 
                                         {/* Feedback Type */}
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                                            <label className="block text-sm font-medium text-foreground/80 mb-1.5">
                                                 What kind of feedback?
                                             </label>
                                             <div className="flex gap-2">
@@ -216,7 +216,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                                                             onClick={() => setType(feedbackType)}
                                                             className={`flex-1 flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl border transition-all ${isActive
                                                                 ? `${config.bg} ${config.border} ${config.color}`
-                                                                : "bg-slate-800/50 border-white/10 text-slate-400 hover:border-white/20"
+                                                                : "bg-background/30 border-border/40 text-muted-foreground hover:border-border/60"
                                                                 }`}
                                                         >
                                                             <Icon className="w-4 h-4" />
@@ -229,7 +229,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
                                         {/* Category */}
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                                            <label className="block text-sm font-medium text-foreground/80 mb-1.5">
                                                 Related to
                                             </label>
                                             <div className="flex flex-wrap gap-2">
@@ -239,8 +239,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                                                         type="button"
                                                         onClick={() => setCategory(option.value)}
                                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${category === option.value
-                                                            ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
-                                                            : "bg-slate-800/50 border border-white/10 text-slate-400 hover:border-white/20"
+                                                            ? "bg-primary/20 border border-primary/30 text-primary"
+                                                            : "bg-background/30 border border-border/40 text-muted-foreground hover:border-border/60"
                                                             }`}
                                                     >
                                                         {option.label}
@@ -251,8 +251,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
                                         {/* Summary */}
                                         <div>
-                                            <label htmlFor="feedback-summary" className="block text-sm font-medium text-slate-300 mb-1.5">
-                                                Summary <span className="text-red-400">*</span>
+                                            <label htmlFor="feedback-summary" className="block text-sm font-medium text-foreground/80 mb-1.5">
+                                                Summary <span className="text-destructive">*</span>
                                             </label>
                                             <input
                                                 id="feedback-summary"
@@ -260,14 +260,14 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                                                 value={summary}
                                                 onChange={(e) => setSummary(e.target.value)}
                                                 placeholder="e.g., Add Dark Mode support for PDFs"
-                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-colors text-sm"
+                                                className="w-full px-4 py-2.5 rounded-xl bg-background/30 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors text-sm"
                                             />
                                         </div>
 
                                         {/* Details */}
                                         <div>
-                                            <label htmlFor="feedback-details" className="block text-sm font-medium text-slate-300 mb-1.5">
-                                                Details <span className="text-slate-500">(Optional)</span>
+                                            <label htmlFor="feedback-details" className="block text-sm font-medium text-foreground/80 mb-1.5">
+                                                Details <span className="text-muted-foreground">(Optional)</span>
                                             </label>
                                             <textarea
                                                 id="feedback-details"
@@ -275,7 +275,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                                                 onChange={(e) => setDetails(e.target.value)}
                                                 placeholder="Tell us more about how this would help you..."
                                                 rows={3}
-                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-colors resize-none text-sm"
+                                                className="w-full px-4 py-2.5 rounded-xl bg-background/30 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors resize-none text-sm"
                                             />
                                         </div>
 
@@ -283,7 +283,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                                         <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="w-full flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold shadow-lg shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm mt-2"
+                                            className="w-full flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-linear-to-r from-(--brand-primary) to-(--brand-accent) hover:from-(--brand-primary-dark) hover:to-(--brand-accent) text-white font-semibold shadow-lg shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm mt-2"
                                         >
                                             {isSubmitting ? (
                                                 <>

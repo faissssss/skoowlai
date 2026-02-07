@@ -19,11 +19,11 @@ export function ChoiceChip({ label, selected, onClick, icon, disabled, locked }:
             onClick={onClick}
             disabled={disabled && !locked}
             className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-                "border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200",
+                "border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
                 selected
-                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30",
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "bg-transparent border-border text-muted-foreground hover:border-primary/30",
                 disabled && !locked && "opacity-50 cursor-not-allowed",
                 locked && "opacity-70 cursor-pointer border-dashed"
             )}
@@ -58,7 +58,7 @@ export function ChoiceChipGroup({ label, options, value, onChange, disabled, cen
 
     return (
         <div className="space-y-2">
-            <label className={`block text-xs font-semibold text-slate-800 dark:text-slate-200 ${centered ? 'text-center' : ''}`}>{label}</label>
+            <label className={`block text-sm font-medium text-foreground ${centered ? 'text-center' : ''}`}>{label}</label>
             <div className={`flex flex-wrap gap-1.5 ${centered ? 'justify-center' : ''}`}>
                 {options.map((option) => (
                     <ChoiceChip

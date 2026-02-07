@@ -73,12 +73,12 @@ export function UpdatePlanDialog({
         className={cn(
           "text-foreground flex max-h-[95vh] flex-col gap-3 sm:max-h-[90vh] sm:gap-4",
           "w-[calc(100vw-2rem)] max-w-2xl sm:w-full",
-          "p-4 sm:p-6 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl shadow-2xl",
+          "p-4 sm:p-6 bg-card border border-border text-foreground rounded-xl shadow-2xl",
           className,
         )}
       >
         <DialogHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pb-0">
-          <DialogTitle className="text-2xl font-bold text-slate-100 sm:text-2xl">
+          <DialogTitle className="text-2xl font-bold text-foreground sm:text-2xl">
             {title || "Upgrade Plan"}
           </DialogTitle>
           <div className="flex items-center gap-1.5 text-sm sm:gap-2">
@@ -86,7 +86,7 @@ export function UpdatePlanDialog({
               size="sm"
               pressed={!isYearly}
               onPressedChange={(pressed) => setIsYearly(!pressed)}
-              className="h-9 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm rounded-md bg-slate-800/70 border border-slate-700 text-slate-200 data-[state=on]:bg-violet-600 data-[state=on]:text-white"
+              className="h-9 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm rounded-md bg-muted border-border text-foreground data-[state=on]:bg-primary data-[state=on]:text-white"
             >
               Monthly
             </Toggle>
@@ -94,7 +94,7 @@ export function UpdatePlanDialog({
               size="sm"
               pressed={isYearly}
               onPressedChange={(pressed) => setIsYearly(pressed)}
-              className="h-9 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm rounded-md bg-slate-800/70 border border-slate-700 text-slate-200 data-[state=on]:bg-violet-600 data-[state=on]:text-white"
+              className="h-9 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm rounded-md bg-muted border-border text-foreground data-[state=on]:bg-primary data-[state=on]:text-white"
             >
               Yearly
             </Toggle>
@@ -145,8 +145,8 @@ export function UpdatePlanDialog({
                       "relative cursor-pointer overflow-hidden rounded-lg border transition-all duration-200 sm:rounded-xl",
                       "focus-visible:ring-primary touch-manipulation focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                       selectedPlan === plan.id
-                        ? "border-violet-500 bg-slate-900/70 ring-1 ring-violet-500/30"
-                        : "border-slate-800 hover:border-slate-700 bg-slate-900/40",
+                        ? "border-primary bg-card/70 ring-1 ring-primary/30"
+                        : "border-border hover:border-border/80 bg-card/40",
                     )}
                   >
                     <motion.div layout="position" className="p-3 sm:p-4">
@@ -155,26 +155,26 @@ export function UpdatePlanDialog({
                           <RadioGroupItem
                             value={plan.id}
                             id={plan.id}
-                            className="pointer-events-none mt-0.5 flex-shrink-0 sm:mt-1"
+                            className="pointer-events-none mt-0.5 shrink-0 sm:mt-1"
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                               <Label
                                 htmlFor={plan.id}
-                                className="cursor-pointer text-sm leading-tight font-semibold sm:text-base sm:font-medium text-slate-100"
+                                className="cursor-pointer text-sm leading-tight font-semibold sm:text-base sm:font-medium text-foreground"
                               >
                                 {plan.title}
                               </Label>
                               {plan.badge && (
                                 <Badge
                                   variant="secondary"
-                                  className="h-5 flex-shrink-0 px-1.5 py-0 text-[10px] sm:h-auto sm:px-2 sm:py-0.5 sm:text-xs bg-slate-700/60 text-white border border-slate-600"
+                                  className="h-5 shrink-0 px-1.5 py-0 text-[10px] sm:h-auto sm:px-2 sm:py-0.5 sm:text-xs bg-muted/60 text-foreground border border-border"
                                 >
                                   {plan.badge}
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-slate-400 mt-1 text-[11px] leading-relaxed sm:text-xs">
+                            <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed sm:text-xs">
                               {plan.description}
                             </p>
                             {plan.features.length > 0 && (
@@ -184,9 +184,9 @@ export function UpdatePlanDialog({
                                     (feature, featureIndex) => (
                                       <div
                                         key={featureIndex}
-                                        className="bg-slate-800/40 border-slate-700 flex flex-shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 sm:gap-2 sm:rounded-lg"
+                                        className="bg-muted/40 border-border flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 sm:gap-2 sm:rounded-lg"
                                       >
-                                        <div className="bg-primary h-1 w-1 flex-shrink-0 rounded-full sm:h-1.5 sm:w-1.5" />
+                                        <div className="bg-primary h-1 w-1 shrink-0 rounded-full sm:h-1.5 sm:w-1.5" />
                                         <span className="text-muted-foreground text-[10px] leading-none whitespace-nowrap sm:text-xs">
                                           {feature.name}
                                         </span>
@@ -198,8 +198,8 @@ export function UpdatePlanDialog({
                             )}
                           </div>
                         </div>
-                        <div className="min-w-[60px] flex-shrink-0 text-right sm:min-w-[80px]">
-                          <div className="text-base leading-tight font-bold sm:text-xl sm:font-semibold text-white">
+                        <div className="min-w-[60px] shrink-0 text-right sm:min-w-[80px]">
+                          <div className="text-base leading-tight font-bold sm:text-xl sm:font-semibold text-foreground">
                             {parseFloat(getCurrentPrice(plan)) >= 0
                               ? `${plan.currency}${getCurrentPrice(plan)}`
                               : getCurrentPrice(plan)}
@@ -254,11 +254,11 @@ export function UpdatePlanDialog({
                               className={cn(
                                 "h-10 w-full touch-manipulation text-sm font-medium sm:h-11 sm:text-base",
                                 plan.id === "free"
-                                  ? "border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:text-white"
+                                  ? "border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                                   : (selectedPlan === currentPlan.id &&
                                       ((isYearly ? "yearly" : "monthly") === currentInterval)
                                         ? ""
-                                        : "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 shadow-lg shadow-violet-500/20")
+                                        : "bg-linear-to-r from-primary to-(--brand-secondary) text-white hover:from-primary/90 hover:to-(--brand-secondary)/90 shadow-lg shadow-primary/20")
                               )}
                               disabled={
                                 plan.id !== "free" &&

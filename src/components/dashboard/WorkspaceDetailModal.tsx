@@ -12,7 +12,7 @@ interface Deck {
     id: string;
     title: string;
     sourceType: string | null;
-    createdAt: Date;
+    createdAt: Date | string;
 }
 
 interface Workspace {
@@ -30,7 +30,13 @@ interface WorkspaceDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     workspace: Workspace | null;
-    workspaces: any[];
+    workspaces: Array<{
+        id: string;
+        name: string;
+        color: string;
+        description?: string | null;
+        _count: { decks: number };
+    }>;
     onWorkspaceChange: () => void;
 }
 
@@ -40,22 +46,22 @@ const getSourceInfo = (sourceType: string | null) => {
             return {
                 icon: Youtube,
                 label: 'YouTube',
-                bgColor: 'bg-red-100 dark:bg-red-900/30',
-                textColor: 'text-red-600 dark:text-red-400'
+                bgColor: 'bg-destructive/10',
+                textColor: 'text-destructive'
             };
         case 'audio':
             return {
                 icon: Mic,
                 label: 'Audio',
-                bgColor: 'bg-purple-100 dark:bg-purple-900/30',
-                textColor: 'text-purple-600 dark:text-purple-400'
+                bgColor: 'bg-(--brand-secondary)/10',
+                textColor: 'text-(--brand-secondary)'
             };
         default:
             return {
                 icon: FileText,
                 label: 'Document',
-                bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-                textColor: 'text-blue-600 dark:text-blue-400'
+                bgColor: 'bg-primary/10',
+                textColor: 'text-primary'
             };
     }
 };
@@ -129,11 +135,11 @@ export default function WorkspaceDetailModal({
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ duration: 0.2 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden border border-slate-200 dark:border-slate-800"
+                        className="relative bg-card rounded-2xl shadow-2xl w-full max-w-4xl max-h-screen overflow-hidden border border-border"
                     >
                         {/* Header - Compact */}
                         <div
-                            className="px-5 py-4 border-b border-slate-200 dark:border-slate-800"
+                            className="px-5 py-4 border-b border-border"
                             style={{ background: `linear-gradient(135deg, ${workspace.color}15, transparent)` }}
                         >
                             <div className="flex items-center justify-between">
@@ -145,10 +151,10 @@ export default function WorkspaceDetailModal({
                                         <FolderOpen className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                                        <h2 className="text-lg font-bold text-foreground leading-tight">
                                             {workspace.name}
                                         </h2>
-                                        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             {workspace.description && (
                                                 <span className="truncate max-w-[200px]">{workspace.description}</span>
                                             )}
@@ -161,7 +167,7 @@ export default function WorkspaceDetailModal({
                                     variant="ghost"
                                     size="icon"
                                     onClick={onClose}
-                                    className="h-8 w-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
                                 >
                                     <X className="w-4 h-4" />
                                 </Button>
@@ -175,11 +181,11 @@ export default function WorkspaceDetailModal({
                         >
                             {workspace.decks.length === 0 ? (
                                 <div className="text-center py-12">
-                                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <FolderOpen className="w-8 h-8 text-slate-400" />
+                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <FolderOpen className="w-8 h-8 text-muted-foreground" />
                                     </div>
-                                    <p className="text-slate-500 dark:text-slate-400 font-medium">No study decks yet</p>
-                                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
+                                    <p className="text-muted-foreground font-medium">No study decks yet</p>
+                                    <p className="text-sm text-muted-foreground/70 mt-1">
                                         Add decks using the ⋯ menu on any study set
                                     </p>
                                 </div>

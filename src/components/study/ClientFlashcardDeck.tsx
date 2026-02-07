@@ -5,7 +5,7 @@ import Flashcard from './Flashcard';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function ClientFlashcardDeck({ cards }: { cards: any[] }) {
+export default function ClientFlashcardDeck({ cards }: { cards: Array<{ front: string; back: string }> }) {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const handleNext = () => {
@@ -17,7 +17,7 @@ export default function ClientFlashcardDeck({ cards }: { cards: any[] }) {
     };
 
     if (cards.length === 0) {
-        return <div className="text-center text-slate-500">No flashcards available.</div>;
+        return <div className="text-center text-muted-foreground">No flashcards available.</div>;
     }
 
     return (
@@ -30,13 +30,13 @@ export default function ClientFlashcardDeck({ cards }: { cards: any[] }) {
 
             <div className="flex items-center justify-center gap-4">
                 <Button variant="outline" onClick={handlePrev} disabled={cards.length <= 1}>
-                    <ChevronLeft className="w-4 h-4 mr-2" /> Previous
+                    <ChevronLeft className="w-4 h-4 mr-2 text-white" /> Previous
                 </Button>
-                <span className="text-sm font-medium text-slate-500">
+                <span className="text-sm font-medium text-muted-foreground">
                     {currentIndex + 1} / {cards.length}
                 </span>
                 <Button variant="outline" onClick={handleNext} disabled={cards.length <= 1}>
-                    Next <ChevronRight className="w-4 h-4 ml-2" />
+                    Next <ChevronRight className="w-4 h-4 ml-2 text-white" />
                 </Button>
             </div>
         </div>

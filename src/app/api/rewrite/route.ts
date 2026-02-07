@@ -5,7 +5,8 @@ import { NextRequest } from 'next/server';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
 
-export const maxDuration = 60;
+export const maxDuration = 120; // Allow longer processing time for audio
+export const runtime = 'edge'; // Use Edge runtime for faster cold starts
 
 const REWRITE_PROMPTS: Record<string, string> = {
     improve: 'Improve the writing quality, clarity, and flow while maintaining the core message.',
@@ -26,15 +27,18 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
+        console.log('Rewrite API Request Body:', JSON.stringify(body, null, 2));
 
         const rewriteSchema = z.object({
             text: z.string().min(1).max(5000), // Prevent massive payloads
-            action: z.enum(['improve', 'shorten', 'paraphrase', 'simplify', 'detailed'])
+            action: z.enum(['improve', 'shorten', 'paraphrase', 'simplify', 'detailed']),
+            deckId: z.string().cuid().optional().nullable() // Client may send deckId (or null)
         }).strict();
 
         const payload = rewriteSchema.safeParse(body);
 
         if (!payload.success) {
+            console.error('Rewrite API Validation Error:', payload.error.flatten());
             return new Response(JSON.stringify({ error: 'Invalid request', details: payload.error.flatten() }), {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' },
@@ -53,6 +57,7 @@ export async function POST(req: NextRequest) {
                     content: text,
                 },
             ],
+            temperature: 0.3, // Lower for consistent rewriting quality
             system: `**Role:** Professional Multi-lingual Editor
 **Task:** Rewrite the user's input text based on the selected action: "${action}" (${instruction}).
 
@@ -79,10 +84,16 @@ export async function POST(req: NextRequest) {
         return result.toTextStreamResponse();
 
     } catch (error) {
-        console.error('Rewrite API Error:', error);
+        console.error('Rewrite API Error Details:', {
+            name: (error as Error).name,
+            message: (error as Error).message,
+            stack: (error as Error).stack,
+            cause: (error as Error).cause
+        });
+
         return new Response(JSON.stringify({
             error: 'Internal Server Error',
-            details: 'An error occurred while processing your request.'
+            details: (error as Error).message || 'An error occurred while processing your request.'
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

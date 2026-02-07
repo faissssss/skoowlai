@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { notFound, redirect } from 'next/navigation';
 import StudyPageLayout from '@/components/study/StudyPageLayout';
 import { auth, currentUser } from '@clerk/nextjs/server';
@@ -18,7 +18,7 @@ export default async function StudyLayout({
     const clerkId = session.userId;
 
     // Get deck with workspace info
-    const deck = await db.deck.findUnique({
+    const deck = await withRetry(() => db.deck.findUnique({
         where: { id: deckId },
         select: {
             id: true,
@@ -34,7 +34,7 @@ export default async function StudyLayout({
                 }
             }
         },
-    });
+    }));
 
     if (!deck) {
         notFound();

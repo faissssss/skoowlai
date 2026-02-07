@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, Square, Loader2, CheckCircle2, Upload, FileAudio, X, AlertCircle } from 'lucide-react';
+import { Mic, Square, Loader2, CheckCircle2, FileAudio, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -185,15 +185,8 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
         }
     };
 
-    // Process audio when blob is ready
-    useEffect(() => {
-        if (audioBlob && step === 'uploading') {
-            processAudio(audioBlob);
-        }
-    }, [audioBlob, step]);
-
     // Process audio - send to API
-    const processAudio = async (blob: Blob) => {
+    const processAudio = useCallback(async (blob: Blob) => {
         try {
             setStep('transcribing');
 
@@ -241,7 +234,14 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
             setError(errorMessage);
             setStep('error');
         }
-    };
+    }, [onNotesGenerated]);
+
+    // Process audio when blob is ready
+    useEffect(() => {
+        if (audioBlob && step === 'uploading') {
+            processAudio(audioBlob);
+        }
+    }, [audioBlob, step, processAudio]);
 
     // Format time as MM:SS
     const formatTime = (seconds: number): string => {
@@ -275,16 +275,16 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
     };
 
     return (
-        <div className="w-full max-w-xl mx-auto p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg">
+        <div className="w-full max-w-xl mx-auto p-6 bg-card rounded-2xl border border-border shadow-lg">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <Mic className="w-5 h-5 text-white" />
+                    <div className="w-10 h-10 bg-linear-to-br from-(--brand-primary) to-(--brand-secondary) rounded-full flex items-center justify-center">
+                        <Mic className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">Audio Notes</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Record voice, get study notes</p>
+                        <h3 className="font-semibold text-foreground">Audio Notes</h3>
+                        <p className="text-xs text-muted-foreground">Record voice, get study notes</p>
                     </div>
                 </div>
                 {onCancel && step === 'idle' && (
@@ -300,10 +300,10 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                     <div key={s} className="flex items-center">
                         <div className={cn(
                             "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                            step === s && "bg-indigo-600 text-white ring-4 ring-indigo-100 dark:ring-indigo-900",
+                            step === s && "bg-primary text-primary-foreground ring-4 ring-primary/20",
                             ['uploading', 'transcribing', 'generating', 'complete'].indexOf(step) > ['recording', 'uploading', 'transcribing', 'generating'].indexOf(s)
-                                ? "bg-green-500 text-white"
-                                : step !== s && "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                                ? "bg-emerald text-white"
+                                : step !== s && "bg-muted text-muted-foreground"
                         )}>
                             {['uploading', 'transcribing', 'generating', 'complete'].indexOf(step) > ['recording', 'uploading', 'transcribing', 'generating'].indexOf(s) ? (
                                 <CheckCircle2 className="w-4 h-4" />
@@ -315,8 +315,8 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                             <div className={cn(
                                 "w-12 h-0.5 mx-1",
                                 ['uploading', 'transcribing', 'generating', 'complete'].indexOf(step) > i
-                                    ? "bg-green-500"
-                                    : "bg-slate-200 dark:bg-slate-700"
+                                ? "bg-success"
+                                : "bg-muted"
                             )} />
                         )}
                     </div>
@@ -333,7 +333,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                         exit={{ opacity: 0, y: -10 }}
                         className={cn(
                             "text-sm font-medium",
-                            step === 'error' ? "text-red-500" : "text-slate-600 dark:text-slate-400"
+                            step === 'error' ? "text-destructive" : "text-muted-foreground"
                         )}
                     >
                         {step === 'recording' ? `${STEP_LABELS[step]} ${formatTime(recordingTime)}` : STEP_LABELS[step]}
@@ -342,7 +342,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
             </div>
 
             {/* Waveform Visualizer */}
-            <div className="relative mb-6 h-24 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
+            <div className="relative mb-6 h-24 bg-muted rounded-xl overflow-hidden">
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
@@ -351,26 +351,26 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                 />
                 {step === 'idle' && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <FileAudio className="w-8 h-8 text-slate-400" />
+                        <FileAudio className="w-8 h-8 text-muted-foreground" />
                     </div>
                 )}
                 {(step === 'uploading' || step === 'transcribing' || step === 'generating') && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 dark:bg-slate-800/80">
-                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/80">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
                     </div>
                 )}
                 {step === 'complete' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-green-50/80 dark:bg-green-900/20">
-                        <CheckCircle2 className="w-8 h-8 text-green-500" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-emerald/10">
+                        <CheckCircle2 className="w-8 h-8 text-emerald" />
                     </div>
                 )}
             </div>
 
             {/* Error Message */}
             {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-sm text-destructive">{error}</p>
                 </div>
             )}
 
@@ -379,7 +379,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                 {step === 'idle' && (
                     <Button
                         onClick={startRecording}
-                        className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-12"
+                        className="flex-1 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary)/90 hover:to-(--brand-secondary)/90 text-white h-12"
                     >
                         <Mic className="w-5 h-5 mr-2" />
                         Start Recording
@@ -389,7 +389,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                 {step === 'recording' && (
                     <Button
                         onClick={stopRecording}
-                        className="flex-1 bg-red-500 hover:bg-red-600 text-white h-12"
+                        className="flex-1 bg-destructive hover:bg-destructive/90 text-white h-12"
                     >
                         <Square className="w-5 h-5 mr-2" />
                         Stop Recording
@@ -399,7 +399,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                 {(step === 'uploading' || step === 'transcribing' || step === 'generating') && (
                     <Button
                         disabled
-                        className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-500 h-12"
+                        className="flex-1 bg-muted text-muted-foreground h-12"
                     >
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Processing...
@@ -409,7 +409,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
                 {step === 'error' && (
                     <Button
                         onClick={handleReset}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white h-12"
+                        className="flex-1 bg-primary hover:bg-primary/90 text-white h-12"
                     >
                         Try Again
                     </Button>
@@ -418,7 +418,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
 
             {/* Tips */}
             {step === 'idle' && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-4">
+                <p className="text-xs text-muted-foreground text-center mt-4">
                     Tip: Speak clearly and at a normal pace for best results
                 </p>
             )}

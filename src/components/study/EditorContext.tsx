@@ -72,7 +72,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
                 .chain()
                 .focus()
                 .setTextSelection(range)
-                .deleteSelection()
+                .unsetAllMarks() // CRITICAL: Clear marks from the range BEFORE replacing to break style continuity
                 .insertContent({
                     type: 'text',
                     text: cleanText,

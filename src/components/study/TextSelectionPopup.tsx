@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageSquareQuote, Wand2, ChevronDown, Sparkles, Scissors, RefreshCw, FileText, BookOpen } from 'lucide-react';
+import { Bot, Wand2, ChevronDown, Sparkles, Scissors, RefreshCw, FileText, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Editor } from '@tiptap/core';
 
@@ -115,15 +115,15 @@ export default function TextSelectionPopup({ onAskAI, onRewrite, editorRef }: Te
                     }}
                     className="pointer-events-auto"
                 >
-                    <div className="flex items-center gap-1 bg-slate-900 dark:bg-slate-800 rounded-full shadow-xl p-1 border border-slate-700">
+                    <div className="flex items-center gap-1 bg-popover rounded-full shadow-xl p-1 border border-border">
                         {/* Ask AI Button */}
                         <Button
                             onClick={handleAskClick}
                             size="sm"
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 px-4 py-2 rounded-full h-9"
+                            className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 px-4 py-2 rounded-full h-9"
                         >
-                            <MessageSquareQuote className="w-4 h-4" />
-                            Ask skoowl ai
+                            <Bot className="w-4 h-4 text-white" />
+                            Ask Skoowl AI
                         </Button>
 
                         {/* Rewrite Button with Dropdown */}
@@ -133,7 +133,7 @@ export default function TextSelectionPopup({ onAskAI, onRewrite, editorRef }: Te
                                     onClick={() => setShowRewriteMenu(!showRewriteMenu)}
                                     size="sm"
                                     variant="ghost"
-                                    className="text-white hover:bg-slate-700 flex items-center gap-1.5 px-3 py-2 rounded-full h-9"
+                                    className="text-foreground hover:bg-muted flex items-center gap-1.5 px-3 py-2 rounded-full h-9"
                                 >
                                     <Wand2 className="w-4 h-4" />
                                     Rewrite
@@ -148,7 +148,7 @@ export default function TextSelectionPopup({ onAskAI, onRewrite, editorRef }: Te
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -5 }}
                                             transition={{ duration: 0.1 }}
-                                            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-slate-900 dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-700 overflow-hidden"
+                                            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-popover rounded-xl shadow-2xl border border-border overflow-hidden"
                                         >
                                             {REWRITE_OPTIONS.map((option) => {
                                                 const Icon = option.icon;
@@ -156,9 +156,9 @@ export default function TextSelectionPopup({ onAskAI, onRewrite, editorRef }: Te
                                                     <button
                                                         key={option.action}
                                                         onClick={() => handleRewriteClick(option.action)}
-                                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-slate-700 transition-colors text-left"
+                                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
                                                     >
-                                                        <Icon className="w-4 h-4 text-indigo-400" />
+                                                        <Icon className="w-4 h-4 text-primary" />
                                                         {option.label}
                                                     </button>
                                                 );

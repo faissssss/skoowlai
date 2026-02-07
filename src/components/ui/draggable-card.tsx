@@ -23,7 +23,7 @@ export const DraggableCardContainer = ({
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1.05 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="absolute inset-0 rounded-xl bg-indigo-500/10 border-2 border-indigo-500 border-dashed pointer-events-none z-0"
+                        className="absolute inset-0 rounded-xl bg-primary/10 border-2 border-primary border-dashed pointer-events-none z-0"
                     />
                 )}
             </AnimatePresence>
@@ -63,10 +63,10 @@ export const DraggableCardBody = ({
                 mass: 0.5
             }}
             className={cn(
-                "relative w-full h-full rounded-xl z-20 overflow-hidden bg-white dark:bg-slate-900 border transition-all duration-200",
+                "relative w-full h-full rounded-xl z-20 overflow-hidden bg-card border transition-all duration-200",
                 isDragging
-                    ? "border-indigo-500 ring-4 ring-indigo-500/20 shadow-[0_0_30px_rgba(99,102,241,0.3)] z-50"
-                    : "border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10",
+                    ? "border-primary ring-4 ring-primary/20 shadow-[0_0_30px_rgba(99,102,241,0.3)] z-50"
+                    : "border-border hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10",
                 className
             )}
             {...props}
@@ -78,7 +78,7 @@ export const DraggableCardBody = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"
+                        className="absolute inset-0 bg-linear-to-br from-primary/5 to-(--brand-secondary)/5 pointer-events-none"
                     />
                 )}
             </AnimatePresence>

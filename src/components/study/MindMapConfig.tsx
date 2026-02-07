@@ -189,7 +189,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+                        className="fixed inset-0 z-100 bg-black/50 backdrop-blur-sm"
                         onClick={onClose}
                     />
 
@@ -199,23 +199,23 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
+                        className="fixed inset-0 z-100 flex items-center justify-center p-4 pointer-events-none"
                     >
-                        <div className="w-full max-w-[90vw] sm:max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto max-h-[90vh] sm:max-h-none flex flex-col">
+                        <div className="w-full max-w-[90vw] sm:max-w-xl bg-card rounded-2xl shadow-2xl overflow-hidden pointer-events-auto max-h-[90vh] sm:max-h-none flex flex-col">
                             {/* Header */}
-                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-2 sm:gap-3">
-                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-(--brand-primary) to-(--brand-secondary) flex items-center justify-center">
                                         <Network className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Generate Mind Map</h2>
-                                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">Visualize your notes as a diagram</p>
+                                        <h2 className="text-base sm:text-lg font-semibold text-foreground">Generate Mind Map</h2>
+                                        <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Visualize your notes as a diagram</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -225,7 +225,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                             <div className="px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
                                 {/* Layout Selection with Visual Previews */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-center">
+                                    <label className="block text-sm font-medium text-foreground mb-2 text-center">
                                         Layout Style
                                     </label>
                                     <div className="grid grid-cols-3 gap-2">
@@ -237,35 +237,23 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                                                 className={cn(
                                                     "relative p-2.5 rounded-xl border-2 transition-all duration-200 text-left group",
                                                     layout === option.value
-                                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                                                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50 dark:bg-slate-800/50",
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border hover:border-primary/30 bg-transparent",
                                                     isGenerating && "opacity-50 cursor-not-allowed"
                                                 )}
                                             >
-                                                {/* Selection indicator */}
-                                                {layout === option.value && (
-                                                    <div className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-indigo-500 rounded-full flex items-center justify-center">
-                                                        <Check className="w-2 h-2 text-white" />
-                                                    </div>
-                                                )}
-
                                                 {/* Icon Preview */}
                                                 <div className={cn(
                                                     "w-full h-6 mb-1.5 transition-colors",
                                                     layout === option.value
-                                                        ? "text-indigo-600 dark:text-indigo-400"
-                                                        : "text-slate-400 dark:text-slate-500 group-hover:text-slate-500 dark:group-hover:text-slate-400"
+                                                        ? "text-primary"
+                                                        : "text-muted-foreground group-hover:text-foreground"
                                                 )}>
                                                     {option.icon}
                                                 </div>
 
                                                 {/* Label */}
-                                                <div className={cn(
-                                                    "font-medium text-xs",
-                                                    layout === option.value
-                                                        ? "text-indigo-700 dark:text-indigo-300"
-                                                        : "text-slate-700 dark:text-slate-300"
-                                                )}>
+                                                <div className="font-medium text-xs">
                                                     {option.label}
                                                 </div>
                                             </button>
@@ -275,7 +263,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
 
                                 {/* Color Theme Selection */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-center">
+                                    <label className="block text-sm font-medium text-foreground mb-2 text-center">
                                         Color Theme
                                     </label>
                                     <div className="flex flex-wrap gap-1.5 justify-center">
@@ -287,8 +275,8 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                                                 className={cn(
                                                     "relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 transition-all duration-200",
                                                     colorTheme === theme.value
-                                                        ? "border-slate-900 dark:border-white bg-slate-100 dark:bg-slate-800"
-                                                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border hover:border-primary/30 bg-transparent",
                                                     isGenerating && "opacity-50 cursor-not-allowed"
                                                 )}
                                             >
@@ -297,17 +285,12 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                                                     {theme.colors.map((color, i) => (
                                                         <div
                                                             key={i}
-                                                            className="w-3 h-3 rounded-full border border-white dark:border-slate-800"
+                                                            className="w-3 h-3 rounded-full border border-background"
                                                             style={{ backgroundColor: color }}
                                                         />
                                                     ))}
                                                 </div>
-                                                <span className={cn(
-                                                    "text-xs font-medium",
-                                                    colorTheme === theme.value
-                                                        ? "text-slate-900 dark:text-white"
-                                                        : "text-slate-600 dark:text-slate-400"
-                                                )}>
+                                                <span className="text-xs font-medium">
                                                     {theme.label}
                                                 </span>
                                             </button>
@@ -317,7 +300,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
 
                                 {/* Depth Selection */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-center">
+                                    <label className="block text-sm font-medium text-foreground mb-2 text-center">
                                         Depth Level
                                     </label>
                                     <div className="flex flex-wrap gap-1.5 justify-center">
@@ -329,8 +312,8 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                                                 className={cn(
                                                     "px-3 py-1.5 rounded-lg border-2 transition-all duration-200",
                                                     depth === option.value
-                                                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                                                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600",
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border text-muted-foreground hover:border-primary/30 bg-transparent",
                                                     isGenerating && "opacity-50 cursor-not-allowed"
                                                 )}
                                             >
@@ -342,20 +325,20 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                             </div>
 
                             {/* Footer */}
-                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-muted/50 shrink-0">
                                 <Button
                                     onClick={handleGenerate}
                                     disabled={isGenerating}
-                                    className="w-full h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-violet-500/25 transition-all"
+                                    className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-indigo-600 hover:from-(--brand-primary)/90 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
                                 >
                                     {isGenerating ? (
                                         <>
-                                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                            <Loader2 className="w-5 h-5 mr-2 animate-spin text-white" />
                                             Generating...
                                         </>
                                     ) : (
                                         <>
-                                            <Sparkles className="w-5 h-5 mr-2" />
+                                            <Network className="w-5 h-5 mr-2 text-white" />
                                             Generate Mind Map
                                         </>
                                     )}

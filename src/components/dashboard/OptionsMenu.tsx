@@ -6,9 +6,9 @@ import {
     FolderOpen,
     LayoutGrid,
     CheckSquare,
-    Settings2, X, ChevronLeft, ChevronRight, Square,
+    Settings2, X, ChevronRight, Square,
     Mic, Youtube, FileText, BookOpen,
-    Trash2, FolderPlus, FolderMinus
+    Trash2, FolderPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,9 +35,7 @@ interface OptionsMenuProps {
     onToggleSelectMode: () => void;
     selectedCount: number;
     onSelectAll: () => void;
-    onClearSelection: () => void;
     onBulkAdd: (workspaceId: string) => void;
-    isBulkMoving: boolean;
     onBulkDelete: () => void;
 }
 
@@ -51,13 +49,13 @@ export default function OptionsMenu({
     onToggleSelectMode,
     selectedCount,
     onSelectAll,
-    onClearSelection,
     onBulkAdd,
-    isBulkMoving,
     onBulkDelete
 }: OptionsMenuProps) {
     const [interactionState, setInteractionState] = useState<'idle' | 'expanded' | 'workspace_active' | 'category_active' | 'bulk_active'>('idle');
     const containerRef = useRef<HTMLDivElement>(null);
+    const prevIsSelectModeRef = useRef(isSelectMode);
+    const prevInteractionStateRef = useRef(interactionState);
 
     // Reset to idle on click outside
     useEffect(() => {
@@ -76,15 +74,20 @@ export default function OptionsMenu({
     useEffect(() => {
         // If selection mode is turned off while we are in bulk_active state, reset to idle
         if (!isSelectMode && interactionState === 'bulk_active') {
-            setInteractionState('idle');
+            // Use setTimeout to break the synchronous setState cycle
+            setTimeout(() => setInteractionState('idle'), 0);
         }
+        prevIsSelectModeRef.current = isSelectMode;
     }, [isSelectMode, interactionState]);
 
     // Auto-expand to bulk actions when select mode is triggered externally (e.g. from Add Decks)
     useEffect(() => {
+        // If select mode is turned on while we are in idle state, expand to bulk actions
         if (isSelectMode && interactionState === 'idle') {
-            setInteractionState('bulk_active');
+            // Use setTimeout to break the synchronous setState cycle
+            setTimeout(() => setInteractionState('bulk_active'), 0);
         }
+        prevInteractionStateRef.current = interactionState;
     }, [isSelectMode, interactionState]);
 
     // Define icons for categories
@@ -104,12 +107,12 @@ export default function OptionsMenu({
     // Helper to get active color
     const getActiveColorClass = () => {
         if (isSelectMode) {
-            return "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 border-indigo-200 dark:border-indigo-800";
+            return "bg-primary/10 text-primary border-primary/30";
         }
         if (workspaceFilter || filter !== 'all') {
-            return "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-indigo-500 ring-1 ring-indigo-500/20";
+            return "bg-background text-foreground border-primary ring-1 ring-primary/20";
         }
-        return "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800";
+        return "bg-background text-foreground border-border";
     };
 
     const handleCancel = () => {
@@ -143,17 +146,23 @@ export default function OptionsMenu({
                 <AnimatePresence mode="wait" initial={false}>
                     {/* Default State: "All" Button - Click to expand */}
                     {interactionState === 'idle' && (
-                        <motion.button
+                        <motion.div
                             key="idle"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={handleExpandClick}
-                            className="flex items-center px-3 gap-2 text-sm font-medium whitespace-nowrap h-full w-full justify-center flex-row-reverse active:scale-95 transition-transform"
+                            className="h-full w-full"
                         >
-                            <Settings2 className="w-4 h-4" />
-                            <span>{getActiveLabel()}</span>
-                        </motion.button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExpandClick}
+                                className="h-full w-full justify-center flex-row-reverse active:scale-95 transition-all"
+                            >
+                                <Settings2 className="w-4 h-4" />
+                                <span>{getActiveLabel()}</span>
+                            </Button>
+                        </motion.div>
                     )}
 
                     {/* Expanded State: 3 Icons with Labels - Click only (no hover) */}
@@ -168,22 +177,22 @@ export default function OptionsMenu({
                         >
                             {/* Close/Cancel button */}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => setInteractionState('idle')}
-                                className="h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border-l border-slate-200 dark:border-slate-700 ml-1 gap-1.5 active:scale-95 transition-transform"
+                                className="h-8 md:h-9 px-2 rounded-md gap-1.5 active:scale-95 transition-transform flex-row-reverse border-l border-border ml-1"
                             >
                                 <X className="w-4 h-4" />
                                 <span className="text-xs font-medium">Cancel</span>
                             </Button>
 
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => setInteractionState('workspace_active')}
                                 className={cn(
-                                    "h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5 active:scale-95 transition-transform",
-                                    workspaceFilter && "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                                    "h-8 md:h-9 px-2 rounded-md gap-1.5 active:scale-95 transition-transform",
+                                    workspaceFilter && "text-primary bg-primary/10"
                                 )}
                             >
                                 <FolderOpen className="w-4 h-4" />
@@ -191,12 +200,12 @@ export default function OptionsMenu({
                             </Button>
 
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => setInteractionState('category_active')}
                                 className={cn(
-                                    "h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5 active:scale-95 transition-transform",
-                                    filter !== 'all' && "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                                    "h-8 md:h-9 px-2 rounded-md gap-1.5 active:scale-95 transition-transform",
+                                    filter !== 'all' && "text-primary bg-primary/10"
                                 )}
                             >
                                 <LayoutGrid className="w-4 h-4" />
@@ -212,8 +221,8 @@ export default function OptionsMenu({
                                     if (!isSelectMode) onToggleSelectMode();
                                 }}
                                 className={cn(
-                                    "h-8 md:h-9 px-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5 active:scale-95 transition-transform",
-                                    isSelectMode && "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                                    "h-8 md:h-9 px-2 rounded-md hover:bg-muted gap-1.5 active:scale-95 transition-transform",
+                                    isSelectMode && "text-primary bg-primary/10"
                                 )}
                             >
                                 <CheckSquare className="w-4 h-4" />
@@ -236,7 +245,7 @@ export default function OptionsMenu({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setInteractionState('expanded')}
-                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
+                                className="h-7 w-7 rounded-md ml-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
@@ -246,8 +255,8 @@ export default function OptionsMenu({
                                 className={cn(
                                     "px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
                                     !workspaceFilter
-                                        ? "bg-indigo-600 text-white shadow-sm"
-                                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-slate-200"
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "bg-muted text-muted-foreground hover:bg-muted/80"
                                 )}
                             >
                                 All
@@ -260,12 +269,12 @@ export default function OptionsMenu({
                                     className={cn(
                                         "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
                                         workspaceFilter === ws.id
-                                            ? "bg-indigo-600 text-white shadow-sm"
-                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-slate-200"
+                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
                                     )}
                                 >
                                     <div
-                                        className="w-2 h-2 rounded-full ring-1 ring-white/20"
+                                        className="w-2 h-2 rounded-full ring-1 ring-background"
                                         style={{ backgroundColor: workspaceFilter === ws.id ? 'currentColor' : ws.color }}
                                     />
                                     {ws.name}
@@ -288,7 +297,7 @@ export default function OptionsMenu({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setInteractionState('expanded')}
-                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
+                                className="h-7 w-7 rounded-md ml-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
@@ -298,12 +307,12 @@ export default function OptionsMenu({
                                 return (
                                     <button
                                         key={key}
-                                        onClick={() => onFilterChange(key as any)}
+                                        onClick={() => onFilterChange(key as 'all' | 'doc' | 'youtube' | 'audio')}
                                         className={cn(
                                             "px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
                                             filter === key
-                                                ? "bg-indigo-600 text-white shadow-sm"
-                                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 hover:bg-slate-200"
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "bg-muted text-muted-foreground hover:bg-muted/80"
                                         )}
                                     >
                                         <Icon className="w-3 h-3" />
@@ -328,7 +337,7 @@ export default function OptionsMenu({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setInteractionState('expanded')}
-                                className="h-7 w-7 rounded-md ml-1 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
+                                className="h-7 w-7 rounded-md ml-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
@@ -339,7 +348,7 @@ export default function OptionsMenu({
                                 onClick={handleCancel}
                                 className={cn(
                                     "h-8 text-xs gap-1.5 font-medium",
-                                    isSelectMode && "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300"
+                                    isSelectMode && "bg-primary/10 text-primary hover:bg-primary/20"
                                 )}
                             >
                                 {isSelectMode ? <X className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
@@ -348,13 +357,13 @@ export default function OptionsMenu({
 
                             {isSelectMode && (
                                 <>
-                                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
+                                    <div className="w-px h-4 bg-border" />
 
                                     <Button
                                         size="sm"
                                         variant="ghost"
                                         onClick={onSelectAll}
-                                        className="h-8 text-xs px-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        className="h-8 text-xs px-2 hover:bg-muted"
                                     >
                                         All
                                     </Button>
@@ -367,7 +376,7 @@ export default function OptionsMenu({
                                                     <Button
                                                         size="sm"
                                                         variant="ghost"
-                                                        className="h-8 text-xs px-2 gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                        className="h-8 text-xs px-2 gap-1.5 hover:bg-muted"
                                                     >
                                                         <FolderPlus className="w-3.5 h-3.5" />
                                                         Move to...
@@ -395,13 +404,13 @@ export default function OptionsMenu({
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
 
-                                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
+                                            <div className="w-px h-4 bg-border" />
 
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
                                                 onClick={onBulkDelete}
-                                                className="h-8 text-xs px-2 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                className="h-8 text-xs px-2 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                                 Delete

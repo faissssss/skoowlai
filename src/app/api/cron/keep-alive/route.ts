@@ -1,8 +1,9 @@
 import { warmupConnection } from '@/lib/db';
+import { checkRedisHealth } from '@/lib/redis';
 import { NextResponse } from 'next/server';
 
 // This endpoint is called by Vercel Cron every 4 minutes
-// to keep the Neon database from auto-suspending
+// to keep both Neon database and Upstash Redis from auto-suspending
 export async function GET(request: Request) {
     // Verify the request is from Vercel Cron (security)
     const authHeader = request.headers.get('authorization');
@@ -14,19 +15,31 @@ export async function GET(request: Request) {
     }
 
     try {
-        const success = await warmupConnection();
+        // Warm up both database and Redis connections
+        const [dbSuccess, redisSuccess] = await Promise.all([
+            warmupConnection(),
+            checkRedisHealth()
+        ]);
+
+        const allHealthy = dbSuccess && redisSuccess;
 
         return NextResponse.json({
-            status: success ? 'ok' : 'failed',
+            status: allHealthy ? 'ok' : 'partial',
             timestamp: new Date().toISOString(),
-            message: success ? 'Database connection warm' : 'Failed to warm connection'
+            services: {
+                database: dbSuccess ? 'healthy' : 'failed',
+                redis: redisSuccess ? 'healthy' : 'failed'
+            },
+            message: allHealthy
+                ? 'All connections warm'
+                : `Some services failed: DB=${dbSuccess}, Redis=${redisSuccess}`
         });
     } catch (error) {
         console.error('Keep-alive cron error:', error);
         return NextResponse.json({
             status: 'error',
             timestamp: new Date().toISOString(),
-            message: 'Database keep-alive failed'
+            message: 'Keep-alive failed'
         }, { status: 500 });
     }
 }

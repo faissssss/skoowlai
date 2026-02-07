@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { CreditCard, Bug, Lightbulb, MessageSquare, Check, Crown, Loader2, User, LogOut } from 'lucide-react';
+import { Bug, Lightbulb, MessageSquare, Loader2, User, LogOut } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import BugReportModal from '@/components/BugReportModal';
 import FeedbackModal from '@/components/FeedbackModal';
@@ -41,7 +41,6 @@ function SubscriptionCard() {
     const [loading, setLoading] = useState(true);
     const [showPricing, setShowPricing] = useState(false);
     const [error, setError] = useState(false);
-    const [openingPortal, setOpeningPortal] = useState(false);
 
     // Client-side cache to render instantly while we refresh in background
     const CACHE_KEY = 'sub-cache-v1';
@@ -169,7 +168,7 @@ function SubscriptionCard() {
         return (
             <Card>
                 <CardContent className="py-8 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </CardContent>
             </Card>
         );
@@ -280,7 +279,6 @@ function SubscriptionCard() {
                     onCancel: async () => {
                         // Cancel via our API (no redirect to Dodo portal)
                         try {
-                            setOpeningPortal(true);
                             const res = await fetch('/api/subscription/cancel', {
                                 method: 'POST',
                                 credentials: 'include',
@@ -302,8 +300,6 @@ function SubscriptionCard() {
                         } catch (e) {
                             console.error('Failed to cancel subscription via API', e);
                             throw new Error('Unable to cancel subscription. Please try again.');
-                        } finally {
-                            setOpeningPortal(false);
                         }
                     },
                     onKeepSubscription: async () => {
@@ -328,16 +324,11 @@ export default function SettingsPage() {
     const { user, isLoaded } = useUser();
     const { signOut } = useClerk();
     const [activeTab, setActiveTab] = useState<string>('account');
-    const [isMounted, setIsMounted] = useState(false);
-
-    // Ensure client-only behaviors (hash, dialogs) run after hydration to avoid SSR mismatches
-    useEffect(() => {
-        setIsMounted(true);
-        const hash = window.location.hash.replace('#', '');
-        if (hash && ['account', 'billing'].includes(hash)) {
-            setActiveTab(hash);
-        }
-    }, []);
+    const isMounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false
+    );
     const [isBugReportOpen, setIsBugReportOpen] = useState(false);
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 

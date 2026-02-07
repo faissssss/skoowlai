@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, Fragment, useRef } from "react";
+import Image from "next/image";
 import { Dialog, Transition } from "@headlessui/react";
-import { Bug, X, Loader2, AlertTriangle, Info, AlertCircle, Upload, ImageIcon, Trash2 } from "lucide-react";
+import { Bug, X, Loader2, AlertTriangle, Info, AlertCircle, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 
@@ -17,15 +18,15 @@ const severityConfig = {
     low: {
         label: "Low",
         icon: Info,
-        color: "text-blue-400",
-        bg: "bg-blue-500/20",
-        border: "border-blue-500/30",
-        activeBg: "bg-blue-500",
+        color: "text-(--brand-accent)",
+        bg: "bg-(--brand-accent)/15",
+        border: "border-(--brand-accent)/25",
+        activeBg: "bg-(--brand-accent)",
     },
     medium: {
         label: "Medium",
         icon: AlertTriangle,
-        color: "text-yellow-400",
+        color: "text-yellow-500",
         bg: "bg-yellow-500/20",
         border: "border-yellow-500/30",
         activeBg: "bg-yellow-500",
@@ -33,10 +34,10 @@ const severityConfig = {
     critical: {
         label: "Critical",
         icon: AlertCircle,
-        color: "text-red-400",
-        bg: "bg-red-500/20",
-        border: "border-red-500/30",
-        activeBg: "bg-red-500",
+        color: "text-destructive",
+        bg: "bg-destructive/20",
+        border: "border-destructive/30",
+        activeBg: "bg-destructive",
     },
 };
 
@@ -159,21 +160,21 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-slate-900 border border-violet-500/30 shadow-2xl shadow-violet-500/10 transition-all flex flex-col">
+                            <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-card border border-primary/30 shadow-2xl shadow-black/20 transition-all flex flex-col">
                                 {/* Header */}
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 shrink-0">
                                     <Dialog.Title className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
-                                            <Bug className="w-5 h-5 text-violet-400" />
+                                        <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+                                            <Bug className="w-5 h-5 text-primary" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-semibold text-white">Report a Bug</h2>
-                                            <p className="text-sm text-slate-400">Help us improve Skoowl AI</p>
+                                            <h2 className="text-lg font-semibold text-foreground font-heading">Report a Bug</h2>
+                                            <p className="text-sm text-muted-foreground">Help us improve Skoowl AI</p>
                                         </div>
                                     </Dialog.Title>
                                     <button
                                         onClick={handleClose}
-                                        className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                                        className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -184,15 +185,15 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                     <form onSubmit={handleSubmit} className="space-y-5">
                                         {/* Error Message */}
                                         {error && (
-                                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
                                                 {error}
                                             </div>
                                         )}
 
                                         {/* Title */}
                                         <div>
-                                            <label htmlFor="bug-title" className="block text-sm font-medium text-slate-300 mb-2">
-                                                Title <span className="text-red-400">*</span>
+                                            <label htmlFor="bug-title" className="block text-sm font-medium text-foreground/80 mb-2">
+                                                Title <span className="text-destructive">*</span>
                                             </label>
                                             <input
                                                 id="bug-title"
@@ -200,14 +201,14 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                                 value={title}
                                                 onChange={(e) => setTitle(e.target.value)}
                                                 placeholder="Short summary of the issue"
-                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-colors"
+                                                className="w-full px-4 py-2.5 rounded-xl bg-background/30 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
                                             />
                                         </div>
 
                                         {/* Description */}
                                         <div>
-                                            <label htmlFor="bug-description" className="block text-sm font-medium text-slate-300 mb-2">
-                                                Description <span className="text-red-400">*</span>
+                                            <label htmlFor="bug-description" className="block text-sm font-medium text-foreground/80 mb-2">
+                                                Description <span className="text-destructive">*</span>
                                             </label>
                                             <textarea
                                                 id="bug-description"
@@ -215,14 +216,14 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                                 onChange={(e) => setDescription(e.target.value)}
                                                 placeholder="What happened? Steps to reproduce..."
                                                 rows={3}
-                                                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-colors resize-none"
+                                                className="w-full px-4 py-2.5 rounded-xl bg-background/30 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors resize-none"
                                             />
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             {/* Severity */}
                                             <div>
-                                                <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                <label className="block text-sm font-medium text-foreground/80 mb-2">
                                                     Severity
                                                 </label>
                                                 <div className="flex gap-2">
@@ -237,7 +238,7 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                                                 onClick={() => setSeverity(level)}
                                                                 className={`flex-1 flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl border transition-all ${isActive
                                                                     ? `${config.bg} ${config.border} ${config.color}`
-                                                                    : "bg-slate-800/50 border-white/10 text-slate-400 hover:border-white/20"
+                                                                    : "bg-background/30 border-border/40 text-muted-foreground hover:border-border/60"
                                                                     }`}
                                                             >
                                                                 <Icon className="w-4 h-4" />
@@ -250,8 +251,8 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
 
                                             {/* Screenshot Upload */}
                                             <div>
-                                                <label className="block text-sm font-medium text-slate-300 mb-2">
-                                                    Screenshot <span className="text-slate-500">(Optional)</span>
+                                                <label className="block text-sm font-medium text-foreground/80 mb-2">
+                                                    Screenshot <span className="text-muted-foreground">(Optional)</span>
                                                 </label>
 
                                                 {!screenshotPreview ? (
@@ -272,16 +273,16 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                                         }}
                                                         onClick={() => fileInputRef.current?.click()}
                                                         className={`w-full p-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all ${isDragging
-                                                            ? "border-violet-500 bg-violet-500/10"
-                                                            : "border-white/10 hover:border-white/20 bg-slate-800/30"
+                                                            ? "border-primary bg-primary/10"
+                                                            : "border-border/40 hover:border-border/60 bg-background/20"
                                                             }`}
                                                     >
                                                         <div className="flex items-center justify-center gap-2">
-                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDragging ? "bg-violet-500/20" : "bg-slate-700/50"
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDragging ? "bg-primary/20" : "bg-secondary/50"
                                                                 }`}>
-                                                                <Upload className={`w-4 h-4 ${isDragging ? "text-violet-400" : "text-slate-400"}`} />
+                                                                <Upload className={`w-4 h-4 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
                                                             </div>
-                                                            <span className="text-xs text-slate-400 font-medium">Upload</span>
+                                                            <span className="text-xs text-muted-foreground font-medium">Upload</span>
                                                         </div>
                                                         <input
                                                             ref={fileInputRef}
@@ -298,20 +299,22 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                                         />
                                                     </div>
                                                 ) : (
-                                                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-slate-800/30 h-[54px]">
-                                                        <img
+                                                    <div className="relative rounded-xl overflow-hidden border border-border/40 bg-background/20 h-[54px]">
+                                                        <Image
                                                             src={screenshotPreview}
                                                             alt="Screenshot preview"
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            unoptimized
+                                                            className="object-cover"
                                                         />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                                        <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
                                                         <button
                                                             type="button"
                                                             onClick={() => {
                                                                 setScreenshot(null);
                                                                 setScreenshotPreview(null);
                                                             }}
-                                                            className="absolute top-1.5 right-1.5 p-1 rounded-md bg-red-500/80 hover:bg-red-500 text-white transition-colors"
+                                                            className="absolute top-1.5 right-1.5 p-1 rounded-md bg-destructive/80 hover:bg-destructive text-white transition-colors"
                                                         >
                                                             <Trash2 className="w-3 h-3" />
                                                         </button>
@@ -324,7 +327,7 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
                                         <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white font-semibold shadow-lg shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                         >
                                             {isSubmitting ? (
                                                 <>

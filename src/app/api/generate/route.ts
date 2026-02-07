@@ -12,6 +12,7 @@ import { NoteConfig, DEFAULT_NOTE_CONFIG, buildSystemPrompt } from '@/lib/noteCo
 // Route segment config
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge'; // Use Edge runtime for faster cold starts
 
 export async function POST(req: NextRequest) {
     console.log('🚀 API route hit - starting processing');
@@ -440,27 +441,28 @@ export async function POST(req: NextRequest) {
 ${text ? `**SOURCE CONTENT TO ANALYZE (CREATE NOTES FROM THIS EXACT CONTENT):**
 
 ---BEGIN TRANSCRIPT---
-${text.slice(0, 50000)}
+${text.slice(0, 30000)}
 ---END TRANSCRIPT---
 
 Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT and END TRANSCRIPT markers above.` : ''}
 `;
 
-        const messages: any[] = [
-            { role: 'user', content: promptText }
+        // Limit messages array size for performance
+        const limitedMessages: any[] = [
+            { role: 'user', content: promptText.slice(0, 35000) } // Limit prompt size
         ];
 
         if (parts.length > 0) {
-            messages[0].experimental_attachments = parts.map(p => ({
+            limitedMessages[0].experimental_attachments = parts.map(p => ({
                 name: 'audio',
                 contentType: p.inlineData.mimeType,
                 url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}`
             }));
         }
 
-        console.log('📨 Sending messages to AI:', JSON.stringify(messages.map(m => ({
+        console.log('📨 Sending messages to AI:', JSON.stringify(limitedMessages.map(m => ({
             ...m,
-            experimental_attachments: m.experimental_attachments?.map((a: any) => ({ ...a, url: '[BASE64 DATA]' }))
+            experimental_attachments: m.experimental_attachments?.map((a: Record<string, unknown>) => ({ ...a, url: '[BASE64 DATA]' }))
         })), null, 2));
 
         // Use streamText to keep connection alive during generation (prevents Vercel timeouts)
@@ -474,7 +476,9 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
                     { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
                 ],
             }),
-            messages: messages,
+            messages: limitedMessages,
+            temperature: 0.3, // Lower temperature = faster, more deterministic
+            maxTokens: 8192, // Limit output size for speed
         });
 
         // Await the full text - connection stays open while streaming
@@ -510,15 +514,15 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
         // Increment usage count after successful deck creation
         await incrementUsage(user.id);
 
-        // Security Audit Log
+        // Security Audit Log - Fire and forget (don't block response)
         const { logAudit } = await import('@/lib/audit');
-        await logAudit({
+        logAudit({
             userId: user.id,
             action: 'GENERATE_DECK',
             resourceId: deck.id,
             details: { title, sourceType, inputLength: text?.length },
             ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
-        });
+        }).catch(() => { /* Silent fail - audit is non-critical */ });
 
         return NextResponse.json({ deckId: deck.id });
 

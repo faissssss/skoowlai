@@ -53,7 +53,7 @@ export default function DeleteDeckButton({ deckId }: { deckId: string }) {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     onClick={handleOpenDialog}
                 >
                     {isDeleting ? (
@@ -76,7 +76,7 @@ export default function DeleteDeckButton({ deckId }: { deckId: string }) {
                         <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-destructive hover:bg-destructive/90 text-white"
                             disabled={isDeleting}
                         >
                             {isDeleting ? 'Deleting...' : 'Delete'}

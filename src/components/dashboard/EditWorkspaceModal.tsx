@@ -10,7 +10,13 @@ import { toast } from 'sonner';
 interface EditWorkspaceModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onWorkspaceUpdated: (workspace: any) => void;
+    onWorkspaceUpdated: (workspace: {
+        id: string;
+        name: string;
+        description?: string;
+        color: string;
+        _count: { decks: number };
+    }) => void;
     workspace: {
         id: string;
         name: string;
@@ -100,7 +106,7 @@ export default function EditWorkspaceModal({
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800"
+                        className="relative bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-border"
                     >
                         {/* Header */}
                         <div className="flex justify-between items-center mb-6">
@@ -111,7 +117,7 @@ export default function EditWorkspaceModal({
                                 >
                                     <FolderOpen className="w-5 h-5 text-white" />
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                                <h2 className="text-xl font-bold text-foreground">
                                     Edit Workspace
                                 </h2>
                             </div>
@@ -123,7 +129,7 @@ export default function EditWorkspaceModal({
                         {/* Form */}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                     Name
                                 </label>
                                 <Input
@@ -136,7 +142,7 @@ export default function EditWorkspaceModal({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                     Description (optional)
                                 </label>
                                 <Input
@@ -148,7 +154,7 @@ export default function EditWorkspaceModal({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                     Color
                                 </label>
                                 <div className="flex flex-wrap gap-2">
@@ -157,7 +163,7 @@ export default function EditWorkspaceModal({
                                             key={c}
                                             type="button"
                                             onClick={() => setColor(c)}
-                                            className={`w-8 h-8 rounded-full transition-transform ${color === c ? 'ring-2 ring-offset-2 ring-slate-900 dark:ring-white scale-110' : 'hover:scale-105'
+                                            className={`w-8 h-8 rounded-full transition-transform ${color === c ? 'ring-2 ring-offset-2 ring-foreground scale-110' : 'hover:scale-105'
                                                 }`}
                                             style={{ backgroundColor: c }}
                                         />
@@ -168,7 +174,7 @@ export default function EditWorkspaceModal({
                             <Button
                                 type="submit"
                                 disabled={!name.trim() || isLoading}
-                                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white"
+                                className="w-full bg-linear-to-r from-primary to-(--brand-secondary) hover:from-primary/90 hover:to-(--brand-secondary)/90 text-white"
                             >
                                 {isLoading ? (
                                     <>

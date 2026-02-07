@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { SettingsButton } from "@/components/ui/settings-button";
 import { Badge } from "@/components/ui/badge";
@@ -98,13 +98,13 @@ export function CancelSubscriptionDialog({
     }
   };
 
-  const handleDialogClose = () => {
+  const handleDialogClose = useCallback(() => {
     setIsOpen(false);
     setShowConfirmation(false);
     setError(null);
     setIsLoading(false);
     onDialogClose?.();
-  };
+  }, [onDialogClose]);
 
   const handleGoBack = () => {
     setShowConfirmation(false);
@@ -124,7 +124,7 @@ export function CancelSubscriptionDialog({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, handleDialogClose]);
 
   return (
     <Dialog
@@ -141,14 +141,14 @@ export function CancelSubscriptionDialog({
         <SettingsButton
           variant="outline"
           beamColor="#ef4444"
-          className="bg-slate-900 border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-900/50 hover:bg-red-900/10 transition-colors"
+          className="bg-muted border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-colors"
         >
           {triggerButtonText || "Cancel Subscription"}
         </SettingsButton>
       </DialogTrigger>
       <DialogContent
         className={cn(
-          "text-foreground flex w-[95%] flex-col overflow-hidden p-0 sm:max-w-[1000px] md:w-[100%] md:flex-row bg-slate-900 border border-slate-800 text-slate-200 rounded-xl shadow-2xl",
+          "text-foreground flex w-[95%] flex-col overflow-hidden p-0 sm:max-w-[1000px] md:w-full md:flex-row bg-background border border-border rounded-xl shadow-2xl",
           leftPanelImageUrl ? "" : "sm:max-w-[500px]",
           className,
         )}
@@ -169,8 +169,8 @@ export function CancelSubscriptionDialog({
               alt="Cancel Subscription"
               className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="via-background/30 to-background/90 absolute inset-0 hidden bg-gradient-to-r from-transparent dark:block"></div>
-            <div className="from-background/80 to-background/20 absolute inset-0 hidden bg-gradient-to-t via-transparent dark:block"></div>
+            <div className="via-background/30 to-background/90 absolute inset-0 hidden bg-linear-to-r from-transparent dark:block"></div>
+            <div className="from-background/80 to-background/20 absolute inset-0 hidden bg-linear-to-t via-transparent dark:block"></div>
           </div>
         )}
         <div

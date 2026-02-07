@@ -27,7 +27,7 @@ interface Deck {
     id: string;
     title: string;
     sourceType: string | null;
-    createdAt: Date;
+    createdAt: Date | string;
 }
 
 interface Workspace {
@@ -95,12 +95,12 @@ export default function WorkspaceCard({
                 onDrop={onDrop}
                 data-workspace-id={workspace.id}
                 className={cn(
-                    "relative bg-white dark:bg-slate-900 rounded-xl border p-6 cursor-pointer transition-all group h-full flex flex-col",
+                    "relative bg-card rounded-xl border p-6 cursor-pointer transition-all group h-full flex flex-col",
                     isDragOver
-                        ? "border-indigo-500 ring-2 ring-indigo-500/40 shadow-[0_0_25px_rgba(99,102,241,0.25)] scale-[1.02] bg-indigo-50/50 dark:bg-indigo-950/20"
+                        ? "border-primary ring-2 ring-primary/40 shadow-[0_0_25px_rgba(91,77,255,0.25)] scale-[1.02] bg-primary/10"
                         : isSelected
-                            ? "border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg shadow-indigo-500/10"
-                            : "border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10"
+                            ? "border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10"
+                            : "border-border hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10"
                 )}
             >
                 {/* Header with icon and actions */}
@@ -119,7 +119,7 @@ export default function WorkspaceCard({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <MoreHorizontal className="w-4 h-4" />
@@ -137,7 +137,7 @@ export default function WorkspaceCard({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onClick={handleDeleteClick}
-                                    className="text-red-600 dark:text-red-400"
+                                    className="text-destructive"
                                 >
                                     <Trash2 className="w-4 h-4 mr-2" />
                                     Delete
@@ -148,21 +148,21 @@ export default function WorkspaceCard({
                 </div>
 
                 {/* Name */}
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">
                     {workspace.name}
                 </h3>
 
                 {/* Description or deck count */}
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 line-clamp-2">
+                <p className="text-sm text-muted-foreground mb-6 line-clamp-2">
                     {workspace.description || `${workspace._count.decks} study ${workspace._count.decks === 1 ? 'deck' : 'decks'}`}
                 </p>
 
                 {/* Footer */}
-                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                <div className="mt-auto pt-4 border-t border-border flex justify-between items-center">
+                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-primary/10 text-primary">
                         {workspace._count.decks} {workspace._count.decks === 1 ? 'deck' : 'decks'}
                     </span>
-                    <span className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors">
+                    <span className="text-xs text-muted-foreground/60 group-hover:text-primary transition-colors">
                         Click to view →
                     </span>
                 </div>
@@ -188,7 +188,7 @@ export default function WorkspaceCard({
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleConfirmDelete}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-destructive hover:bg-destructive/90 text-white"
                         >
                             Delete Workspace
                         </AlertDialogAction>

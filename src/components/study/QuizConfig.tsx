@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChoiceChipGroup } from '@/components/ui/choice-chip';
-import { Loader2, Brain, Clock, CheckCircle2, HelpCircle, Edit3, Shuffle, X } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, HelpCircle, Pencil, Shuffle, X, ClipboardCheck } from 'lucide-react';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import PricingModal from '@/components/PricingModal';
 import UsageLimitModal from '@/components/UsageLimitModal';
@@ -73,7 +73,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
     const typeOptions = [
         { value: 'multiple-choice', label: 'Multiple Choice', icon: <CheckCircle2 className="w-4 h-4" /> },
         { value: 'true-false', label: 'True / False', icon: <HelpCircle className="w-4 h-4" /> },
-        { value: 'fill-in', label: 'Fill-in', icon: <Edit3 className="w-4 h-4" /> },
+        { value: 'fill-in', label: 'Fill-in', icon: <Pencil className="w-4 h-4" /> },
         { value: 'mixed', label: 'Mixed', icon: <Shuffle className="w-4 h-4" /> },
     ];
 
@@ -102,7 +102,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+                            className="fixed inset-0 z-100 bg-black/50 backdrop-blur-sm"
                             onClick={onClose}
                         />
 
@@ -112,23 +112,23 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                            className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
+                            className="fixed inset-0 z-100 flex items-center justify-center p-4 pointer-events-none"
                         >
-                            <div className="w-full max-w-[90vw] sm:max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto max-h-[90vh] sm:max-h-none flex flex-col">
+                            <div className="w-full max-w-[90vw] sm:max-w-xl bg-card rounded-2xl shadow-2xl overflow-hidden pointer-events-auto max-h-[90vh] sm:max-h-none flex flex-col">
                                 {/* Header */}
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2 sm:gap-3">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                                            <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-yellow-500 to-amber-500 flex items-center justify-center">
+                                            <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                         </div>
                                         <div>
-                                            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Create Quiz</h2>
-                                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">Configure your quiz preferences</p>
+                                            <h2 className="text-base sm:text-lg font-semibold text-foreground">Create Quiz</h2>
+                                            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Configure your quiz preferences</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={onClose}
-                                        className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                     >
                                         <X className="w-5 h-5" />
                                     </button>
@@ -188,7 +188,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                                                     value={customCount}
                                                     onChange={(e) => setCustomCount(e.target.value)}
                                                     placeholder="Enter number (1-50)"
-                                                    className="w-40 text-center dark:bg-slate-900 dark:border-slate-600"
+                                                    className="w-40 text-center bg-background border-border"
                                                     disabled={isGenerating}
                                                 />
                                             </div>
@@ -197,21 +197,21 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                                 </div>
 
                                 {/* Footer */}
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-muted/50 shrink-0">
                                     <Button
                                         onClick={handleCreate}
                                         disabled={isGenerating || (count === 'custom' && (!customCount || parseInt(customCount) < 1))}
-                                        className="w-full h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-violet-500/25 transition-all"
+                                        className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-indigo-600 hover:from-(--brand-primary)/90 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
                                     >
                                         {isGenerating ? (
                                             <>
-                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                                Generating...
+                                                <Loader2 className="w-5 h-5 mr-2 animate-spin text-white" />
+                                                <span className="text-white">Generating...</span>
                                             </>
                                         ) : (
                                             <>
-                                                <Brain className="w-5 h-5 mr-2" />
-                                                Generate Quiz
+                                                <ClipboardCheck className="w-5 h-5 mr-2 text-white" />
+                                                <span className="text-white">Generate Quiz</span>
                                             </>
                                         )}
                                     </Button>

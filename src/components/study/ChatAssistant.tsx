@@ -1,9 +1,42 @@
 'use client';
 
+// Type declaration for SpeechRecognition API (used by voice recording feature)
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    maxAlternatives: number;
+    onaudioend: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onaudiostart: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onerror: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onnomatch: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onresult: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onsoundend: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onsoundstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onspeechend: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onspeechstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+    abort(): void;
+    start(): void;
+    stop(): void;
+}
+
+interface SpeechRecognitionConstructor {
+    new(): SpeechRecognition;
+}
+
+declare global {
+    interface Window {
+        SpeechRecognition?: SpeechRecognitionConstructor;
+        webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    }
+}
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, ArrowRight, Mic, MicOff, Paperclip, X, Trash2, Maximize2 } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Bot, Send, Loader2, ArrowRight, Mic, MicOff, Paperclip, X, Trash2, Maximize2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -68,13 +101,17 @@ function TypingMessage({
     useEffect(() => {
         // Skip animation for historical messages
         if (isHistorical) {
-            setDisplayedLength(content.length);
+            startTransition(() => {
+                setDisplayedLength(content.length);
+            });
             return;
         }
 
         // Reset when new message starts
         if (content.length < prevContentLengthRef.current) {
-            setDisplayedLength(0);
+            startTransition(() => {
+                setDisplayedLength(0);
+            });
         }
         prevContentLengthRef.current = content.length;
 
@@ -84,7 +121,9 @@ function TypingMessage({
             const tickInterval = 20;
 
             const timer = setTimeout(() => {
-                setDisplayedLength(prev => Math.min(prev + charsPerTick, content.length));
+                startTransition(() => {
+                    setDisplayedLength(prev => Math.min(prev + charsPerTick, content.length));
+                });
             }, tickInterval);
 
             return () => clearTimeout(timer);
@@ -99,17 +138,17 @@ function TypingMessage({
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
-                        strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
-                        em: ({ node, ...props }) => <em className="italic" {...props} />,
-                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                        ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-0.5" {...props} />,
-                        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5" {...props} />,
-                        li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
-                        h1: ({ node, ...props }) => <h1 className="text-base font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
-                        h2: ({ node, ...props }) => <h2 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
-                        h3: ({ node, ...props }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0" {...props} />,
-                        hr: ({ node, ...props }) => <hr className="my-2 border-slate-200 dark:border-slate-700" {...props} />,
-                        code: ({ node, ...props }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs" {...props} />,
+                        strong: ({ ...props }) => <strong className="font-semibold text-white" {...props} />,
+                        em: ({ ...props }) => <em className="italic text-white" {...props} />,
+                        p: ({ ...props }) => <p className="mb-2 last:mb-0 text-white" {...props} />,
+                        ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 space-y-0.5 text-white" {...props} />,
+                        ol: ({ ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5 text-white" {...props} />,
+                        li: ({ ...props }) => <li className="pl-0.5 text-white" {...props} />,
+                        h1: ({ ...props }) => <h1 className="text-base font-semibold mb-1.5 mt-2 first:mt-0 text-white" {...props} />,
+                        h2: ({ ...props }) => <h2 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0 text-white" {...props} />,
+                        h3: ({ ...props }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0 text-white" {...props} />,
+                        hr: ({ ...props }) => <hr className="my-2 border-slate-700" {...props} />,
+                        code: ({ ...props }) => <code className="bg-slate-800 px-1 py-0.5 rounded text-xs text-white" {...props} />,
                     }}
                 >
                     {formattedContent}
@@ -130,23 +169,23 @@ function TypingMessage({
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
-                    strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
-                    em: ({ node, ...props }) => <em className="italic" {...props} />,
-                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                    ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2 space-y-0.5" {...props} />,
-                    ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5" {...props} />,
-                    li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
-                    h1: ({ node, ...props }) => <h1 className="text-base font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
-                    h2: ({ node, ...props }) => <h2 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0" {...props} />,
-                    h3: ({ node, ...props }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0" {...props} />,
-                    hr: ({ node, ...props }) => <hr className="my-2 border-slate-200 dark:border-slate-700" {...props} />,
-                    code: ({ node, ...props }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-xs" {...props} />,
+                    strong: ({ ...props }) => <strong className="font-semibold text-white" {...props} />,
+                    em: ({ ...props }) => <em className="italic text-white" {...props} />,
+                    p: ({ ...props }) => <p className="mb-2 last:mb-0 text-white" {...props} />,
+                    ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 space-y-0.5 text-white" {...props} />,
+                    ol: ({ ...props }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5 text-white" {...props} />,
+                    li: ({ ...props }) => <li className="pl-0.5 text-white" {...props} />,
+                    h1: ({ ...props }) => <h1 className="text-base font-semibold mb-1.5 mt-2 first:mt-0 text-white" {...props} />,
+                    h2: ({ ...props }) => <h2 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0 text-white" {...props} />,
+                    h3: ({ ...props }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0 text-white" {...props} />,
+                    hr: ({ ...props }) => <hr className="my-2 border-slate-700" {...props} />,
+                    code: ({ ...props }) => <code className="bg-slate-800 px-1 py-0.5 rounded text-xs text-white" {...props} />,
                 }}
             >
                 {displayContent}
             </ReactMarkdown>
             {(isStreaming || isTyping) && (
-                <span className="inline-block w-1.5 h-4 bg-indigo-500 ml-0.5 animate-pulse rounded-sm align-middle" />
+                <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm align-middle" />
             )}
         </div>
     );
@@ -164,7 +203,6 @@ export default function ChatAssistant({
     rewriteRequest,
     onRewriteInsert,
     onRewriteClear,
-    editorRef,
 }: {
     context: string;
     deckId: string;
@@ -187,7 +225,6 @@ export default function ChatAssistant({
     const [isRewriting, setIsRewriting] = useState(false);
     const [focusContent, setFocusContent] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const recognitionRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Load conversation history on mount
@@ -215,7 +252,7 @@ export default function ChatAssistant({
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
-    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [isTranscribing, _setIsTranscribing] = useState(false); // Voice transcription loading state - setter unused but reserved
 
     // Cleanup on unmount
     useEffect(() => {
@@ -270,7 +307,11 @@ export default function ChatAssistant({
                 body: JSON.stringify({ text, action, deckId }),
             });
 
-            if (!response.ok) throw new Error('Failed to rewrite');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Rewrite API Error:', errorData);
+                throw new Error(errorData.error || 'Failed to rewrite');
+            }
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
@@ -396,7 +437,7 @@ export default function ChatAssistant({
                     }
 
                     // Transcribe with Groq Whisper
-                    setIsTranscribing(true);
+                    _setIsTranscribing(true);
                     try {
                         const arrayBuffer = await audioBlob.arrayBuffer();
                         const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
@@ -418,7 +459,7 @@ export default function ChatAssistant({
                     } catch (err) {
                         console.error('Voice transcription error:', err);
                     } finally {
-                        setIsTranscribing(false);
+                        _setIsTranscribing(false);
                     }
                 };
 
@@ -499,7 +540,11 @@ export default function ChatAssistant({
                 }),
             });
 
-            if (!response.ok) throw new Error('Failed to get response');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Chat API Error Response:', errorData);
+                throw new Error(errorData.details || 'Failed to get response');
+            }
 
             // Add empty assistant message that will be filled
             const assistantMsg: Message = {
@@ -602,9 +647,9 @@ export default function ChatAssistant({
             )}>
                 <Button
                     onClick={onToggle}
-                    className="h-12 w-10 rounded-l-xl rounded-r-none shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center"
+                    className="h-12 w-10 rounded-l-xl rounded-r-none shadow-lg bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white flex items-center justify-center"
                 >
-                    <MessageSquare className="h-5 w-5" />
+                    <Bot className="h-5 w-5" />
                 </Button>
             </div>
 
@@ -616,16 +661,16 @@ export default function ChatAssistant({
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed top-16 right-0 bottom-0 z-40 w-[400px] bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl"
+                        className="fixed top-16 right-0 bottom-0 z-40 w-[400px] bg-background border-l border-border flex flex-col shadow-2xl"
                     >
                         {/* Header - Toolbar Only */}
-                        <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex-shrink-0">
+                        <div className="px-6 py-3 border-b border-border bg-background shrink-0">
                             <div className="flex items-center justify-between">
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setShowClearDialog(true)}
-                                    className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 p-2 h-auto"
+                                    className="text-muted-foreground hover:text-destructive p-2 h-auto"
                                     title="Clear History"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -634,7 +679,7 @@ export default function ChatAssistant({
                                     variant="ghost"
                                     size="sm"
                                     onClick={onToggle}
-                                    className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                                    className="text-muted-foreground hover:text-foreground"
                                 >
                                     Hide <ArrowRight className="w-4 h-4 ml-1" />
                                 </Button>
@@ -645,15 +690,15 @@ export default function ChatAssistant({
                         <div className="flex-1 overflow-y-auto p-6" ref={scrollRef}>
                             <div className="space-y-6">
                                 {/* Intro Header - Scrollable with messages */}
-                                <div className="pb-4 border-b border-slate-200 dark:border-slate-800 mb-2">
-                                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Hey, I'm skoowl ai</h2>
-                                    <p className="text-slate-500 dark:text-slate-400 text-sm">
+                                <div className="pb-4 border-b border-border mb-2">
+                                    <h2 className="font-heading text-2xl font-bold text-foreground mb-1">Hey, I&apos;m Skoowl AI</h2>
+                                    <p className="text-muted-foreground text-sm">
                                         I can work with you on your doc and answer any questions!
                                     </p>
                                 </div>
 
                                 {messages.length === 0 && (
-                                    <div className="text-center text-slate-500 mt-6">
+                                    <div className="text-center text-muted-foreground mt-6">
                                         <p className="text-sm">Type a question below to get started.</p>
                                     </div>
                                 )}
@@ -669,20 +714,20 @@ export default function ChatAssistant({
                                         {m.citation && m.role === 'user' && (
                                             <div className="flex items-start gap-2 mb-2 max-w-[85%] opacity-80 hover:opacity-100 transition-opacity">
                                                 <div className="mt-1.5">
-                                                    <div className="w-3 h-3 border-l-2 border-b-2 border-slate-400 rounded-bl-md" />
+                                                    <div className="w-3 h-3 border-l-2 border-b-2 border-muted-foreground rounded-bl-md" />
                                                 </div>
-                                                <p className="text-xs text-slate-600 dark:text-slate-400 italic line-clamp-2 text-left bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                                                    "{m.citation}"
+                                                <p className="text-xs text-muted-foreground italic line-clamp-2 text-left bg-muted px-2 py-1 rounded">
+                                                    &ldquo;{m.citation}&rdquo;
                                                 </p>
                                             </div>
                                         )}
 
                                         <div
                                             className={cn(
-                                                "max-w-[85%] rounded-2xl px-5 py-3 text-sm leading-relaxed relative group",
+                                                "max-w-[85%] w-fit rounded-2xl px-5 py-3 text-sm leading-relaxed relative group",
                                                 m.role === 'user'
-                                                    ? "bg-indigo-600 text-white"
-                                                    : "bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800"
+                                                    ? "bg-primary text-white self-end ml-auto"
+                                                    : "bg-[#1e293b] text-white border border-slate-700 self-start mr-auto"
                                             )}
                                         >
                                             {/* Focus Read Button - Only for assistant messages */}
@@ -692,7 +737,7 @@ export default function ChatAssistant({
                                                         e.stopPropagation();
                                                         setFocusContent(m.content);
                                                     }}
-                                                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 transition-all"
+                                                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-background/80 text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-all"
                                                     title="Focus Read"
                                                 >
                                                     <Maximize2 className="w-3.5 h-3.5" />
@@ -707,16 +752,16 @@ export default function ChatAssistant({
                                                     isHistorical={m.isHistorical}
                                                 />
                                             ) : (
-                                                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                                                <div className="whitespace-pre-wrap wrap-break-word">{m.content}</div>
                                             )}
                                         </div>
                                     </div>
                                 ))}
                                 {isLoading && (
                                     <div className="flex justify-start w-full">
-                                        <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-5 py-3 flex items-center gap-2">
-                                            <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                                            <span className="text-xs text-slate-500 dark:text-slate-400">Thinking...</span>
+                                        <div className="bg-muted border border-border rounded-2xl px-5 py-3 flex items-center gap-2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                            <span className="text-xs text-muted-foreground">Thinking...</span>
                                         </div>
                                     </div>
                                 )}
@@ -737,20 +782,20 @@ export default function ChatAssistant({
                         </div>
 
                         {/* Input Bar - Fixed */}
-                        <div className="p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+                        <div className="p-4 bg-background border-t border-border shrink-0">
                             {/* Attached Files Display */}
                             {attachedFiles.length > 0 && (
                                 <div className="mb-3 flex flex-wrap gap-2">
                                     {attachedFiles.map((file, index) => (
                                         <div
                                             key={index}
-                                            className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 rounded-lg px-3 py-1.5 text-xs"
+                                            className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5 text-xs"
                                         >
                                             <Paperclip className="w-3 h-3" />
                                             <span className="max-w-[150px] truncate">{file.name}</span>
                                             <button
                                                 onClick={() => removeFile(index)}
-                                                className="text-slate-500 hover:text-red-500"
+                                                className="text-muted-foreground hover:text-destructive"
                                             >
                                                 <X className="w-3 h-3" />
                                             </button>
@@ -761,22 +806,30 @@ export default function ChatAssistant({
 
                             {/* Recording Indicator */}
                             {isRecording && (
-                                <div className="mb-2 flex items-center gap-2 text-xs text-red-500">
-                                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                <div className="mb-2 flex items-center gap-2 text-xs text-destructive">
+                                    <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
                                     <span>Recording... Speak now</span>
+                                </div>
+                            )}
+
+                            {/* Transcribing Indicator */}
+                            {isTranscribing && (
+                                <div className="mb-2 flex items-center gap-2 text-xs text-primary">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <span>Transcribing...</span>
                                 </div>
                             )}
 
                             {/* Citation Card */}
                             {activeCitation && (
-                                <div className="mb-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex items-start gap-3">
-                                    <ArrowRight className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0 rotate-180" />
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 flex-1 line-clamp-3">
-                                        "{activeCitation}"
+                                <div className="mb-3 bg-muted border border-border rounded-lg p-3 flex items-start gap-3">
+                                    <ArrowRight className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0 rotate-180" />
+                                    <p className="text-sm text-foreground flex-1 line-clamp-3">
+                                        &quot;{activeCitation}&quot;
                                     </p>
                                     <button
                                         onClick={clearCitation}
-                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0"
+                                        className="text-muted-foreground hover:text-foreground shrink-0"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -801,7 +854,7 @@ export default function ChatAssistant({
                                     variant="ghost"
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={isLoading}
-                                    className="h-9 w-9 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex-shrink-0"
+                                    className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
                                 >
                                     <Paperclip className="w-4 h-4" />
                                 </Button>
@@ -813,8 +866,8 @@ export default function ChatAssistant({
                                         onChange={(e) => setInput(e.target.value)}
                                         placeholder={isRecording ? "Listening..." : "Type a question here..."}
                                         className={cn(
-                                            "w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 placeholder:text-slate-500 rounded-xl pr-12 py-3 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500",
-                                            isRecording && "border-red-300 dark:border-red-700"
+                                            "w-full bg-muted border-border text-foreground placeholder:text-muted-foreground rounded-xl pr-12 py-3 focus-visible:ring-primary/50 focus-visible:border-primary",
+                                            isRecording && "border-destructive"
                                         )}
                                         disabled={isLoading}
                                     />
@@ -824,7 +877,7 @@ export default function ChatAssistant({
                                         type="submit"
                                         size="icon"
                                         disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg disabled:opacity-50"
                                     >
                                         <Send className="w-4 h-4" />
                                     </Button>
@@ -838,17 +891,17 @@ export default function ChatAssistant({
                                     onClick={toggleRecording}
                                     disabled={isLoading}
                                     className={cn(
-                                        "h-9 w-9 flex-shrink-0",
+                                        "h-9 w-9 shrink-0",
                                         isRecording
-                                            ? "bg-red-500 hover:bg-red-600 text-white"
-                                            : "text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                                            ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                            : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                                     )}
                                 >
                                     {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                                 </Button>
                             </form>
                             <div className="text-center mt-2">
-                                <p className="text-[10px] text-slate-500 dark:text-slate-600">
+                                <p className="text-[10px] text-muted-foreground">
                                     AI can make mistakes. Check important info.
                                 </p>
                             </div>
@@ -859,10 +912,10 @@ export default function ChatAssistant({
 
             {/* Clear History Confirmation Dialog */}
             <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-                <DialogContent className="sm:max-w-md bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                <DialogContent className="sm:max-w-md bg-background border-border">
                     <DialogHeader>
-                        <DialogTitle className="text-slate-900 dark:text-white">Clear Chat History?</DialogTitle>
-                        <DialogDescription className="text-slate-600 dark:text-slate-400">
+                        <DialogTitle className="text-foreground">Clear Chat History?</DialogTitle>
+                        <DialogDescription className="text-muted-foreground">
                             Are you sure you want to delete all chat messages? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
@@ -870,14 +923,14 @@ export default function ChatAssistant({
                         <Button
                             variant="outline"
                             onClick={() => setShowClearDialog(false)}
-                            className="border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="border-border text-foreground hover:bg-muted"
                         >
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={handleClearHistory}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                         >
                             Delete
                         </Button>

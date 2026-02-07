@@ -14,7 +14,7 @@ import ShareModal from '@/components/ShareModal';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Role } from '@/lib/permissions';
-import { EditorProvider, useEditorContext, RewriteRequest } from './EditorContext';
+import { EditorProvider, useEditorContext } from './EditorContext';
 import PricingModal from '@/components/PricingModal';
 import { IS_PRE_LAUNCH } from '@/lib/config';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
@@ -159,26 +159,24 @@ function StudyPageLayoutInner({
 
     // Determine if user can share (only owner)
     const canShare = userRole === 'OWNER';
-    // Determine if user can edit
-    const canEdit = userRole === 'OWNER' || userRole === 'EDITOR';
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col overflow-x-hidden">
+        <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
             {/* Header */}
-            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 md:px-6 h-14 md:h-16 flex items-center sticky top-0 z-30 relative">
+            <header className="bg-card border-b border-border px-3 md:px-6 h-14 md:h-16 flex items-center sticky top-0 z-30">
                 {/* Left: Mobile menu + Back button + Title */}
                 <div className="flex items-center gap-1.5 md:gap-3 min-w-0 flex-1">
                     {/* Mobile sidebar toggle */}
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="md:hidden text-slate-500 dark:text-slate-400 h-8 w-8 shrink-0"
+                        className="md:hidden text-muted-foreground h-8 w-8 shrink-0"
                         onClick={() => setIsMobileSidebarOpen(true)}
                     >
                         <Menu className="w-5 h-5" />
                     </Button>
                     <Link href="/dashboard" className="hidden md:block">
-                        <Button variant="ghost" size="icon" className="text-slate-500 dark:text-slate-400">
+                        <Button variant="ghost" size="icon" className="text-muted-foreground">
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                     </Link>
@@ -194,7 +192,7 @@ function StudyPageLayoutInner({
                                 onKeyDown={handleTitleKeyDown}
                                 onBlur={() => setTimeout(() => { if (isEditingTitle) handleSaveTitle(); }, 150)}
                                 disabled={isSavingTitle}
-                                className="font-semibold text-sm md:text-base text-slate-900 dark:text-slate-100 bg-transparent border-b-2 border-indigo-500 outline-none px-1 py-0.5 min-w-0 w-full max-w-[100px] md:max-w-[300px]"
+                                className="font-semibold text-sm md:text-base text-foreground bg-transparent border-b-2 border-primary outline-none px-1 py-0.5 min-w-0 w-full max-w-[100px] md:max-w-[300px]"
                                 placeholder="Enter title..."
                             />
                             <Button
@@ -209,7 +207,7 @@ function StudyPageLayoutInner({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 md:h-7 md:w-7 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+                                className="h-6 w-6 md:h-7 md:w-7 text-muted-foreground hover:bg-accent shrink-0"
                                 onClick={handleCancelEditTitle}
                                 disabled={isSavingTitle}
                             >
@@ -219,12 +217,12 @@ function StudyPageLayoutInner({
                     ) : (
                         <div className="flex items-center gap-1.5 group cursor-pointer min-w-0" onClick={handleStartEditTitle}>
                             <h1
-                                className="font-semibold text-sm md:text-base text-slate-900 dark:text-slate-100 truncate"
+                                className="font-semibold text-sm md:text-base text-foreground truncate"
                                 title={currentTitle}
                             >
                                 {shortenTitle(currentTitle, 12)}
                             </h1>
-                            <Pencil className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                            <Pencil className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                         </div>
                     )}
 
@@ -233,8 +231,8 @@ function StudyPageLayoutInner({
                         <span className={cn(
                             "px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline",
                             userRole === 'EDITOR'
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                ? "bg-primary/10 text-primary"
+                                : "bg-secondary text-muted-foreground"
                         )}>
                             {userRole === 'EDITOR' ? 'Editor' : 'Viewer'}
                         </span>
@@ -243,13 +241,13 @@ function StudyPageLayoutInner({
                     {/* Workspace Badge */}
                     {deck.workspace && (
                         <span
-                            className="px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800"
+                            className="px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline-flex items-center gap-1 bg-secondary"
                         >
                             <div
                                 className="w-2 h-2 rounded-full"
                                 style={{ backgroundColor: deck.workspace.color }}
                             />
-                            <span className="text-slate-600 dark:text-slate-400">{deck.workspace.name}</span>
+                            <span className="text-muted-foreground">{deck.workspace.name}</span>
                         </span>
                     )}
                 </div>
@@ -279,7 +277,7 @@ function StudyPageLayoutInner({
                                 onClick={() => setIsShareModalOpen(true)}
                                 variant="outline"
                                 size="sm"
-                                className="gap-1.5 border-white/20 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 h-8 md:h-9 px-2 md:px-3 hover:border-indigo-500/50 hover:text-indigo-500 transition-colors"
+                                className="gap-1.5 h-8 md:h-9 px-2 md:px-3"
                             >
                                 <UserPlus className="w-4 h-4" />
                                 <span className="hidden md:inline">Share</span>
@@ -342,11 +340,11 @@ function StudyPageLayoutInner({
                                 animate={{ x: 0 }}
                                 exit={{ x: -280 }}
                                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="fixed left-0 top-0 bottom-0 w-[280px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 md:hidden flex flex-col"
+                                className="fixed left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border z-50 md:hidden flex flex-col"
                             >
                                 {/* Mobile Drawer Header */}
-                                <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                                    <Link href="/dashboard" className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                <div className="p-4 border-b border-border flex items-center justify-between">
+                                    <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground">
                                         <ArrowLeft className="w-4 h-4" />
                                         <span className="text-sm font-medium">Back to Dashboard</span>
                                     </Link>
@@ -371,7 +369,7 @@ function StudyPageLayoutInner({
                                                     {isActive && (
                                                         <motion.div
                                                             layoutId="mobile-sidebar-active-indicator"
-                                                            className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-md"
+                                                            className="absolute inset-0 bg-primary/10 rounded-md"
                                                             transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                                                         />
                                                     )}
@@ -379,7 +377,7 @@ function StudyPageLayoutInner({
                                                         variant="ghost"
                                                         className={cn(
                                                             "w-full gap-3 justify-start relative z-10",
-                                                            isActive && "text-indigo-600 dark:text-indigo-400"
+                                                            isActive && "text-primary"
                                                         )}
                                                     >
                                                         <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
@@ -393,10 +391,10 @@ function StudyPageLayoutInner({
 
                                 {/* Mobile Upgrade Button - Hidden during pre-launch */}
                                 {!IS_PRE_LAUNCH && (
-                                    <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+                                    <div className="p-4 border-t border-border">
                                         <Button
                                             onClick={() => { setIsPricingOpen(true); setIsMobileSidebarOpen(false); }}
-                                            className="w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25"
+                                            className="w-full gap-2 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white shadow-lg shadow-black/20"
                                         >
                                             <Crown className="w-4 h-4 shrink-0" />
                                             <span>Upgrade to Pro</span>
@@ -413,10 +411,10 @@ function StudyPageLayoutInner({
                     initial={false}
                     animate={{ width: isSidebarCollapsed ? 80 : 256 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="hidden md:flex bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-r border-y border-slate-200 dark:border-slate-700/50 flex-col fixed left-0 top-1/2 -translate-y-1/2 h-[70vh] z-20 overflow-y-auto rounded-r-2xl shadow-xl shadow-slate-900/10 dark:shadow-black/30"
+                    className="hidden md:flex bg-card/95 backdrop-blur-sm border-r border-y border-border/60 flex-col fixed left-0 top-1/2 -translate-y-1/2 h-[70vh] z-20 overflow-y-auto rounded-r-2xl shadow-xl shadow-black/20"
                 >
                     {/* Sidebar Header with Toggle */}
-                    <div className="p-4 border-b border-slate-200/50 dark:border-slate-700/50 flex items-center justify-start">
+                    <div className="p-4 border-b border-border/60 flex items-center justify-start">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -438,7 +436,7 @@ function StudyPageLayoutInner({
                                         {isActive && (
                                             <motion.div
                                                 layoutId="sidebar-active-indicator"
-                                                className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-md"
+                                                className="absolute inset-0 bg-primary/10 rounded-md"
                                                 transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                                             />
                                         )}
@@ -446,7 +444,7 @@ function StudyPageLayoutInner({
                                             variant="ghost"
                                             className={cn(
                                                 "w-full gap-3 transition-all duration-300 justify-start relative z-10",
-                                                isActive && "text-indigo-600 dark:text-indigo-400"
+                                                isActive && "text-primary"
                                             )}
                                             title={isSidebarCollapsed ? item.label : undefined}
                                         >
@@ -475,11 +473,11 @@ function StudyPageLayoutInner({
 
                     {/* Upgrade Plan Button - Hidden during pre-launch */}
                     {!IS_PRE_LAUNCH && (
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+                        <div className="p-4 border-t border-border">
                             <AnimatedDockButton className="w-full">
                                 <Button
                                     onClick={() => setIsPricingOpen(true)}
-                                    className="w-full gap-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25 justify-center"
+                                    className="w-full gap-2 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white shadow-lg shadow-black/20 justify-center"
                                     title={isSidebarCollapsed ? "Upgrade to Pro" : undefined}
                                 >
                                     <Crown className="w-4 h-4 shrink-0" />

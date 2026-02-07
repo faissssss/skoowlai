@@ -125,16 +125,16 @@ export default function FileUpload() {
 
     return (
         // Main container: w-full, max-w-full, box-border, overflow-hidden
-        <div className="w-full max-w-full box-border p-4 sm:p-6 bg-white dark:bg-slate-900 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors overflow-hidden">
+        <div className="w-full max-w-full box-border p-4 sm:p-6 bg-card rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-colors overflow-hidden">
             {!file ? (
                 <div className="text-center space-y-4 py-6">
-                    <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto">
+                    <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
                         <Upload className="w-7 h-7" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Upload your material</h3>
-                        <p className="text-slate-500 dark:text-slate-400 mt-1">Drag & drop or click to browse</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">📄 PDF, DOCX, PPT, TXT • Max 10MB</p>
+                        <h3 className="text-lg font-semibold text-foreground">Upload your material</h3>
+                        <p className="text-muted-foreground mt-1">Drag & drop or click to browse</p>
+                        <p className="text-xs text-muted-foreground/70 mt-2">📄 PDF, DOCX, PPT, TXT • Max 10MB</p>
                     </div>
                     <input
                         type="file"
@@ -143,7 +143,7 @@ export default function FileUpload() {
                         accept=".pdf,.docx,.pptx,.txt"
                         onChange={handleFileChange}
                     />
-                    <Button asChild variant="outline" className="mt-4 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <Button asChild variant="outline" className="mt-4 border-border hover:bg-muted">
                         <label htmlFor="file-upload" className="cursor-pointer">
                             Select File
                         </label>
@@ -154,15 +154,15 @@ export default function FileUpload() {
                 <div className="w-full max-w-full space-y-3 overflow-hidden box-border">
                     {/* File Size Warning - shrink text, wrap properly */}
                     {sizeError && (
-                        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg w-full max-w-full overflow-hidden box-border">
-                            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-md flex items-center justify-center shrink-0">
+                        <div className="flex items-start gap-2 p-3 bg-amber/10 dark:bg-amber/20 border border-amber/30 dark:border-amber/30 rounded-lg w-full max-w-full overflow-hidden box-border">
+                            <div className="w-8 h-8 bg-amber/20 dark:bg-amber/30 text-amber rounded-md flex items-center justify-center shrink-0">
                                 <AlertTriangle className="w-4 h-4" />
                             </div>
                             <div className="flex-1 min-w-0 overflow-hidden">
-                                <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                                <p className="text-sm font-semibold text-amber">
                                     File too large
                                 </p>
-                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 break-words">
+                                <p className="text-xs text-amber/80 mt-0.5 wrap-break-word">
                                     Your file is {(file.size / 1024 / 1024).toFixed(1)} MB. Max size is 10MB.
                                 </p>
                             </div>
@@ -173,15 +173,15 @@ export default function FileUpload() {
                     <div className={cn(
                         "flex items-center gap-2 p-3 rounded-lg border w-full max-w-full overflow-hidden box-border",
                         sizeError
-                            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                            : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+                            ? "bg-destructive/10 dark:bg-destructive/20 border-destructive/30 dark:border-destructive/30"
+                            : "bg-muted border-border"
                     )}>
                         {/* Icon - fixed size, never shrink */}
                         <div className={cn(
                             "w-8 h-8 rounded-md flex items-center justify-center shrink-0",
                             sizeError
-                                ? "bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400"
-                                : "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
+                                ? "bg-destructive/20 dark:bg-destructive/30 text-destructive"
+                                : "bg-primary/10 text-primary"
                         )}>
                             <File className="w-4 h-4" />
                         </div>
@@ -192,8 +192,8 @@ export default function FileUpload() {
                                 className={cn(
                                     "text-sm font-medium truncate",
                                     sizeError
-                                        ? "text-red-700 dark:text-red-300"
-                                        : "text-slate-900 dark:text-slate-100"
+                                        ? "text-destructive"
+                                        : "text-foreground"
                                 )}
                                 title={file.name}
                             >
@@ -202,8 +202,8 @@ export default function FileUpload() {
                             <p className={cn(
                                 "text-xs",
                                 sizeError
-                                    ? "text-red-500 dark:text-red-400"
-                                    : "text-slate-500 dark:text-slate-400"
+                                    ? "text-destructive/80"
+                                    : "text-muted-foreground"
                             )}>
                                 {(file.size / 1024 / 1024).toFixed(2)} MB
                             </p>
@@ -214,7 +214,7 @@ export default function FileUpload() {
                             variant="ghost"
                             size="icon"
                             onClick={handleClearFile}
-                            className="w-8 h-8 text-slate-400 hover:text-red-500 dark:hover:text-red-400 shrink-0"
+                            className="w-8 h-8 text-muted-foreground hover:text-destructive shrink-0"
                             disabled={isUploading}
                         >
                             <X className="w-4 h-4" />
@@ -227,8 +227,8 @@ export default function FileUpload() {
                         className={cn(
                             "w-full h-10",
                             sizeError
-                                ? "bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                : "bg-primary hover:bg-primary/90 text-primary-foreground"
                         )}
                         disabled={isUploading || sizeError}
                     >

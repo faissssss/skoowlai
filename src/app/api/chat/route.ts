@@ -8,6 +8,7 @@ import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
 
 export const maxDuration = 60;
+export const runtime = 'edge'; // Use Edge runtime for faster cold starts
 
 export async function POST(req: NextRequest) {
     // 1. Authenticate user first
@@ -26,16 +27,18 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
+        console.log('Chat API Request Body:', JSON.stringify(body, null, 2));
 
         const chatSchema = z.object({
             messages: z.array(z.any()), // AI SDK messages format
             context: z.string().max(50000).optional(),
-            deckId: z.string().uuid().optional()
+            deckId: z.string().cuid().optional()
         }).strict();
 
         const payload = chatSchema.safeParse(body);
 
         if (!payload.success) {
+            console.error('Chat API Validation Error:', payload.error.flatten());
             return NextResponse.json({
                 error: 'Invalid request body',
                 details: payload.error.flatten()
@@ -85,6 +88,7 @@ export async function POST(req: NextRequest) {
         const result = streamText({
             model: google('gemini-2.5-flash'),
             messages: allMessages,
+            temperature: 0.4, // Slightly higher for conversational responses
             system: `You are Skoowl AI, a friendly study assistant. Help students understand their notes clearly and concisely.
 
 **CRITICAL FORMATTING RULES:**
@@ -165,10 +169,16 @@ ${context}
 
         return result.toTextStreamResponse();
     } catch (error) {
-        console.error('Chat API Error:', error);
+        console.error('Chat API Error Details:', {
+            name: (error as Error).name,
+            message: (error as Error).message,
+            stack: (error as Error).stack,
+            cause: (error as Error).cause
+        });
+
         return NextResponse.json({
             error: 'Internal Server Error',
-            details: 'An error occurred while processing your request.'
+            details: (error as Error).message || 'An error occurred while processing your request.'
         }, { status: 500 });
     }
 }

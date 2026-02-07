@@ -1,14 +1,6 @@
-import { SignIn } from "@clerk/nextjs";
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-    title: "Sign In",
-    description: "Log in to your Skoowl AI account to access your dashboard, notes, and study materials.",
-    robots: {
-        index: false,
-        follow: false,
-    },
-};
+import { SignIn } from "@clerk/nextjs";
 
 export default function SignInPage() {
     return (
@@ -19,14 +11,37 @@ export default function SignInPage() {
             }}
         >
             {/* Ambient glow effects */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/15 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-(--brand-secondary)/20 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/15 rounded-full blur-[100px] pointer-events-none" />
+
+            <style jsx global>{`
+                .cl-socialButtonsBlockButton {
+                    color: white !important;
+                }
+                .cl-socialButtonsBlockButtonText {
+                    color: white !important;
+                }
+                .cl-socialButtonsIconButton {
+                    color: white !important;
+                }
+            `}</style>
 
             <SignIn
                 appearance={{
                     elements: {
                         rootBox: "mx-auto",
-                        card: "bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-purple-500/10",
+                        card: "bg-card/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-(--brand-secondary)/10",
+                        inputText: "text-white",
+                        inputLabel: "text-white",
+                        formButton: "text-white",
+                        socialButtonsBlockButton: "text-white",
+                        socialButtonsBlockButtonText: "text-white",
+                        socialButtonsIconButton: "text-white",
+                        dividerText: "text-white",
+                        footerActionLink: "text-white",
+                        footerText: "text-white",
+                        headerTitle: "text-white",
+                        headerSubtitle: "text-white",
                     },
                 }}
             />

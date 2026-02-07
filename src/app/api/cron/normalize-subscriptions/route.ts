@@ -78,3 +78,8 @@ export async function GET(req: NextRequest) {
     }
 }
 
+// Vercel Cron configuration
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 second timeout
+
+

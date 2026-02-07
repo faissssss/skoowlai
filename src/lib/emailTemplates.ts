@@ -5,13 +5,13 @@
  * All emails share a consistent header, footer, and styling.
  */
 
-// Brand colors
+// Brand colors - Renewed Palette
 const COLORS = {
-    primary: '#7c3aed',      // Purple
-    primaryDark: '#5b21b6',
-    secondary: '#4f46e5',    // Indigo
-    accent: '#c084fc',       // Light purple
-    dark: '#0f172a',         // Slate 900
+    primary: '#5B4DFF',      // Brand purple
+    primaryDark: '#4A3FFF',  // Hover / emphasis
+    secondary: '#4F46E5',    // Structural brand support
+    accent: '#22D3EE',       // Cyan accent - AI insight, motion, highlights
+    dark: '#0B0D14',         // Brand background
     text: '#1e293b',         // Slate 800
     textLight: '#64748b',    // Slate 500
     textMuted: '#94a3b8',    // Slate 400

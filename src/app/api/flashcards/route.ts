@@ -20,6 +20,9 @@ type FlashcardFocus = 'terms' | 'concepts' | 'data' | 'mix';
 type FlashcardFormat = 'classic' | 'qa' | 'practical';
 type FlashcardDetail = 'brief' | 'standard' | 'detailed';
 
+export const maxDuration = 60;
+export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+
 function buildFlashcardPrompt(
     content: string,
     focus: FlashcardFocus,
@@ -145,6 +148,7 @@ export async function POST(req: NextRequest) {
             model: google('gemini-2.5-flash'),
             schema: flashcardsSchema,
             messages: [{ role: 'user', content: prompt }],
+            temperature: 0.4, // Balanced creativity for varied flashcards
         });
 
         // Delete existing cards for this deck first (fresh generation)

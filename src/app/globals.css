@@ -7,8 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-heading: var(--font-poppins);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -140,68 +141,74 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --brand-primary: #5B4DFF;
+  --brand-primary-dark: #4A3FFF;
+  --brand-secondary: #4F46E5;
+  --brand-accent: #22D3EE;
+  --brand-dark: #0B0D14;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.16 0.01 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.16 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.16 0.01 260);
+  --primary: oklch(0.42 0.23 275);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --secondary: oklch(0.92 0.01 260);
+  --secondary-foreground: oklch(0.16 0.01 260);
+  --muted: oklch(0.86 0.01 260);
+  --muted-foreground: oklch(0.56 0.02 260);
+  --accent: oklch(0.78 0.17 210);
+  --accent-foreground: oklch(0.13 0.02 265);
+  --destructive: oklch(0.6 0.22 30);
+  --border: oklch(0.9 0.01 260);
+  --input: oklch(0.9 0.01 260);
+  --ring: oklch(0.42 0.23 275);
+  --chart-1: oklch(0.42 0.23 275);
+  --chart-2: oklch(0.78 0.17 210);
+  --chart-3: oklch(0.6 0.22 30);
+  --chart-4: oklch(0.55 0.15 150);
+  --chart-5: oklch(0.65 0.18 70);
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.16 0.01 260);
+  --sidebar-primary: oklch(0.42 0.23 275);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.92 0.01 260);
+  --sidebar-accent-foreground: oklch(0.16 0.01 260);
+  --sidebar-border: oklch(0.9 0.01 260);
+  --sidebar-ring: oklch(0.42 0.23 275);
 }
 
 .dark {
-  --background: oklch(0.129 0.014 285.75);
-  /* slate-950 */
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.168 0.014 285.75);
-  /* slate-900 - deep blue */
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.168 0.014 285.75);
-  /* slate-900 - deep blue */
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.279 0.014 285.75);
-  /* slate-700 */
-  --input: oklch(0.279 0.014 285.75);
-  /* slate-700 */
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Dark Mode - Renewed Color Palette */
+  --brand-primary: #5B4DFF;
+  --brand-primary-dark: #4A3FFF;
+  --brand-secondary: #4F46E5;
+  --brand-accent: #22D3EE;
+  --brand-dark: #0B0D14;
+  --background: oklch(0.13 0.02 265);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.17 0.02 265);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.17 0.02 265);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.7 0.22 275);
+  --primary-foreground: oklch(0.13 0.02 265);
+  --secondary: oklch(0.32 0.01 260);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.32 0.01 260);
+  --muted-foreground: oklch(0.7 0.02 260);
+  --accent: oklch(0.74 0.18 210);
+  --accent-foreground: oklch(0.13 0.02 265);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(0.25 0.02 260);
+  --input: oklch(0.25 0.02 260);
+  --ring: oklch(0.7 0.22 275);
+  --chart-1: oklch(0.7 0.22 275);
+  --chart-2: oklch(0.74 0.18 210);
+  --chart-3: oklch(0.65 0.2 25);
+  --chart-4: oklch(0.55 0.15 150);
+  --chart-5: oklch(0.65 0.18 70);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -220,6 +227,10 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.font-heading {
+  font-family: var(--font-heading);
 }
 
 ::view-transition-old(root),
@@ -247,26 +258,26 @@ div[data-floating-ui-portal] {
   position: relative !important;
 }
 
-/* Clerk Pricing Table: Bright yellow checkmarks */
+/* Clerk Pricing Table: Bright checkmarks - new brand purple */
 [data-clerk-component] li svg,
 .cl-pricingTable svg,
 .cl-pricingTableFeatureListItem svg,
 .cl-pricingTableCard li svg {
-  color: #fbbf24 !important;
+  color: #5B4DFF !important;
 }
 
 [data-clerk-component] li svg path,
 .cl-pricingTable svg path,
 .cl-pricingTableFeatureListItem svg path {
-  stroke: #fbbf24 !important;
+  stroke: #5B4DFF !important;
   fill: none !important;
 }
 
-/* Clerk Pricing Table: Upcoming badge styling (match Active badge) */
+/* Clerk Pricing Table: Upcoming badge styling - new brand purple */
 [data-clerk-component] [class*="badge"]:not([class*="active"]),
 .cl-badge,
 .cl-pricingTableCard [class*="badge"] {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  background: linear-gradient(135deg, #5B4DFF 0%, #4A3FFF 100%) !important;
   color: white !important;
   font-weight: 600 !important;
   border: none !important;

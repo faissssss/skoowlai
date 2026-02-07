@@ -1,13 +1,13 @@
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import ClientQuiz from './ClientQuiz';
 
 export default async function QuizPage({ params }: { params: Promise<{ deckId: string }> }) {
     const { deckId } = await params;
-    const deck = await db.deck.findUnique({
+    const deck = await withRetry(() => db.deck.findUnique({
         where: { id: deckId },
         include: { quizzes: true },
-    });
+    }));
 
     if (!deck) {
         notFound();

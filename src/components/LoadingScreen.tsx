@@ -15,10 +15,10 @@ export default function LoadingScreen() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
+                    className="fixed inset-0 z-100 flex flex-col items-center justify-center"
                 >
                     {/* Glassmorphism backdrop */}
-                    <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" />
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-md" />
 
                     {/* Content */}
                     <div className="relative z-10 flex flex-col items-center gap-8">
@@ -45,7 +45,7 @@ export default function LoadingScreen() {
                                     repeat: Infinity,
                                     ease: "easeInOut",
                                 }}
-                                className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur-2xl"
+                                className="absolute inset-0 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) rounded-full blur-2xl"
                             />
 
                             {/* Logo */}
@@ -62,13 +62,13 @@ export default function LoadingScreen() {
 
                         {/* App name */}
                         <div className="text-center">
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                                skoowl ai
+                            <h1 className="text-2xl font-bold bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) bg-clip-text text-transparent">
+                                Skoowl AI
                             </h1>
                         </div>
 
                         {/* Indeterminate progress bar */}
-                        <div className="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden">
                             <motion.div
                                 animate={{
                                     x: ["-100%", "200%"],
@@ -78,7 +78,7 @@ export default function LoadingScreen() {
                                     repeat: Infinity,
                                     ease: "easeInOut",
                                 }}
-                                className="w-1/2 h-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full"
+                                className="w-1/2 h-full bg-linear-to-r from-transparent via-primary to-transparent rounded-full"
                             />
                         </div>
 
@@ -90,7 +90,7 @@ export default function LoadingScreen() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -5 }}
                                 transition={{ duration: 0.2 }}
-                                className="text-sm text-slate-400 text-center max-w-xs"
+                                className="text-sm text-muted-foreground text-center max-w-xs"
                             >
                                 {message}
                             </motion.p>

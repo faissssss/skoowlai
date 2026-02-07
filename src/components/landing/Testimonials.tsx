@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import { Marquee } from '../magicui/marquee';
 import { AnimatedGradientText } from '../magicui/animated-gradient-text';
-import { cn } from '@/lib/utils';
 
 // Testimonial data
 const testimonials = [
@@ -71,10 +70,10 @@ const testimonials = [
 
 // Avatar gradient colors
 const avatarGradients = [
-    'from-violet-500 to-purple-600',
+    'from-(--brand-secondary) to-(--brand-accent)',
     'from-blue-500 to-cyan-500',
     'from-emerald-500 to-teal-500',
-    'from-orange-500 to-red-500',
+    'from-orange-500 to-destructive',
     'from-pink-500 to-rose-500',
     'from-indigo-500 to-blue-500',
     'from-amber-500 to-yellow-500',
@@ -87,20 +86,20 @@ function getAvatarGradient(index: number) {
 
 const ReviewCard = ({ testimonial, index }: { testimonial: typeof testimonials[0]; index: number }) => {
     return (
-        <div className="flex-shrink-0 w-[350px] md:w-[400px] p-6 mx-3 rounded-2xl bg-slate-800/40 backdrop-blur-md border border-white/5 hover:border-violet-500/30 transition-all duration-300">
+        <div className="shrink-0 w-[350px] md:w-[400px] p-6 mx-3 rounded-2xl bg-card/80 backdrop-blur-md border border-border hover:border-primary/30 transition-all duration-300">
             {/* Header */}
             <div className="flex items-center gap-4 mb-4">
                 {/* Avatar with Initial */}
-                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
+                <div className={`w-12 h-12 rounded-full bg-linear-to-br ${getAvatarGradient(index)} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
                     {testimonial.initial}
                 </div>
                 <div>
-                    <p className="text-white font-semibold">{testimonial.name}</p>
-                    <p className="text-violet-300 text-sm">{testimonial.role}</p>
+                    <p className="text-foreground font-semibold">{testimonial.name}</p>
+                    <p className="text-(--brand-secondary) text-sm">{testimonial.role}</p>
                 </div>
             </div>
             {/* Quote */}
-            <p className="text-slate-300 text-sm leading-relaxed">"{testimonial.text}"</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">&quot;{testimonial.text}&quot;</p>
         </div>
     );
 };
@@ -119,13 +118,13 @@ export default function Testimonials() {
                 viewport={{ once: true }}
                 className="text-center mb-12 px-6"
             >
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
                     Student{' '}
                     <AnimatedGradientText colorFrom="#8b5cf6" colorTo="#d946ef">
                         Stories
                     </AnimatedGradientText>
                 </h2>
-                <p className="text-slate-400 max-w-xl mx-auto">
+                <p className="text-muted-foreground max-w-xl mx-auto">
                     Join us to study smarter, not harder.
                 </p>
             </motion.div>
@@ -142,9 +141,9 @@ export default function Testimonials() {
                     ))}
                 </Marquee>
                 {/* Gradient Fade Left */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-black via-transparent to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-linear-to-r from-black via-transparent to-transparent z-10" />
                 {/* Gradient Fade Right */}
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-black via-transparent to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-linear-to-l from-black via-transparent to-transparent z-10" />
             </div>
         </section>
     );

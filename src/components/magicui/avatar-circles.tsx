@@ -31,7 +31,7 @@ export function AvatarCircles({
                 >
                     {/* Optimized by Vercel Edge */}
                     <Image
-                        className="h-10 w-10 rounded-full border-2 border-slate-800 hover:scale-110 transition-transform object-cover"
+                        className="h-10 w-10 rounded-full border-2 border-background hover:scale-110 transition-transform object-cover"
                         src={avatar.imageUrl}
                         width={40}
                         height={40}
@@ -41,7 +41,7 @@ export function AvatarCircles({
                 </a>
             ))}
             {numPeople && numPeople > 0 && (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-800 bg-slate-900 text-center text-xs font-medium text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-background bg-muted text-center text-xs font-medium text-foreground">
                     +{numPeople}
                 </div>
             )}

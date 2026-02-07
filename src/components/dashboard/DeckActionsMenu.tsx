@@ -133,7 +133,7 @@ export default function DeckActionsMenu({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                className="text-muted-foreground hover:text-foreground"
                             >
                                 {isMoving ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -173,7 +173,7 @@ export default function DeckActionsMenu({
                     {currentWorkspaceId && (
                         <DropdownMenuItem onClick={handleRemoveFromWorkspace}>
                             <FolderMinus className="w-4 h-4 mr-2" />
-                            Remove from "{currentWorkspace?.name}"
+                            Remove from &quot;{currentWorkspace?.name}&quot;
                         </DropdownMenuItem>
                     )}
 
@@ -184,7 +184,7 @@ export default function DeckActionsMenu({
                     {/* Delete */}
                     <DropdownMenuItem
                         onClick={() => setShowDeleteDialog(true)}
-                        className="text-red-600 dark:text-red-400"
+                        className="text-destructive"
                     >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete
@@ -205,7 +205,7 @@ export default function DeckActionsMenu({
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-destructive hover:bg-destructive/90 text-white"
                             disabled={isDeleting}
                         >
                             {isDeleting ? 'Deleting...' : 'Delete'}

@@ -13,6 +13,9 @@ type QuizType = 'multiple-choice' | 'true-false' | 'fill-in' | 'mixed';
 type QuizDifficulty = 'basic' | 'intermediate' | 'advanced' | 'expert';
 type QuizScope = 'summary' | 'granular' | 'full';
 
+export const maxDuration = 60;
+export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+
 // Combined schema for quiz generation with hints
 // IMPORTANT: answer.min(1) ensures answers are NEVER empty
 const quizSchema = z.object({
@@ -154,6 +157,7 @@ export async function POST(req: NextRequest) {
             model: google('gemini-2.5-flash'),
             schema: quizSchema,
             messages: [{ role: 'user', content: prompt }],
+            temperature: 0.3, // Lower for consistent, accurate quiz questions
         });
 
         // Delete existing quizzes for this deck first (fresh generation)

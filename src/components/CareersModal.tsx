@@ -15,27 +15,27 @@ const openRoles = [
         type: "Full-time",
         location: "Remote",
         icon: Code,
-        color: "text-blue-400",
-        bg: "bg-blue-500/10",
-        border: "border-blue-500/20",
+        color: "text-blue",
+        bg: "bg-blue/10",
+        border: "border-blue/20",
     },
     {
         title: "Product Designer",
         type: "Full-time",
         location: "Remote",
         icon: Paintbrush,
-        color: "text-purple-400",
-        bg: "bg-purple-500/10",
-        border: "border-purple-500/20",
+        color: "text-(--brand-secondary)",
+        bg: "bg-(--brand-secondary)/10",
+        border: "border-(--brand-secondary)/20",
     },
     {
         title: "Marketing Lead",
         type: "Full-time",
         location: "Remote",
         icon: Megaphone,
-        color: "text-pink-400",
-        bg: "bg-pink-500/10",
-        border: "border-pink-500/20",
+        color: "text-(--brand-accent)",
+        bg: "bg-(--brand-accent)/10",
+        border: "border-(--brand-accent)/20",
     },
 ];
 
@@ -50,7 +50,7 @@ export default function CareersModal({ isOpen, onClose }: CareersModalProps) {
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[9999] overflow-y-auto"
+            className="fixed inset-0 z-9999 overflow-y-auto"
             data-scroll-lock-scrollable
         >
             {/* Backdrop */}
@@ -66,26 +66,26 @@ export default function CareersModal({ isOpen, onClose }: CareersModalProps) {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="relative w-full max-w-lg bg-slate-900 rounded-xl shadow-2xl border border-slate-700/50 overflow-hidden"
+                    className="relative w-full max-w-lg bg-card rounded-xl shadow-2xl border border-border overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Close Button */}
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors"
+                        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
                     >
-                        <X className="w-4 h-4 text-slate-400" />
+                        <X className="w-4 h-4 text-muted-foreground" />
                     </button>
 
                     {/* Header */}
                     <div className="p-6 pb-2 text-center">
-                        <div className="mx-auto w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-4 border border-purple-500/20">
-                            <Briefcase className="w-6 h-6 text-purple-400" />
+                        <div className="mx-auto w-12 h-12 rounded-full bg-(--brand-secondary)/10 flex items-center justify-center mb-4 border border-(--brand-secondary)/20">
+                            <Briefcase className="w-6 h-6 text-(--brand-secondary)" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">
+                        <h2 className="text-2xl font-bold text-foreground mb-2">
                             Join the Flock
                         </h2>
-                        <p className="text-slate-400 text-sm">
+                        <p className="text-muted-foreground text-sm">
                             Help us build the future of AI-powered learning.
                         </p>
                     </div>
@@ -95,18 +95,18 @@ export default function CareersModal({ isOpen, onClose }: CareersModalProps) {
                         {openRoles.map((role, index) => (
                             <div
                                 key={index}
-                                className="group p-4 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 transition-all cursor-default"
+                                className="group p-4 rounded-xl bg-muted/50 hover:bg-muted border border-border hover:border-border/80 transition-all cursor-default"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className={`p-2 rounded-lg ${role.bg} ${role.border} border`}>
                                         <role.icon className={`w-5 h-5 ${role.color}`} />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-white font-medium text-sm">{role.title}</h3>
+                                        <h3 className="text-foreground font-medium text-sm">{role.title}</h3>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs text-slate-500">{role.type}</span>
-                                            <span className="w-1 h-1 rounded-full bg-slate-600" />
-                                            <span className="text-xs text-slate-500">{role.location}</span>
+                                            <span className="text-xs text-muted-foreground/60">{role.type}</span>
+                                            <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+                                            <span className="text-xs text-muted-foreground/60">{role.location}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -115,13 +115,13 @@ export default function CareersModal({ isOpen, onClose }: CareersModalProps) {
                     </div>
 
                     {/* CTA Footer */}
-                    <div className="p-6 bg-slate-950/50 border-t border-slate-800 text-center">
-                        <p className="text-slate-400 text-sm mb-4">
-                            Don't see your role? We're always looking for talent.
+                    <div className="p-6 bg-muted/30 border-t border-border text-center">
+                        <p className="text-muted-foreground text-sm mb-4">
+                            Don&apos;t see your role? We&apos;re always looking for talent.
                         </p>
                         <a
                             href="mailto:careers@skoowlai.com?subject=Application for Skoowl AI"
-                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white text-slate-900 font-semibold hover:bg-slate-100 transition-colors text-sm"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors text-sm"
                         >
                             <Mail className="w-4 h-4" />
                             Apply via Email

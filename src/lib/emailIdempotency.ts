@@ -5,10 +5,7 @@
  * or when users refresh the checkout success page.
  */
 
-import { PrismaClient } from "@prisma/client";
-
-// Use a direct Prisma instance for SentEmail (not affected by soft-delete middleware)
-const prisma = new PrismaClient();
+import { db } from './db';
 
 export type EmailType =
     | 'trial_welcome'
@@ -55,7 +52,7 @@ export async function checkAndMarkEmailSent(
     try {
         // Use atomic upsert: only creates if doesn't exist
         // Returns the created/found record
-        const result = await prisma.sentEmail.upsert({
+        const result = await db.sentEmail.upsert({
             where: { idempotencyKey },
             create: {
                 idempotencyKey,

@@ -11,7 +11,7 @@ export const FREE_LIMITS = {
     CHAT_DAILY: 20,
 };
 
-// Usage limits for student plan
+// Usage limits for pro plan
 export const STUDENT_LIMITS = {
     STUDY_DECKS_DAILY: Infinity,
     FLASHCARDS_DAILY: Infinity,
