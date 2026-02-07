@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Prevent 307 redirects on API routes (fixes webhook issues)
   skipTrailingSlashRedirect: true,
+  // Disable Turbopack for production builds (fixes Vercel deployment errors)
+  // Turbopack is still used for local dev via --turbo flag in package.json
+  turbopack: undefined,
   experimental: {
     // React Compiler disabled due to Next.js 16 compatibility issues
     // reactCompiler: true,
