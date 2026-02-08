@@ -13,53 +13,10 @@ interface LiveAudioRecorderProps {
     onCancel?: () => void;
 }
 
-interface SpeechRecognitionEvent extends Event {
-    resultIndex: number;
-    results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionResultList {
-    length: number;
-    item(index: number): SpeechRecognitionResult;
-    [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-    isFinal: boolean;
-    [index: number]: SpeechRecognitionAlternative;
-}
-
-interface SpeechRecognitionAlternative {
-    transcript: string;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-    error: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    maxAlternatives: number;
-    onstart: ((event: Event) => void) | null;
-    onresult: ((event: SpeechRecognitionEvent) => void) | null;
-    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-    onend: ((event: Event) => void) | null;
-    start(): void;
-    stop(): void;
-}
-
-interface WindowWithSpeechRecognition extends Window {
-    SpeechRecognition?: new () => SpeechRecognition;
-    webkitSpeechRecognition?: new () => SpeechRecognition;
-}
-
 const getBrowserInfo = () => {
     if (typeof window === 'undefined') return { name: 'unknown', supportsNativeSpeech: false };
     const ua = navigator.userAgent;
-    const w = window as WindowWithSpeechRecognition;
-    const hasSpeechRecognition = !!(w.SpeechRecognition || w.webkitSpeechRecognition);
+    const hasSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
     if (ua.includes('Chrome') && !ua.includes('Edg')) return { name: 'Chrome', supportsNativeSpeech: hasSpeechRecognition };
     if (ua.includes('Edg')) return { name: 'Edge', supportsNativeSpeech: hasSpeechRecognition };
@@ -149,8 +106,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
 
     // Start browser speech recognition
     const startSpeechRecognition = useCallback(() => {
-        const w = window as WindowWithSpeechRecognition;
-        const SpeechRecognitionAPI = w.SpeechRecognition || w.webkitSpeechRecognition;
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         if (!SpeechRecognitionAPI) {
             console.warn('Speech recognition not supported');

@@ -1,38 +1,5 @@
 'use client';
 
-// Type declaration for SpeechRecognition API (used by voice recording feature)
-interface SpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    maxAlternatives: number;
-    onaudioend: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onaudiostart: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onend: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onerror: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onnomatch: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onresult: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onsoundend: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onsoundstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onspeechend: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onspeechstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-    abort(): void;
-    start(): void;
-    stop(): void;
-}
-
-interface SpeechRecognitionConstructor {
-    new(): SpeechRecognition;
-}
-
-declare global {
-    interface Window {
-        SpeechRecognition?: SpeechRecognitionConstructor;
-        webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    }
-}
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Send, Loader2, ArrowRight, Mic, MicOff, Paperclip, X, Trash2, Maximize2 } from 'lucide-react';
