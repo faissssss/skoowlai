@@ -8,7 +8,8 @@ import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
 
 export const maxDuration = 60;
-export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+// Node.js runtime required: uses Prisma via requireAuth/db
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
     // 1. Authenticate user first

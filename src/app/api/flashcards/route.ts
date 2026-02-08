@@ -21,7 +21,8 @@ type FlashcardFormat = 'classic' | 'qa' | 'practical';
 type FlashcardDetail = 'brief' | 'standard' | 'detailed';
 
 export const maxDuration = 60;
-export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+// Node.js runtime required: uses Prisma via requireAuth/db
+export const runtime = 'nodejs';
 
 function buildFlashcardPrompt(
     content: string,

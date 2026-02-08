@@ -7,7 +7,8 @@ import { verifyUsageLimits, USAGE_LIMITS } from '@/lib/usageVerifier';
 import { requireAuth } from '@/lib/auth';
 
 export const maxDuration = 120; // Allow longer processing time for audio
-export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+// Node.js runtime required: uses OpenAI SDK/Buffer
+export const runtime = 'nodejs';
 
 // Initialize Groq client (OpenAI-compatible)
 const groq = new OpenAI({

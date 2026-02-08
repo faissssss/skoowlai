@@ -479,7 +479,7 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
             }),
             messages: limitedMessages,
             temperature: 0.3, // Lower temperature = faster, more deterministic
-            maxTokens: 8192, // Limit output size for speed
+            maxOutputTokens: 8192, // Limit output size for speed
         });
 
         // Await the full text - connection stays open while streaming

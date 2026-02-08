@@ -6,7 +6,8 @@ import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
 
 export const maxDuration = 120; // Allow longer processing time for audio
-export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+// Node.js runtime required: uses Prisma via requireAuth/db
+export const runtime = 'nodejs';
 
 const REWRITE_PROMPTS: Record<string, string> = {
     improve: 'Improve the writing quality, clarity, and flow while maintaining the core message.',
