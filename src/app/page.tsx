@@ -1041,11 +1041,11 @@ export default function LandingPage() {
                     <div className="p-3 rounded-xl bg-muted/50 border border-border/50 text-muted-foreground">
                       A. Mitochondria
                     </div>
-                    <div className="p-3 rounded-xl bg-emerald/20 border border-emerald/50 text-emerald flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/50 text-amber-400 flex items-center justify-between">
                       <span>B. Chloroplast</span>
                       <div className="flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="text-xs font-medium">Correct!</span>
+                        <CheckCircle className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-medium text-amber-400">Correct!</span>
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-muted/50 border border-border/50 text-muted-foreground">

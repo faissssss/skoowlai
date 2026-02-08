@@ -56,16 +56,10 @@ export const metadata: Metadata = {
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     images: [
       {
-        url: "https://skoowlai.com/skoowl-logo.png",
-        width: 512,
-        height: 512,
-        alt: "Skoowl AI - AI-Powered Study Assistant",
-      },
-      {
-        url: "https://skoowlai.com/twitter-card.png",
+        url: "/preview.png",
         width: 1200,
         height: 630,
-        alt: "Unlock Your Study Potential with Skoowl AI",
+        alt: "Skoowl AI - AI-Powered Study Assistant",
       },
     ],
   },
@@ -77,10 +71,10 @@ export const metadata: Metadata = {
     site: "@skoowlai",
     images: [
       {
-        url: "https://skoowlai.com/twitter-card.png",
+        url: "/preview.png",
         width: 1200,
         height: 630,
-        alt: "Unlock Your Study Potential with Skoowl AI",
+        alt: "Skoowl AI - AI-Powered Study Assistant",
       },
     ],
   },
@@ -178,4 +172,3 @@ export default function RootLayout({
     </ClerkProvider>
   );
 }
-
