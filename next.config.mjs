@@ -38,6 +38,16 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
+                hostname: 'img.clerk.com', // Clerk hosted avatars
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'images.clerk.dev', // Clerk image CDN
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
                 hostname: 'images.unsplash.com', // Common placeholder source
                 pathname: '/**',
             }
