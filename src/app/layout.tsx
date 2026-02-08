@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     description: "Turn your lectures into structured notes, flashcards, quizzes, and mind maps instantly.",
     images: [
       {
-        url: "/preview.png",
+        url: "/preview.png?v=3",
         width: 1200,
         height: 630,
         alt: "Skoowl AI - AI-Powered Study Assistant",
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     site: "@skoowlai",
     images: [
       {
-        url: "/preview.png",
+        url: "/preview.png?v=3",
         width: 1200,
         height: 630,
         alt: "Skoowl AI - AI-Powered Study Assistant",
@@ -91,11 +91,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/skoowl-logo.png', sizes: '512x512', type: 'image/png' },
-      { url: '/icon.png', sizes: 'any' },
-      { url: '/icon.ico', sizes: 'any' }
+      { url: '/skoowl-logo.png?v=2', sizes: '512x512', type: 'image/png' },
+      { url: '/skoowl-logo.png?v=2', sizes: 'any', type: 'image/png' }
     ],
-    apple: '/apple-icon.png',
+    apple: '/skoowl-logo.png?v=2',
   },
 };
 
