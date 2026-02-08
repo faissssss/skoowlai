@@ -12,7 +12,8 @@ import { NoteConfig, DEFAULT_NOTE_CONFIG, buildSystemPrompt } from '@/lib/noteCo
 // Route segment config
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge'; // Use Edge runtime for faster cold starts
+// Node.js runtime required: officeparser/pdf-parse/zlib are not Edge-compatible
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
     console.log('🚀 API route hit - starting processing');
