@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { FileText, Mic, Youtube, Brain, Layers, CheckCircle, Network, Sparkles, Menu, X, Upload, Users, HelpCircle, Plus, Settings, LogOut } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { SignedIn, SignedOut, useUser, SignOutButton } from '@clerk/nextjs';
@@ -15,6 +14,7 @@ const PricingModal = dynamic(() => import('@/components/PricingModal'), { ssr: f
 const AccountModal = dynamic(() => import('@/components/AccountModal'), { ssr: false });
 const BugReportModal = dynamic(() => import('@/components/BugReportModal'), { ssr: false });
 const FeedbackModal = dynamic(() => import('@/components/FeedbackModal'), { ssr: false });
+const ShaderGradientBackground = dynamic(() => import('@/components/landing/ShaderGradientBackground'), { ssr: false });
 
 import { AnimatedGradientText } from '@/components/magicui/animated-gradient-text';
 import { AvatarCircles } from '@/components/magicui/avatar-circles';
@@ -95,14 +95,26 @@ const dynamicWords = ['Smart Notes', 'Quizzes', 'Flashcards', 'Mind Maps', 'Stud
 
 function TextLoop() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reduceMotion) return;
     const interval = setInterval(() => {
       setCurrentWordIndex((prev) => (prev + 1) % dynamicWords.length);
     }, 2500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [reduceMotion]);
+
+  if (reduceMotion) {
+    return (
+      <span className="inline-block">
+        <AnimatedGradientText colorFrom="#5B4DFF" colorTo="#22D3EE">
+          {dynamicWords[0]}
+        </AnimatedGradientText>
+      </span>
+    );
+  }
 
   return (
     <motion.span
@@ -296,6 +308,7 @@ export default function LandingPage() {
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="dark relative min-h-screen overflow-hidden bg-background">
@@ -304,45 +317,7 @@ export default function LandingPage() {
       
       {/* ShaderGradient Background */}
       <div className="absolute inset-0 z-0 w-full h-full">
-        <ShaderGradientCanvas
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-          }}
-          pixelDensity={1} // Optimization: Cap at 1x to prevent 4x rendering on Retina screens
-        >
-          <ShaderGradient
-            animate="on"
-            brightness={0.5}
-            cAzimuthAngle={180}
-            cDistance={10}
-            cPolarAngle={70}
-            cameraZoom={1}
-            color1="#0B0D14"
-            color2="#0f172a"
-            color3="#5B4DFF"
-            envPreset="city"
-            grain="off"
-            lightType="3d"
-            positionX={0}
-            positionY={-1}
-            positionZ={0}
-            reflection={0} // Optimization: Disable reflections
-            rotationX={0}
-            rotationY={0}
-            rotationZ={0}
-            type="waterPlane"
-            uDensity={1.5} // Optimization: Slightly reduced density
-            uFrequency={5}
-            uSpeed={0.1}
-            uStrength={3}
-            uTime={0.2}
-          />
-        </ShaderGradientCanvas>
+        <ShaderGradientBackground disabled={reduceMotion} />
       </div>
 
       {/* Ambient glow effects */}
@@ -602,8 +577,8 @@ export default function LandingPage() {
               className="text-center"
             >
               <div className="flex justify-center mb-2">
-                <div className="p-2 rounded-xl bg-emerald/20 border border-emerald/30">
-                  <Layers className="w-5 h-5 text-emerald" />
+                <div className="p-2 rounded-xl bg-(--brand-primary)/10 border border-(--brand-primary)/20">
+                  <Layers className="w-5 h-5 text-(--brand-primary)" />
                 </div>
               </div>
               <CountUpNumber value={200} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />

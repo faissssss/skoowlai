@@ -1,8 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Marquee } from '../magicui/marquee';
 import { AnimatedGradientText } from '../magicui/animated-gradient-text';
+import { useEffect, useRef, useState } from 'react';
 
 // Testimonial data
 const testimonials = [
@@ -105,11 +106,32 @@ const ReviewCard = ({ testimonial, index }: { testimonial: typeof testimonials[0
 };
 
 export default function Testimonials() {
+    const reduceMotion = useReducedMotion();
+    const sectionRef = useRef<HTMLElement>(null);
+    const [isVisible, setIsVisible] = useState(false);
     const firstRow = testimonials.slice(0, testimonials.length / 2);
     const secondRow = testimonials.slice(testimonials.length / 2);
 
+    useEffect(() => {
+        const node = sectionRef.current;
+        if (!node) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin: '200px' }
+        );
+
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, []);
+
     return (
-        <section className="relative py-16 overflow-hidden">
+        <section ref={sectionRef} className="relative py-16 overflow-hidden">
             {/* Section Header */}
             <motion.div
                 initial={{ opacity: 0, y: 30 }}
@@ -130,16 +152,26 @@ export default function Testimonials() {
             </motion.div>
 
             <div className="relative flex w-full flex-col items-center justify-center overflow-hidden">
-                <Marquee pauseOnHover className="[--duration:80s]">
-                    {firstRow.map((review, i) => (
-                        <ReviewCard key={review.name} testimonial={review} index={i} />
-                    ))}
-                </Marquee>
-                <Marquee reverse pauseOnHover className="[--duration:80s] mt-4">
-                    {secondRow.map((review, i) => (
-                        <ReviewCard key={review.name} testimonial={review} index={i + firstRow.length} />
-                    ))}
-                </Marquee>
+                {(reduceMotion || !isVisible) ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 px-6">
+                        {testimonials.map((review, i) => (
+                            <ReviewCard key={review.name} testimonial={review} index={i} />
+                        ))}
+                    </div>
+                ) : (
+                    <>
+                        <Marquee pauseOnHover className="[--duration:80s]">
+                            {firstRow.map((review, i) => (
+                                <ReviewCard key={review.name} testimonial={review} index={i} />
+                            ))}
+                        </Marquee>
+                        <Marquee reverse pauseOnHover className="[--duration:80s] mt-4">
+                            {secondRow.map((review, i) => (
+                                <ReviewCard key={review.name} testimonial={review} index={i + firstRow.length} />
+                            ))}
+                        </Marquee>
+                    </>
+                )}
                 {/* Gradient Fade Left */}
                 <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-linear-to-r from-black via-transparent to-transparent z-10" />
                 {/* Gradient Fade Right */}

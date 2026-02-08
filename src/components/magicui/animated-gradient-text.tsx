@@ -17,7 +17,7 @@ export function AnimatedGradientText({
 }: AnimatedGradientTextProps) {
     return (
         <span
-            className={cn("inline-block pb-1", className)}
+            className={cn("inline-block pb-1.5 leading-[1.15]", className)}
             style={{
                 background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
                 WebkitBackgroundClip: "text",
