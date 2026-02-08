@@ -172,7 +172,7 @@ export default function WorkspaceCard({
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete "{workspace.name}"?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete &quot;{workspace.name}&quot;?</AlertDialogTitle>
                         <AlertDialogDescription>
                             {workspace._count.decks > 0 ? (
                                 <>

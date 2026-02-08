@@ -4,8 +4,8 @@
   "description": "AI Study Buddy",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS='--no-deprecation' next dev --turbo",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "dev": "cross-env NODE_OPTIONS='--no-deprecation' next dev",
+    "build": "prisma generate && prisma migrate deploy && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test:email-placeholders": "npx tsx scripts/scan-email-placeholders.ts",
@@ -112,3 +112,5 @@
     "typescript": "^5"
   }
 }
+
+
