@@ -95,7 +95,7 @@ const dynamicWords = ['Smart Notes', 'Quizzes', 'Flashcards', 'Mind Maps', 'Stud
 
 function TextLoop() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotion() ?? false;
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -244,7 +244,7 @@ function UserMenu() {
         >
           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
             {user?.imageUrl ? (
-              <img src={user.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+              <Image src={user.imageUrl} alt="Profile" width={32} height={32} className="w-full h-full object-cover" />
             ) : (
               <span className="text-sm font-medium text-primary">
                 {user?.firstName?.[0] || user?.emailAddresses[0]?.emailAddress?.[0] || 'U'}
@@ -317,7 +317,7 @@ export default function LandingPage() {
       
       {/* ShaderGradient Background */}
       <div className="absolute inset-0 z-0 w-full h-full">
-        <ShaderGradientBackground disabled={reduceMotion} />
+        <ShaderGradientBackground disabled={reduceMotion ?? false} />
       </div>
 
       {/* Ambient glow effects */}
