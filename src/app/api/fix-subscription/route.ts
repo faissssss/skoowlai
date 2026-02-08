@@ -1,43 +1,58 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendWelcomeEmail } from '@/lib/email';
+import { requireAdmin, requireDebugSecret } from '@/lib/admin';
 
 /**
  * Emergency subscription fix endpoint
  * This manually activates a subscription when webhooks fail
  * 
- * Usage: GET https://skoowlai.com/api/fix-subscription?secret=YOUR_SECRET
+ * Usage: POST /api/fix-subscription with JSON body
+ * { email, subscriptionId, customerId, plan, endsAt }
  */
-export async function GET(request: Request) {
-    try {
-        // Simple secret check (you should use a proper secret)
-        const { searchParams } = new URL(request.url);
-        const secret = searchParams.get('secret');
+export async function GET() {
+    return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+}
 
-        // Temp secret for immediate fix
-        if (secret !== 'fix-my-sub-now-123') {
+export async function POST(request: NextRequest) {
+    try {
+        const admin = await requireAdmin();
+        if (!admin.ok) return admin.response;
+
+        const secretError = requireDebugSecret(request, 'FIX_SUBSCRIPTION_SECRET');
+        if (secretError) return secretError;
+
+        const body = await request.json();
+        const {
+            email,
+            subscriptionId,
+            customerId,
+            plan,
+            endsAt,
+        } = body || {};
+
+        if (!email || !subscriptionId || !customerId || !plan || !endsAt) {
             return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
+                { error: 'Missing required fields' },
+                { status: 400 }
             );
         }
 
-        const USER_EMAIL = 'faiswibowo14@gmail.com';
-        const SUBSCRIPTION_ID = 'sub_0NWB7mbwknxctZunKQ2Ji';
-        const CUSTOMER_ID = 'cus_0NWB7mblPbviqTETcSahi';
-        const SUBSCRIPTION_PLAN = 'monthly';
-        const NEXT_BILLING_DATE = new Date('2026-01-20T05:39:00Z');
+        const NEXT_BILLING_DATE = new Date(endsAt);
+        if (Number.isNaN(NEXT_BILLING_DATE.getTime())) {
+            return NextResponse.json({ error: 'Invalid endsAt date' }, { status: 400 });
+        }
 
-        console.log('🔍 Looking for user:', USER_EMAIL);
+        console.log('🔍 Looking for user:', email);
 
         // Find the user
         const user = await db.user.findFirst({
-            where: { email: USER_EMAIL }
+            where: { email }
         });
 
         if (!user) {
             return NextResponse.json(
-                { error: 'User not found', email: USER_EMAIL },
+                { error: 'User not found', email },
                 { status: 404 }
             );
         }
@@ -56,9 +71,9 @@ export async function GET(request: Request) {
             where: { id: user.id },
             data: {
                 subscriptionStatus: 'active',
-                subscriptionPlan: SUBSCRIPTION_PLAN,
-                subscriptionId: SUBSCRIPTION_ID,
-                customerId: CUSTOMER_ID,
+                subscriptionPlan: plan,
+                subscriptionId,
+                customerId,
                 subscriptionEndsAt: NEXT_BILLING_DATE,
             }
         });
@@ -69,9 +84,9 @@ export async function GET(request: Request) {
         console.log('📧 Sending welcome email...');
         try {
             await sendWelcomeEmail({
-                email: USER_EMAIL,
-                plan: SUBSCRIPTION_PLAN as 'monthly' | 'yearly',
-                subscriptionId: SUBSCRIPTION_ID,
+                email,
+                plan: plan as 'monthly' | 'yearly',
+                subscriptionId,
             });
             console.log('✅ Welcome email sent!');
         } catch (emailError) {
@@ -93,7 +108,7 @@ export async function GET(request: Request) {
     } catch (error) {
         console.error('❌ Error fixing subscription:', error);
         return NextResponse.json(
-            { error: 'Failed to fix subscription', details: String(error) },
+            { error: 'Failed to fix subscription' },
             { status: 500 }
         );
     }

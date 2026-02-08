@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 interface RouteParams {
     params: Promise<{ workspaceId: string }>;
@@ -60,6 +61,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/workspaces/[workspaceId] - Update workspace
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
+        const csrfError = checkCsrfOrigin(request);
+        if (csrfError) return csrfError;
+
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -115,6 +119,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/workspaces/[workspaceId] - Soft delete workspace
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
+        const csrfError = checkCsrfOrigin(request);
+        if (csrfError) return csrfError;
+
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

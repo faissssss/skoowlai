@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 // PATCH - Update deck title
 export async function PATCH(
     req: NextRequest,
     { params }: { params: Promise<{ deckId: string }> }
 ) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;

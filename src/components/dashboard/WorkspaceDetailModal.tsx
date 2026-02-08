@@ -97,7 +97,7 @@ export default function WorkspaceDetailModal({
     const cards: CardData[] = workspace.decks.map(deck => ({
         id: deck.id,
         title: deck.title,
-        description: new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        description: new Date(deck.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace('20260', '2026'),
         icon: getDeckIcon(deck.sourceType),
         color: getDeckColor(deck.sourceType),
         actions: (

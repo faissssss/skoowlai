@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin, requireDebugSecret } from '@/lib/admin';
 
 /**
  * Debug endpoint to test webhook signature verification
@@ -6,6 +7,12 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
     try {
+        const admin = await requireAdmin();
+        if (!admin.ok) return admin.response;
+
+        const secretError = requireDebugSecret(request, 'DEBUG_ENDPOINTS_SECRET');
+        if (secretError) return secretError;
+
         const webhookKey = process.env.DODO_PAYMENTS_WEBHOOK_KEY;
 
         return NextResponse.json({

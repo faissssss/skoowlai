@@ -19,6 +19,10 @@ const nextConfig = {
     ],
 
     serverExternalPackages: ['openai'],
+    compiler: {
+        // Strip console logs in production bundles (keep warnings/errors)
+        removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+    },
     // Enable Vercel Edge Image Optimization for external images
     images: {
         remotePatterns: [

@@ -6,12 +6,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 export const maxDuration = 60;
 // Node.js runtime required: uses Prisma via requireAuth/db
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
@@ -170,6 +174,7 @@ ${context}
 
         return result.toTextStreamResponse();
     } catch (error) {
+        const isProd = process.env.NODE_ENV === 'production';
         console.error('Chat API Error Details:', {
             name: (error as Error).name,
             message: (error as Error).message,
@@ -179,7 +184,7 @@ ${context}
 
         return NextResponse.json({
             error: 'Internal Server Error',
-            details: (error as Error).message || 'An error occurred while processing your request.'
+            details: isProd ? 'An error occurred while processing your request.' : (error as Error).message
         }, { status: 500 });
     }
 }

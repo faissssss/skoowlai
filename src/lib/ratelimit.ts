@@ -64,7 +64,13 @@ export async function checkRateLimit(
     const limiter = getRatelimit(requests, duration);
 
     if (!limiter) {
-        // Rate limiting not configured, allow request
+        // Rate limiting not configured
+        if (process.env.NODE_ENV === 'production') {
+            return NextResponse.json(
+                { error: 'Rate limiting unavailable' },
+                { status: 503 }
+            );
+        }
         return null;
     }
 

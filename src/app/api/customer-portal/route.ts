@@ -21,14 +21,6 @@ const customerPortalHandler = CustomerPortal({
 
 export async function GET(req: NextRequest) {
   try {
-    const sp = req.nextUrl.searchParams;
-    const customerIdFromQuery = sp.get("customer_id");
-
-    // If already provided, delegate to Dodo handler
-    if (customerIdFromQuery) {
-      return customerPortalHandler(req);
-    }
-
     // Resolve from authenticated user
     const { userId } = await auth();
     if (!userId) {
@@ -66,6 +58,12 @@ export async function GET(req: NextRequest) {
         { error: "Missing customer_id for current user" },
         { status: 400 }
       );
+    }
+
+    // If caller provided a customer_id, ensure it matches the authenticated user
+    const requestedCustomerId = req.nextUrl.searchParams.get("customer_id");
+    if (requestedCustomerId && requestedCustomerId !== resolvedCustomerId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Redirect to same route with ?customer_id=... so the adapter can process it

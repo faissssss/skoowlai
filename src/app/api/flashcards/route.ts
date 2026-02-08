@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 // Schema for flashcards
 const flashcardsSchema = z.object({
@@ -77,6 +78,9 @@ Generate ${count} UNIQUE flashcards now.`;
 }
 
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
@@ -245,6 +249,9 @@ export async function GET(req: NextRequest) {
 
 // DELETE endpoint to clear flashcards
 export async function DELETE(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // Authenticate user
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;

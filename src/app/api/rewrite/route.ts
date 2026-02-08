@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         return result.toTextStreamResponse();
 
     } catch (error) {
+        const isProd = process.env.NODE_ENV === 'production';
         console.error('Rewrite API Error Details:', {
             name: (error as Error).name,
             message: (error as Error).message,
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
 
         return new Response(JSON.stringify({
             error: 'Internal Server Error',
-            details: (error as Error).message || 'An error occurred while processing your request.'
+            details: isProd ? 'An error occurred while processing your request.' : (error as Error).message
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

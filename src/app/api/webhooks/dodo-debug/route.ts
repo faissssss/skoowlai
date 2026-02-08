@@ -1,8 +1,15 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { requireAdmin, requireDebugSecret } from '@/lib/admin';
 
 export async function POST(req: Request) {
     try {
+        const admin = await requireAdmin();
+        if (!admin.ok) return admin.response;
+
+        const secretError = requireDebugSecret(req, 'DEBUG_ENDPOINTS_SECRET');
+        if (secretError) return secretError;
+
         const headerList = await headers();
         const headersObj: Record<string, string> = {};
         headerList.forEach((val, key) => {

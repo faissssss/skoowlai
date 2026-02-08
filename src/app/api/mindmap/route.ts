@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -498,6 +499,9 @@ function convertToReactFlowFormat(
 
 // POST - Generate mind map from deck content
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
@@ -651,6 +655,9 @@ export async function GET(req: NextRequest) {
 
 // PUT - Update/save mind map
 export async function PUT(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // Authenticate user
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;

@@ -8,6 +8,7 @@ import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
 import { verifyUsageLimits, incrementUsage, USAGE_LIMITS, InputType } from '@/lib/usageVerifier';
 import { NoteConfig, DEFAULT_NOTE_CONFIG, buildSystemPrompt } from '@/lib/noteConfig';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 // Route segment config
 export const maxDuration = 120;
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     console.log('🚀 API route hit - starting processing');
 
     // 1. Authenticate user first (Strong Security)
@@ -25,6 +29,8 @@ export async function POST(req: NextRequest) {
     // Rate limit check (uses User ID now guaranteed)
     const rateLimitResponse = await checkRateLimitFromRequest(req);
     if (rateLimitResponse) return rateLimitResponse;
+
+    const isProd = process.env.NODE_ENV === 'production';
 
     try {
         let text = '';
@@ -155,7 +161,9 @@ export async function POST(req: NextRequest) {
 
                         return NextResponse.json({
                             error: 'Failed to get transcript',
-                            details: errorData.message || 'Unable to extract transcript from this video. Please try a different video.'
+                            details: isProd
+                                ? 'Unable to extract transcript from this video. Please try a different video.'
+                                : (errorData.message || 'Unable to extract transcript from this video. Please try a different video.')
                         }, { status: 400 });
                     }
 
@@ -201,7 +209,9 @@ export async function POST(req: NextRequest) {
                     console.error('❌ Transcript fetch error:', transcriptErr);
                     return NextResponse.json({
                         error: 'Failed to process video',
-                        details: transcriptErr.message || 'An error occurred while processing this video. Please try again.'
+                        details: isProd
+                            ? 'An error occurred while processing this video. Please try again.'
+                            : (transcriptErr.message || 'An error occurred while processing this video. Please try again.')
                     }, { status: 500 });
                 }
             }

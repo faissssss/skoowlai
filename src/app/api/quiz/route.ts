@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -86,6 +87,9 @@ Generate ${count} UNIQUE quiz questions with helpful hints now.`;
 // ... imports ...
 
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
@@ -280,6 +284,9 @@ export async function GET(req: NextRequest) {
 
 // DELETE endpoint to clear quizzes
 export async function DELETE(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // Authenticate user
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;

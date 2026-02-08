@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendSubscriptionEmails } from '@/lib/email';
 import { auth } from '@clerk/nextjs/server';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 /**
  * Test endpoint to verify subscription emails work
@@ -9,6 +10,9 @@ import { auth } from '@clerk/nextjs/server';
  * Usage: POST /api/test-email with body { "email": "your@email.com" }
  */
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // Security: Only allow in development or for specific admin
     const isDev = process.env.NODE_ENV === 'development';
     const { userId } = await auth();
@@ -51,8 +55,9 @@ export async function POST(req: NextRequest) {
         }
     } catch (error: any) {
         console.error('Test email error:', error);
+        const isProd = process.env.NODE_ENV === 'production';
         return NextResponse.json({
-            error: error.message || 'Unknown error'
+            error: isProd ? 'Failed to send test email' : (error.message || 'Unknown error')
         }, { status: 500 });
     }
 }

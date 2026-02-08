@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { createClient } from '@deepgram/sdk';
+import { auth } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+    const { userId } = await auth();
+    if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Rate limit check: Strict limit for token generation (10 req / 60s)
     const rateLimitResponse = await checkRateLimitFromRequest(req, 10, '60 s');
     if (rateLimitResponse) return rateLimitResponse;

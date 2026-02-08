@@ -3,6 +3,7 @@ import OpenAI, { toFile } from 'openai';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 export const maxDuration = 30;
 
@@ -13,6 +14,9 @@ const groq = new OpenAI({
 });
 
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
@@ -75,6 +79,7 @@ export async function POST(req: NextRequest) {
         console.error('❌ Voice transcription error:', error);
 
         if (error instanceof Error) {
+            const isProd = process.env.NODE_ENV === 'production';
             if (error.message.includes('Invalid API Key')) {
                 return NextResponse.json(
                     { error: 'Groq API key is invalid' },
@@ -82,7 +87,7 @@ export async function POST(req: NextRequest) {
                 );
             }
             return NextResponse.json(
-                { error: error.message },
+                { error: 'Internal Server Error', details: isProd ? 'Transcription failed' : error.message },
                 { status: 500 }
             );
         }

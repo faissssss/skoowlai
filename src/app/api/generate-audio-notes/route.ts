@@ -5,6 +5,7 @@ import { generateText } from 'ai';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { verifyUsageLimits, USAGE_LIMITS } from '@/lib/usageVerifier';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 export const maxDuration = 120; // Allow longer processing time for audio
 // Node.js runtime required: uses OpenAI SDK/Buffer
@@ -81,6 +82,9 @@ const NOTE_GENERATION_PROMPT = `**Role:** Senior Academic Researcher & Note Take
 Output ONLY the Markdown notes, nothing else.`;
 
 export async function POST(req: NextRequest) {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     // 1. Authenticate user first
     const { user, errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
@@ -180,6 +184,7 @@ export async function POST(req: NextRequest) {
         console.error('❌ Audio notes generation error:', error);
 
         if (error instanceof Error) {
+            const isProd = process.env.NODE_ENV === 'production';
             // Handle specific Groq errors
             if (error.message.includes('Invalid API Key')) {
                 return NextResponse.json(
@@ -194,7 +199,7 @@ export async function POST(req: NextRequest) {
                 );
             }
             return NextResponse.json(
-                { error: error.message, details: error.message },
+                { error: 'Internal Server Error', details: isProd ? 'Audio processing failed' : error.message },
                 { status: 500 }
             );
         }

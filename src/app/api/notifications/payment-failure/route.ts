@@ -3,9 +3,13 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { sendPaymentFailedEmail } from "@/lib/email";
 import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from "@/lib/emailIdempotency";
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 export async function POST(req: NextRequest) {
   try {
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) return csrfError;
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

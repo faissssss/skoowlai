@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 // GET /api/workspaces - List user's workspaces
 export async function GET() {
@@ -52,6 +53,9 @@ export async function GET() {
 // POST /api/workspaces - Create new workspace
 export async function POST(request: NextRequest) {
     try {
+        const csrfError = checkCsrfOrigin(request);
+        if (csrfError) return csrfError;
+
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

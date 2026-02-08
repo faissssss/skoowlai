@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { dodoClient } from '@/lib/dodo';
+import { checkCsrfOrigin } from '@/lib/csrf';
 
 type Plan = 'monthly' | 'yearly';
 type SubStatus = 'free' | 'active' | 'cancelled' | 'on_hold' | 'expired' | 'trialing';
@@ -260,8 +261,11 @@ export async function reconcileFromDodo(userClerkId: string) {
     };
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
     try {
+        const csrfError = checkCsrfOrigin(req);
+        if (csrfError) return csrfError;
+
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
