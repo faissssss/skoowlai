@@ -50,7 +50,7 @@ import { useGlobalLoader } from '@/contexts/LoaderContext';
 import { toast } from 'sonner';
 import NoteConfigModal from '@/components/NoteConfigModal';
 import { NoteConfig } from '@/lib/noteConfig/types';
-import UsageLimitModal from '@/components/UsageLimitModal';
+import { useErrorModal } from '@/components/ErrorModal';
 
 import CreateWorkspaceModal from '@/components/dashboard/CreateWorkspaceModal';
 import EditWorkspaceModal from '@/components/dashboard/EditWorkspaceModal';
@@ -141,12 +141,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
     const [pendingYoutubeUrl, setPendingYoutubeUrl] = useState('');
     const [pendingAudioData, setPendingAudioData] = useState<{ notes: string; transcript: string; title: string } | null>(null);
 
-    // Usage limit modal state
-    const [showLimitModal, setShowLimitModal] = useState(false);
-    const [limitInfo, setLimitInfo] = useState({ used: 0, limit: 3 });
-
     const router = useRouter();
     const { startLoading, stopLoading } = useGlobalLoader();
+    const { showError } = useErrorModal();
 
     // Workspace state
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -514,15 +511,15 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             clearTimeout(notesTimer);
 
             if (!response.ok) {
-                const errorData = await response.json();
+                const errorData = await response.json().catch(() => ({}));
 
-                // Handle 429 limit reached - show upgrade modal
+                // Handle 429 limit reached - show warning alert
                 if (response.status === 429 && errorData.upgradeRequired) {
-                    setLimitInfo({
-                        used: errorData.currentUsage || errorData.used || 3,
-                        limit: errorData.limit || 3
-                    });
-                    setShowLimitModal(true);
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
                     clearTimeout(transcriptTimer);
                     clearTimeout(notesTimer);
                     return;
@@ -562,9 +559,18 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
+                const errorData = await response.json().catch(() => ({}));
+                if (response.status === 429 && errorData.upgradeRequired) {
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
+                    return;
+                }
+                const errorText = errorData.details || errorData.error || 'Failed to create study set';
                 console.error('API Error:', response.status, errorText);
-                throw new Error(`Failed to create study set: ${errorText}`);
+                throw new Error(errorText);
             }
 
             const data = await response.json();
@@ -1176,15 +1182,6 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                 }}
                 onGenerate={handleGenerateWithConfig}
                 isLoading={isYoutubeLoading}
-            />
-
-            {/* Usage Limit Modal - shows when deck limit reached */}
-            <UsageLimitModal
-                isOpen={showLimitModal}
-                onClose={() => setShowLimitModal(false)}
-                feature="study deck"
-                limit={limitInfo.limit}
-                used={limitInfo.used}
             />
 
             {/* Create Workspace Modal */}

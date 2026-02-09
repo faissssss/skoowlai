@@ -10,7 +10,7 @@ import { useGlobalLoader } from '@/contexts/LoaderContext';
 import { toast } from 'sonner';
 import NoteConfigModal from '@/components/NoteConfigModal';
 import { NoteConfig } from '@/lib/noteConfig/types';
-import UsageLimitModal from '@/components/UsageLimitModal';
+import { useErrorModal } from '@/components/ErrorModal';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes (Free Beta limit)
 
@@ -19,10 +19,9 @@ export default function FileUpload() {
     const [isUploading, setIsUploading] = useState(false);
     const [sizeError, setSizeError] = useState(false);
     const [showConfigModal, setShowConfigModal] = useState(false);
-    const [showLimitModal, setShowLimitModal] = useState(false);
-    const [limitInfo, setLimitInfo] = useState({ used: 0, limit: 3 });
     const router = useRouter();
     const { startLoading, stopLoading } = useGlobalLoader();
+    const { showError } = useErrorModal();
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         if (acceptedFiles?.length > 0) {
@@ -96,11 +95,11 @@ export default function FileUpload() {
 
                 // Handle 429 limit reached - show upgrade modal
                 if (response.status === 429 && errorData.upgradeRequired) {
-                    setLimitInfo({
-                        used: errorData.currentUsage || errorData.used || 3,
-                        limit: errorData.limit || 3
-                    });
-                    setShowLimitModal(true);
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
                     return;
                 }
 
@@ -254,14 +253,6 @@ export default function FileUpload() {
                 isLoading={isUploading}
             />
 
-            {/* Usage Limit Modal - shows when deck limit reached */}
-            <UsageLimitModal
-                isOpen={showLimitModal}
-                onClose={() => setShowLimitModal(false)}
-                feature="study deck"
-                limit={limitInfo.limit}
-                used={limitInfo.used}
-            />
         </div>
     );
 }

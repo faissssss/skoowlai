@@ -52,30 +52,39 @@ export async function checkFeatureLimit(feature: FeatureType): Promise<FeatureLi
     const today = new Date();
     const hasFutureAccess =
         user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) > today : false;
+    const hasGraceAccess =
+        user.paymentGracePeriodEndsAt ? new Date(user.paymentGracePeriodEndsAt) > today : false;
 
     // Treat trialing users as subscribers, and cancelled users retain access until period end
     const isSubscriber =
         user.subscriptionStatus === 'active' ||
         user.subscriptionStatus === 'trialing' ||
-        (user.subscriptionStatus === 'cancelled' && hasFutureAccess);
+        (user.subscriptionStatus === 'cancelled' && hasFutureAccess) ||
+        (user.subscriptionStatus === 'on_hold' && hasGraceAccess);
 
     // Get the appropriate usage field and limit
-    const usageMap: Record<FeatureType, { countField: string; dateField: string; freeLimit: number; studentLimit: number }> = {
+    const usageMap: Record<
+        FeatureType,
+        { countField: string; dateField: string; legacyDateField?: string; freeLimit: number; studentLimit: number }
+    > = {
         flashcard: {
             countField: 'flashcardUsageCount',
-            dateField: 'lastUsageDate',
+            dateField: 'lastFlashcardUsageDate',
+            legacyDateField: 'lastUsageDate',
             freeLimit: FREE_LIMITS.FLASHCARDS_DAILY,
             studentLimit: STUDENT_LIMITS.FLASHCARDS_DAILY,
         },
         quiz: {
             countField: 'quizUsageCount',
-            dateField: 'lastUsageDate',
+            dateField: 'lastQuizUsageDate',
+            legacyDateField: 'lastUsageDate',
             freeLimit: FREE_LIMITS.QUIZZES_DAILY,
             studentLimit: STUDENT_LIMITS.QUIZZES_DAILY,
         },
         mindmap: {
             countField: 'mindmapUsageCount',
-            dateField: 'lastUsageDate',
+            dateField: 'lastMindmapUsageDate',
+            legacyDateField: 'lastUsageDate',
             freeLimit: FREE_LIMITS.MINDMAPS_DAILY,
             studentLimit: STUDENT_LIMITS.MINDMAPS_DAILY,
         },
@@ -87,7 +96,8 @@ export async function checkFeatureLimit(feature: FeatureType): Promise<FeatureLi
         },
         studyDeck: {
             countField: 'dailyUsageCount',
-            dateField: 'lastUsageDate',
+            dateField: 'lastStudyDeckUsageDate',
+            legacyDateField: 'lastUsageDate',
             freeLimit: FREE_LIMITS.STUDY_DECKS_DAILY,
             studentLimit: STUDENT_LIMITS.STUDY_DECKS_DAILY,
         },
@@ -98,10 +108,11 @@ export async function checkFeatureLimit(feature: FeatureType): Promise<FeatureLi
 
     // Get current usage
     let currentUsage = (user as any)[config.countField] || 0;
-    const lastUsageDate = (user as any)[config.dateField] ? new Date((user as any)[config.dateField]) : null;
+    const lastUsageDateRaw = (user as any)[config.dateField] ?? (config.legacyDateField ? (user as any)[config.legacyDateField] : null);
+    const lastUsageDate = lastUsageDateRaw ? new Date(lastUsageDateRaw) : null;
 
     // Reset counter if it's a new day
-    if (lastUsageDate && !isSameDay(lastUsageDate, today)) {
+    if ((lastUsageDate && !isSameDay(lastUsageDate, today)) || (!lastUsageDate && currentUsage > 0)) {
         await db.user.update({
             where: { id: user.id },
             data: { [config.countField]: 0 },
@@ -160,11 +171,11 @@ export async function incrementFeatureUsage(userId: string, feature: FeatureType
     };
 
     const dateFieldMap: Record<FeatureType, string> = {
-        flashcard: 'lastUsageDate',
-        quiz: 'lastUsageDate',
-        mindmap: 'lastUsageDate',
+        flashcard: 'lastFlashcardUsageDate',
+        quiz: 'lastQuizUsageDate',
+        mindmap: 'lastMindmapUsageDate',
         chat: 'lastChatUsageDate',
-        studyDeck: 'lastUsageDate',
+        studyDeck: 'lastStudyDeckUsageDate',
     };
 
     await db.user.update({

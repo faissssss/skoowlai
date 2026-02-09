@@ -51,17 +51,16 @@ export async function POST(request: NextRequest) {
         }
 
         // Update our DB immediately
-        // - Trial: keep access until end of trial period (do not revoke immediately)
+        // - Trial: ends immediately (consistent with immediate cancel)
         // - Paid: keep access until end of current period
-        // For both cases, we use the existing subscriptionEndsAt or fallback to now if missing
-        const accessEndsAt = user.subscriptionEndsAt || new Date();
+        const accessEndsAt = isTrial ? new Date() : (user.subscriptionEndsAt || new Date());
 
         await db.user.update({
             where: { id: user.id },
             data: {
                 subscriptionStatus: 'cancelled',
-                // For trials and paid plans, we DON'T change the end date on cancel
-                // We just mark status as cancelled. Access continues until subscriptionEndsAt.
+                ...(isTrial ? { subscriptionEndsAt: accessEndsAt } : {}),
+                paymentGracePeriodEndsAt: null,
             }
         });
 

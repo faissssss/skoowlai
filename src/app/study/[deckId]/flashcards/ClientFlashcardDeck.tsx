@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Flashcard from '@/components/study/Flashcard';
+import SwipeableCardStack from '@/components/study/SwipeableCardStack';
 import FlashcardConfig from '@/components/study/FlashcardConfig';
 import { Button } from '@/components/ui/button';
 import {
-    ChevronLeft, ChevronRight, Loader2, RefreshCw, CreditCard,
+    ChevronLeft, ChevronRight, Loader2, RefreshCw, Layers,
     Edit3, PlayCircle, Save, X, Plus, Trash2, List
 } from 'lucide-react';
 import { saveAllFlashcards } from '../actions';
@@ -158,13 +159,13 @@ export default function ClientFlashcardDeck({
         return (
             <>
                 <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <CreditCard className="w-8 h-8 text-primary" />
+                    <div className="w-16 h-16 bg-(--brand-primary) rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Layers className="w-8 h-8 text-white" />
                     </div>
                     <h2 className="text-xl font-bold text-foreground mb-2">No Flashcards Yet</h2>
                     <p className="text-muted-foreground mb-4">Generate flashcards from your notes</p>
                     <Button onClick={() => setShowConfig(true)} className="bg-(--brand-primary) hover:bg-(--brand-primary)/90 text-primary-foreground">
-                        <CreditCard className="w-4 h-4 mr-2" /> Create Flashcards
+                        <Layers className="w-4 h-4 mr-2" /> Create Flashcards
                     </Button>
                 </div>
                 {configModal}
@@ -181,8 +182,8 @@ export default function ClientFlashcardDeck({
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-linear-to-br from-(--brand-primary) to-blue-600 rounded-xl flex items-center justify-center shrink-0">
-                                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-(--brand-primary) rounded-xl flex items-center justify-center shrink-0">
+                                <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                             </div>
                             <div className="min-w-0">
                                 <h2 className="text-lg sm:text-xl font-bold text-foreground">Flashcards</h2>
@@ -363,8 +364,8 @@ export default function ClientFlashcardDeck({
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-linear-to-br from-(--brand-primary) to-blue-600 rounded-xl flex items-center justify-center shrink-0">
-                            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-(--brand-primary) rounded-xl flex items-center justify-center shrink-0">
+                            <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
                         <div className="min-w-0">
                             <h2 className="text-lg sm:text-xl font-bold text-foreground">Flashcards</h2>
@@ -385,10 +386,11 @@ export default function ClientFlashcardDeck({
                     </AnimatedDockButton>
                 </div>
 
-                <Flashcard
-                    key={currentIndex}
-                    frontContent={cards[currentIndex].front}
-                    backContent={cards[currentIndex].back}
+                <SwipeableCardStack
+                    cards={cards}
+                    currentIndex={currentIndex}
+                    onSwipeLeft={handleNext}
+                    onSwipeRight={handlePrev}
                 />
 
                 <div className="flex items-center justify-center gap-2 sm:gap-4">

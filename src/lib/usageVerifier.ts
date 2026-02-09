@@ -95,9 +95,10 @@ export async function verifyUsageLimits(options: VerifyOptions): Promise<VerifyR
 
     // Step 1: Check if we need to reset the daily counter
     let currentCount = user.dailyUsageCount || 0;
-    const lastUsageDate = user.lastUsageDate ? new Date(user.lastUsageDate) : null;
+    const lastUsageDateRaw = user.lastStudyDeckUsageDate ?? user.lastUsageDate ?? null;
+    const lastUsageDate = lastUsageDateRaw ? new Date(lastUsageDateRaw) : null;
 
-    if (lastUsageDate && !isSameDay(lastUsageDate, today)) {
+    if ((lastUsageDate && !isSameDay(lastUsageDate, today)) || (!lastUsageDate && currentCount > 0)) {
         // Reset counter for new day
         await db.user.update({
             where: { id: user.id },
@@ -115,11 +116,14 @@ export async function verifyUsageLimits(options: VerifyOptions): Promise<VerifyR
     const now = new Date();
     const hasFutureAccess =
         user.subscriptionEndsAt && new Date(user.subscriptionEndsAt) > now;
+    const hasGraceAccess =
+        user.paymentGracePeriodEndsAt && new Date(user.paymentGracePeriodEndsAt) > now;
 
     const isSubscriber =
         user.subscriptionStatus === 'active' ||
         user.subscriptionStatus === 'trialing' ||
-        (user.subscriptionStatus === 'cancelled' && hasFutureAccess);
+        (user.subscriptionStatus === 'cancelled' && hasFutureAccess) ||
+        (user.subscriptionStatus === 'on_hold' && hasGraceAccess);
 
     if (isSubscriber) {
         console.log('✅ Subscriber (or trial / in-period cancelled) detected, bypassing daily limit');
@@ -224,7 +228,7 @@ export async function incrementUsage(userId: string): Promise<void> {
             where: { id: userId },
             data: {
                 dailyUsageCount: { increment: 1 },
-                lastUsageDate: new Date(),
+                lastStudyDeckUsageDate: new Date(),
             }
         });
         console.log('✅ Usage incremented for user:', userId);

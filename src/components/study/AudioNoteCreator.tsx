@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Square, Loader2, CheckCircle2, FileAudio, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { useErrorModal } from '@/components/ErrorModal';
 
 type RecordingStep = 'idle' | 'recording' | 'uploading' | 'transcribing' | 'generating' | 'complete' | 'error';
 
@@ -37,6 +37,7 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
     const animationFrameRef = useRef<number | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const { showError } = useErrorModal();
 
     // Get supported MIME type
     const getSupportedMimeType = (): string => {
@@ -205,7 +206,15 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to process audio');
+                if (response.status === 429 && (errorData.upgradeRequired || errorData.error === 'Daily limit reached')) {
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
+                    throw new Error(errorData.details || errorData.error || 'Daily limit reached');
+                }
+                throw new Error(errorData.error || errorData.details || 'Failed to process audio');
             }
 
             setStep('generating');
@@ -222,15 +231,6 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
         } catch (err) {
             console.error('Error processing audio:', err);
             const errorMessage = err instanceof Error ? err.message : 'Failed to process audio';
-            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
-
-            if (isLimitError) {
-                toast.error('Usage Limit Reached', {
-                    description: errorMessage,
-                    duration: 5000,
-                });
-            }
-
             setError(errorMessage);
             setStep('error');
         }

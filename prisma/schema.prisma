@@ -21,6 +21,10 @@ model User {
   quizUsageCount      Int            @default(0)
   mindmapUsageCount   Int            @default(0)
   chatUsageCount      Int            @default(0)
+  lastFlashcardUsageDate DateTime?
+  lastQuizUsageDate      DateTime?
+  lastMindmapUsageDate   DateTime?
+  lastStudyDeckUsageDate DateTime?
   lastChatUsageDate   DateTime?
   // Subscription fields (Dodo Payments)
   subscriptionStatus  String         @default("free") // free, active, cancelled, expired
@@ -174,4 +178,3 @@ model SentEmail {
   @@index([recipientEmail])
   @@index([emailType])
 }
-

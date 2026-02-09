@@ -103,6 +103,7 @@ import { Toaster } from "sonner";
 import { TimerProvider } from "@/contexts/TimerContext";
 import CookieConsent from "@/components/CookieConsent";
 import GlobalLoaderWrapper from "@/components/GlobalLoaderWrapper";
+import { ErrorModalProvider } from "@/components/ErrorModal";
 
 export default function RootLayout({
   children,
@@ -158,13 +159,15 @@ export default function RootLayout({
             enableSystem
             storageKey="studybuddy-theme"
           >
-            <GlobalLoaderWrapper>
-              <TimerProvider>
-                {children}
-              </TimerProvider>
-            </GlobalLoaderWrapper>
-            <Toaster />
-            <CookieConsent />
+            <ErrorModalProvider>
+              <GlobalLoaderWrapper>
+                <TimerProvider>
+                  {children}
+                </TimerProvider>
+              </GlobalLoaderWrapper>
+              <Toaster />
+              <CookieConsent />
+            </ErrorModalProvider>
           </ThemeProvider>
         </body>
       </html>

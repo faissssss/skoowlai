@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square, Loader2, CheckCircle2, AlertCircle, Volume2, Pause, Play, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useErrorModal } from '@/components/ErrorModal';
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'processing' | 'complete' | 'error';
 
@@ -46,6 +46,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const transcriptBoxRef = useRef<HTMLDivElement>(null);
     const audioLevelIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const { showError } = useErrorModal();
 
     useEffect(() => { setBrowserInfo(getBrowserInfo()); }, []);
 
@@ -276,7 +277,18 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
                 body: JSON.stringify({ audio: base64, mimeType: blob.type, fileName: `recording-${Date.now()}.webm` }),
             });
 
-            if (!response.ok) throw new Error('Failed to process audio');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (response.status === 429 && (errorData.upgradeRequired || errorData.error === 'Daily limit reached')) {
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
+                    throw new Error(errorData.details || errorData.error || 'Daily limit reached');
+                }
+                throw new Error(errorData.error || errorData.details || 'Failed to process audio');
+            }
 
             const data = await response.json();
             setFinalTranscript(data.transcript);
@@ -284,15 +296,6 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             onComplete(data.notes, data.transcript, data.title);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to process audio. Please try again.';
-            const isLimitError = errorMessage.toLowerCase().includes('limit') || errorMessage.toLowerCase().includes('daily');
-
-            if (isLimitError) {
-                toast.error('Usage Limit Reached', {
-                    description: errorMessage,
-                    duration: 5000,
-                });
-            }
-
             setError(errorMessage);
             setState('error');
         }

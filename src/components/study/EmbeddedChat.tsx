@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { useErrorModal } from '@/components/ErrorModal';
 
 interface Message {
     id: string;
@@ -18,6 +19,7 @@ export default function EmbeddedChat({ context, deckId }: { context: string; dec
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const { showError } = useErrorModal();
 
     // Load conversation history on mount
     useEffect(() => {
@@ -69,7 +71,19 @@ export default function EmbeddedChat({ context, deckId }: { context: string; dec
                 }),
             });
 
-            if (!response.ok) throw new Error('Failed to get response');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (response.status === 429 && (errorData.upgradeRequired || errorData.error === 'Daily limit reached')) {
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
+                    setMessages(prev => prev.slice(0, -1));
+                    return;
+                }
+                throw new Error(errorData.details || 'Failed to get response');
+            }
 
             // Add empty assistant message that will be filled
             const assistantMsg: Message = {

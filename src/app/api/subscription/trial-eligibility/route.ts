@@ -30,7 +30,7 @@ export async function GET() {
         return NextResponse.json({ eligible });
     } catch (error) {
         console.error('Error checking trial eligibility:', error);
-        // On error, default to eligible (fail open for UX)
-        return NextResponse.json({ eligible: true });
+        // On error, default to ineligible (fail closed)
+        return NextResponse.json({ eligible: false });
     }
 }

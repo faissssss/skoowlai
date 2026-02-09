@@ -22,6 +22,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { useErrorModal } from '@/components/ErrorModal';
 
 interface Message {
     id: string;
@@ -193,6 +194,7 @@ export default function ChatAssistant({
     const [focusContent, setFocusContent] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { showError } = useErrorModal();
 
     // Load conversation history on mount
     useEffect(() => {
@@ -509,6 +511,15 @@ export default function ChatAssistant({
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+                if (response.status === 429 && (errorData.upgradeRequired || errorData.error === 'Daily limit reached')) {
+                    showError(
+                        'Daily limit reached',
+                        errorData.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
+                    setMessages(prev => prev.slice(0, -1));
+                    return;
+                }
                 console.error('Chat API Error Response:', errorData);
                 throw new Error(errorData.details || 'Failed to get response');
             }

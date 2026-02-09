@@ -6,7 +6,7 @@ import QuizConfig from '@/components/study/QuizConfig';
 import { Button } from '@/components/ui/button';
 import {
     RotateCcw, Loader2, RefreshCw, Clock, AlertTriangle, Trophy,
-    CheckCircle, XCircle, ClipboardCheck, Edit3, PlayCircle, Save,
+    CheckCircle, XCircle, HelpCircle, Edit3, PlayCircle, Save,
     X, Plus, Trash2, List, Eye, EyeOff
 } from 'lucide-react';
 import { saveAllQuizzes } from '../actions';
@@ -334,13 +334,13 @@ export default function ClientQuiz({
         return (
             <>
                 <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-16 h-16 bg-yellow-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <ClipboardCheck className="w-8 h-8 text-yellow-500" />
+                    <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <HelpCircle className="w-8 h-8 text-white" />
                     </div>
                     <h2 className="text-xl font-bold text-foreground mb-2">No Quiz Yet</h2>
                     <p className="text-muted-foreground mb-4">Generate a quiz from your notes</p>
-                    <Button onClick={() => setShowConfig(true)} className="bg-purple-600 hover:bg-purple-700 text-white">
-                        <ClipboardCheck className="w-4 h-4 mr-2" /> Create Quiz
+                    <Button onClick={() => setShowConfig(true)} className="bg-yellow-500 hover:bg-yellow-600 text-white">
+                        <HelpCircle className="w-4 h-4 mr-2" /> Create Quiz
                     </Button>
                 </div>
                 {configModal}
@@ -357,8 +357,8 @@ export default function ClientQuiz({
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-linear-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center">
-                                <ClipboardCheck className="w-5 h-5 text-white" strokeWidth={1.5} />
+                            <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center">
+                                <HelpCircle className="w-5 h-5 text-white" strokeWidth={1.5} />
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold text-foreground">Quiz</h2>
@@ -718,8 +718,8 @@ export default function ClientQuiz({
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-linear-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center">
-                        <ClipboardCheck className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center">
+                        <HelpCircle className="w-5 h-5 text-white" strokeWidth={1.5} />
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-foreground">Quiz</h2>

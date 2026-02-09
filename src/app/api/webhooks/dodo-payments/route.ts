@@ -518,7 +518,7 @@ async function handleSubscriptionActivated(data: any, webhookId: string) {
             subscriptionEndsAt: nextBillingDate,
             subscriptionId,
             subscriptionPlan: plan,
-            customerId: user.customerId,
+            customerId: user.customerId || data.customer?.customer_id || data.customer?.id || data.customer_id || user.customerId,
         },
     });
 
@@ -800,28 +800,60 @@ async function handleSubscriptionCancelled(data: any, webhookId: string) {
         return;
     }
 
-    // ✅ BUG #6 FIX: Keep access until trial/subscription end date
-    // For both trial and paid subscriptions, user should keep access until subscriptionEndsAt
-    if (user.subscriptionStatus === 'trialing') {
-        await db.user.update({
-            where: { id: user.id },
-            data: {
-                subscriptionStatus: 'cancelled',
-                // Keep existing subscriptionEndsAt (trial end date) - don't revoke immediately
-            }
-        });
-        console.log(`✅ Trial cancelled for user ${user.id}, access until ${user.subscriptionEndsAt?.toISOString()}`);
-    } else {
-        // If paid, keep access until end of billing period
-        await db.user.update({
-            where: { id: user.id },
-            data: {
-                subscriptionStatus: 'cancelled',
-            }
-        });
-        console.log(`✅ Subscription cancelled for user ${user.id}, access until ${user.subscriptionEndsAt?.toISOString()}`)
-            ;
+    const parseDate = (value: any): Date | null => {
+        if (!value) return null;
+        if (value instanceof Date) return value;
+        if (typeof value === 'number') {
+            const ms = value < 1e12 ? value * 1000 : value;
+            const d = new Date(ms);
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+        if (typeof value === 'string') {
+            const d = new Date(value);
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+    };
+
+    const cancelAtPeriodEnd =
+        data?.cancel_at_next_billing_date === true ||
+        data?.subscription?.cancel_at_next_billing_date === true;
+
+    const endCandidates = [
+        data?.next_billing_date,
+        data?.current_period_end,
+        data?.current_period_end_at,
+        data?.subscription?.next_billing_date,
+        data?.subscription?.current_period_end,
+        data?.subscription?.current_period_end_at,
+        data?.ends_at,
+        data?.ended_at,
+        data?.cancelled_at,
+        data?.canceled_at,
+        data?.subscription?.ends_at,
+        data?.subscription?.ended_at,
+        data?.subscription?.cancelled_at,
+        data?.subscription?.canceled_at,
+    ];
+
+    const payloadEndsAt = endCandidates.map(parseDate).find((d) => d) || null;
+    let accessEndsAt = payloadEndsAt ?? user.subscriptionEndsAt ?? new Date();
+
+    // Trial + immediate cancellation should end now unless payload has a precise end
+    if (user.subscriptionStatus === 'trialing' && !cancelAtPeriodEnd) {
+        accessEndsAt = payloadEndsAt ?? new Date();
     }
+
+    await db.user.update({
+        where: { id: user.id },
+        data: {
+            subscriptionStatus: 'cancelled',
+            subscriptionEndsAt: accessEndsAt,
+            paymentGracePeriodEndsAt: null,
+        }
+    });
+
+    console.log(`? Subscription cancelled for user ${user.id}, access until ${accessEndsAt.toISOString()}`);
 
     // Sync to Clerk metadata so UserProfile billing shows correct data
     if (user.clerkId) {

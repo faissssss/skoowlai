@@ -194,7 +194,7 @@ export default function NoteConfigModal({
                                 <Button
                                     onClick={handleGenerate}
                                     disabled={isLoading}
-                                    className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-indigo-600 hover:from-(--brand-primary)/90 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
+                                    className="w-full h-11 bg-linear-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-medium rounded-xl shadow-lg shadow-teal-500/25 transition-all"
                                 >
                                     {isLoading ? (
                                         <>

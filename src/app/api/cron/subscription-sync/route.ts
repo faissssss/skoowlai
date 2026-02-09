@@ -18,12 +18,17 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   const querySecret = req.nextUrl.searchParams.get('secret');
   const cronSecret = process.env.CRON_SECRET;
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (isProd && !cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
 
   // Allow authentication via header OR query parameter
-  const isAuthorized =
-    !cronSecret ||
-    authHeader === `Bearer ${cronSecret}` ||
-    querySecret === cronSecret;
+  const hasSecret = Boolean(cronSecret);
+  const isAuthorized = !hasSecret
+    ? !isProd
+    : (authHeader === `Bearer ${cronSecret}` || querySecret === cronSecret);
 
   if (!isAuthorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

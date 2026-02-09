@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, Network, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
+import { useErrorModal } from '@/components/ErrorModal';
 
 interface MindMapConfigProps {
     deckId: string;
@@ -153,6 +154,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
     const [colorTheme, setColorTheme] = useState('indigo');
     const [isGenerating, setIsGenerating] = useState(false);
     const { startLoading, stopLoading } = useGlobalLoader();
+    const { showError } = useErrorModal();
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -167,7 +169,15 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
             if (response.ok) {
                 onGenerated();
             } else {
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
+                if (response.status === 429 && data.upgradeRequired) {
+                    showError(
+                        'Daily limit reached',
+                        data.details || 'You have reached your daily limit. Please try again tomorrow.',
+                        'limit'
+                    );
+                    return;
+                }
                 console.error('Failed to generate mind map:', data.error);
                 alert('Failed to generate mind map. Please try again.');
             }
@@ -205,7 +215,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                             {/* Header */}
                             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-2 sm:gap-3">
-                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-(--brand-primary) to-(--brand-secondary) flex items-center justify-center">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-pink-500 to-rose-500 flex items-center justify-center">
                                         <Network className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                     </div>
                                     <div>
@@ -329,7 +339,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                                 <Button
                                     onClick={handleGenerate}
                                     disabled={isGenerating}
-                                    className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-indigo-600 hover:from-(--brand-primary)/90 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
+                                    className="w-full h-11 bg-linear-to-r from-pink-500 to-rose-600 hover:from-pink-500/90 hover:to-rose-700 text-white font-medium rounded-xl shadow-lg shadow-pink-500/25 transition-all"
                                 >
                                     {isGenerating ? (
                                         <>

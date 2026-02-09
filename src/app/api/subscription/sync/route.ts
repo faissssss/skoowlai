@@ -29,6 +29,21 @@ function mapDodoStatus(s: string | null): SubStatus | null {
     return null;
 }
 
+function parseDate(value: unknown): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === 'number') {
+        const ms = value < 1e12 ? value * 1000 : value;
+        const d = new Date(ms);
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    if (typeof value === 'string') {
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+}
+
 /**
  * Find the most relevant subscription for a customer by scanning all subs.
  * Preference: active > trialing > pending > on_hold, and yearly over monthly.
@@ -94,6 +109,7 @@ export async function reconcileFromDodo(userClerkId: string) {
             subscriptionEndsAt: true,
             subscriptionId: true,
             customerId: true,
+            paymentGracePeriodEndsAt: true,
         },
     });
 
@@ -108,8 +124,8 @@ export async function reconcileFromDodo(userClerkId: string) {
         };
     }
 
-    if (!user.subscriptionId) {
-        // Nothing to reconcile without a subscriptionId
+    if (!user.subscriptionId && !user.customerId) {
+        // Nothing to reconcile without a subscriptionId or customerId
         return {
             success: true,
             status: user.subscriptionStatus as SubStatus,
@@ -120,16 +136,17 @@ export async function reconcileFromDodo(userClerkId: string) {
         };
     }
 
-    // Attempt remote retrieval
+    // Attempt remote retrieval (if we have subscriptionId)
     let sub: any = null;
-    try {
-        sub = await dodoClient.subscriptions?.retrieve?.(user.subscriptionId);
-    } catch (e) {
-        console.warn('[Sync] Failed to retrieve subscription from Dodo:', e);
+    let selectedSub: any = null;
+    if (user.subscriptionId) {
+        try {
+            sub = await dodoClient.subscriptions?.retrieve?.(user.subscriptionId);
+            selectedSub = sub;
+        } catch (e) {
+            console.warn('[Sync] Failed to retrieve subscription from Dodo:', e);
+        }
     }
-
-    // Use the retrieved subscription as baseline selection
-    let selectedSub: any = sub;
 
     // Compute desired values based on selectedSub
     let nextPlan: Plan | null = null;
@@ -183,6 +200,17 @@ export async function reconcileFromDodo(userClerkId: string) {
         }
     }
 
+    if (!selectedSub) {
+        return {
+            success: true,
+            status: user.subscriptionStatus as SubStatus,
+            plan: (user.subscriptionPlan as Plan | null) ?? null,
+            subscriptionEndsAt: user.subscriptionEndsAt ?? null,
+            subscriptionId: user.subscriptionId ?? null,
+            source: 'db',
+        };
+    }
+
     const nextEndsAt: Date | null = selectedSub?.next_billing_date ? new Date(selectedSub.next_billing_date) : null;
     const nextCustomerId: string | null =
         selectedSub?.customer?.customer_id ?? selectedSub?.customer_id ?? selectedSub?.customerId ?? null;
@@ -234,6 +262,24 @@ export async function reconcileFromDodo(userClerkId: string) {
         }
     }
 
+    if (dodoStatus === 'on_hold') {
+        const graceFromSub = parseDate(
+            selectedSub?.payment_grace_period_ends_at ??
+            selectedSub?.grace_period_ends_at ??
+            selectedSub?.grace_period_end ??
+            selectedSub?.retry_until ??
+            selectedSub?.payment_retry_until ??
+            selectedSub?.payment_retry_ends_at ??
+            selectedSub?.payment_failure_grace_period_ends_at
+        );
+        const fallbackGrace = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        if (!user.paymentGracePeriodEndsAt || user.paymentGracePeriodEndsAt.getTime() < now.getTime()) {
+            update.paymentGracePeriodEndsAt = graceFromSub ?? fallbackGrace;
+        }
+    } else if (dodoStatus && user.paymentGracePeriodEndsAt) {
+        update.paymentGracePeriodEndsAt = null;
+    }
+
     let updated = user;
     if (Object.keys(update).length > 0) {
         updated = await db.user.update({
@@ -280,8 +326,11 @@ export async function POST(req: NextRequest) {
 }
 
 // Convenience GET so you can open it in browser while testing via ngrok
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const csrfError = checkCsrfOrigin(req);
+        if (csrfError) return csrfError;
+
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -66,12 +66,12 @@ export default function ClientMindMap({ deckId, initialNodes, initialEdges }: Cl
         return (
             <>
                 <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-16 h-16 bg-(--brand-secondary)/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Network className="w-8 h-8 text-(--brand-secondary)" />
+                    <div className="w-16 h-16 bg-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Network className="w-8 h-8 text-white" />
                     </div>
                     <h2 className="text-xl font-bold text-foreground mb-2">No Mind Map Yet</h2>
                     <p className="text-muted-foreground mb-4">Generate a mind map from your notes</p>
-                    <Button onClick={() => setShowConfig(true)} className="bg-(--brand-primary) hover:bg-(--brand-primary)/90 text-primary-foreground">
+                    <Button onClick={() => setShowConfig(true)} className="bg-pink-500 hover:bg-pink-600 text-white">
                         <Network className="w-4 h-4 mr-2" /> Create Mind Map
                     </Button>
                 </div>
@@ -86,7 +86,7 @@ export default function ClientMindMap({ deckId, initialNodes, initialEdges }: Cl
             <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-linear-to-br from-primary to-(--brand-secondary) rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center">
                         <Network className="w-5 h-5 text-white" />
                     </div>
                     <div>

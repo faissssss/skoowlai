@@ -46,9 +46,9 @@ function buildFlashcardPrompt(
     };
 
     const detailInstructions = {
-        brief: 'Keep answers very concise - keywords and short phrases only. Maximum 10 words per side.',
-        standard: 'Provide one clear, complete sentence for each side. Enough context to understand.',
-        detailed: 'Include context, bullet points if needed, and examples. Comprehensive explanations.',
+        brief: 'Keep answers very concise - keywords and short phrases only. Maximum 50 characters for the front, 100 characters for the back.',
+        standard: 'Provide one clear, complete sentence for each side. Maximum 80 characters for the front, 200 characters for the back.',
+        detailed: 'Include context and key points. Maximum 100 characters for the front, 300 characters for the back.',
     };
 
     // Generate a random seed to ensure variety
@@ -70,6 +70,7 @@ function buildFlashcardPrompt(
 4. Ensure accuracy based on the source material
 5. Follow the format and detail level strictly
 6. **IMPORTANT: Generate FRESH, UNIQUE flashcards every time. Vary the topics, phrasing, and aspects covered.**
+7. **CRITICAL: Keep text SHORT for easy mobile reading and memorization. Front side max 100 chars, back side max 300 chars. Prioritize brevity over detail.**
 
 **CONTENT TO CREATE FLASHCARDS FROM:**
 ${content.slice(0, 25000)}

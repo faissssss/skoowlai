@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChoiceChipGroup } from '@/components/ui/choice-chip';
-import { Loader2, Sparkles, BookOpen, MessageSquare, Wrench, FileText, List, X, CreditCard, Tag, Database, Shuffle, GalleryHorizontal } from 'lucide-react';
+import { Loader2, Sparkles, BookOpen, MessageSquare, Wrench, FileText, List, X, Layers, Tag, Database, Shuffle, GalleryHorizontal } from 'lucide-react';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import PricingModal from '@/components/PricingModal';
-import UsageLimitModal from '@/components/UsageLimitModal';
+import { useErrorModal } from '@/components/ErrorModal';
 
 interface FlashcardConfigProps {
     deckId: string;
@@ -26,9 +26,8 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
     const [customCount, setCustomCount] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
-    const [showLimitModal, setShowLimitModal] = useState(false);
-    const [limitInfo, setLimitInfo] = useState({ used: 0, limit: 5 });
     const { startLoading, stopLoading } = useGlobalLoader();
+    const { showError } = useErrorModal();
 
     const handleCreate = async () => {
         setIsGenerating(true);
@@ -45,10 +44,12 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
             if (response.ok) {
                 onGenerated();
             } else if (response.status === 429) {
-                // Limit reached - show upgrade modal
-                const data = await response.json();
-                setLimitInfo({ used: data.currentUsage || 5, limit: data.limit || 5 });
-                setShowLimitModal(true);
+                const data = await response.json().catch(() => ({}));
+                showError(
+                    'Daily limit reached',
+                    data.details || 'You have reached your daily limit. Please try again tomorrow.',
+                    'limit'
+                );
             } else {
                 const data = await response.json();
                 console.error('Failed to generate flashcards:', data.error);
@@ -117,7 +118,7 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
                                 <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2 sm:gap-3">
                                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-(--brand-primary) to-(--brand-secondary) flex items-center justify-center">
-                                            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                            <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                         </div>
                                         <div>
                                             <h2 className="text-base sm:text-lg font-semibold text-foreground">Create Flashcards</h2>
@@ -199,7 +200,7 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
                                     <Button
                                         onClick={handleCreate}
                                         disabled={isGenerating || (count === 'custom' && (!customCount || parseInt(customCount) < 1))}
-                                        className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-indigo-600 hover:from-(--brand-primary)/90 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
+                                        className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-blue-600 hover:from-(--brand-primary)/90 hover:to-blue-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
                                     >
                                         {isGenerating ? (
                                             <>
@@ -208,7 +209,7 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
                                             </>
                                         ) : (
                                             <>
-                                                <CreditCard className="w-5 h-5 mr-2 text-white" />
+                                                <Layers className="w-5 h-5 mr-2 text-white" />
                                                 <span className="text-white">Generate Flashcards</span>
                                             </>
                                         )}
@@ -220,13 +221,6 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
                 )}
             </AnimatePresence>
             <PricingModal isOpen={showPricing} onClose={() => setShowPricing(false)} />
-            <UsageLimitModal
-                isOpen={showLimitModal}
-                onClose={() => setShowLimitModal(false)}
-                feature="flashcard"
-                limit={limitInfo.limit}
-                used={limitInfo.used}
-            />
         </>
     );
 }

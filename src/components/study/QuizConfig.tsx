@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChoiceChipGroup } from '@/components/ui/choice-chip';
-import { Loader2, Clock, CheckCircle2, HelpCircle, Pencil, Shuffle, X, ClipboardCheck } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, HelpCircle, Pencil, Shuffle, X } from 'lucide-react';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import PricingModal from '@/components/PricingModal';
-import UsageLimitModal from '@/components/UsageLimitModal';
+import { useErrorModal } from '@/components/ErrorModal';
 
 interface QuizConfigProps {
     deckId: string;
@@ -26,9 +26,8 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
     const [customCount, setCustomCount] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
-    const [showLimitModal, setShowLimitModal] = useState(false);
-    const [limitInfo, setLimitInfo] = useState({ used: 0, limit: 5 });
     const { startLoading, stopLoading } = useGlobalLoader();
+    const { showError } = useErrorModal();
 
     const handleCreate = async () => {
         setIsGenerating(true);
@@ -45,10 +44,12 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
             if (response.ok) {
                 onGenerated(timer, finalCount);
             } else if (response.status === 429) {
-                // Limit reached - show upgrade modal
-                const data = await response.json();
-                setLimitInfo({ used: data.currentUsage || 5, limit: data.limit || 5 });
-                setShowLimitModal(true);
+                const data = await response.json().catch(() => ({}));
+                showError(
+                    'Daily limit reached',
+                    data.details || 'You have reached your daily limit. Please try again tomorrow.',
+                    'limit'
+                );
             } else {
                 const data = await response.json();
                 console.error('Failed to generate quiz:', data.error);
@@ -119,7 +120,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                                 <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center justify-between shrink-0">
                                     <div className="flex items-center gap-2 sm:gap-3">
                                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-yellow-500 to-amber-500 flex items-center justify-center">
-                                            <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                            <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                         </div>
                                         <div>
                                             <h2 className="text-base sm:text-lg font-semibold text-foreground">Create Quiz</h2>
@@ -201,7 +202,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                                     <Button
                                         onClick={handleCreate}
                                         disabled={isGenerating || (count === 'custom' && (!customCount || parseInt(customCount) < 1))}
-                                        className="w-full h-11 bg-linear-to-r from-(--brand-primary) to-indigo-600 hover:from-(--brand-primary)/90 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg shadow-(--brand-primary)/25 transition-all"
+                                        className="w-full h-11 bg-linear-to-r from-yellow-500 to-amber-600 hover:from-yellow-500/90 hover:to-amber-700 text-white font-medium rounded-xl shadow-lg shadow-yellow-500/25 transition-all"
                                     >
                                         {isGenerating ? (
                                             <>
@@ -210,7 +211,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                                             </>
                                         ) : (
                                             <>
-                                                <ClipboardCheck className="w-5 h-5 mr-2 text-white" />
+                                                <HelpCircle className="w-5 h-5 mr-2 text-white" />
                                                 <span className="text-white">Generate Quiz</span>
                                             </>
                                         )}
@@ -222,13 +223,6 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                 )}
             </AnimatePresence>
             <PricingModal isOpen={showPricing} onClose={() => setShowPricing(false)} />
-            <UsageLimitModal
-                isOpen={showLimitModal}
-                onClose={() => setShowLimitModal(false)}
-                feature="quiz"
-                limit={limitInfo.limit}
-                used={limitInfo.used}
-            />
         </>
     );
 }

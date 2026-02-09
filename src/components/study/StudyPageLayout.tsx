@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, CreditCard, ClipboardCheck, Share2, Menu, UserPlus, Pencil, Check, X, Crown } from 'lucide-react';
-import { AnimatedDockButton } from '@/components/ui/animated-dock-button';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
+import { FileText, Layers, HelpCircle, Network } from 'lucide-react';
 import ChatAssistant from '@/components/study/ChatAssistant';
 import TextSelectionPopup, { RewriteAction } from '@/components/study/TextSelectionPopup';
 import StudyTimer from '@/components/study/StudyTimer';
@@ -16,8 +13,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Role } from '@/lib/permissions';
 import { EditorProvider, useEditorContext } from './EditorContext';
 import PricingModal from '@/components/PricingModal';
-import { IS_PRE_LAUNCH } from '@/lib/config';
-import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { StudyHeader } from './StudyHeader';
+import { StudyNavbar } from './StudyNavbar';
 
 interface StudyPageLayoutProps {
     children: React.ReactNode;
@@ -35,12 +32,6 @@ interface StudyPageLayoutProps {
     userRole?: Role | null;
 }
 
-// Utility to shorten title
-function shortenTitle(title: string, maxLength: number = 25): string {
-    if (title.length <= maxLength) return title;
-    return title.substring(0, maxLength) + '...';
-}
-
 function StudyPageLayoutInner({
     children,
     deck,
@@ -52,14 +43,8 @@ function StudyPageLayoutInner({
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [citation, setCitation] = useState<string | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [editedTitle, setEditedTitle] = useState(deck.title);
-    const [currentTitle, setCurrentTitle] = useState(deck.title);
-    const [isSavingTitle, setIsSavingTitle] = useState(false);
     const [isPricingOpen, setIsPricingOpen] = useState(false);
-    const titleInputRef = useRef<HTMLInputElement>(null);
     const pathname = usePathname();
-    const router = useRouter();
     const { isRunning: isTimerRunning, isPaused: isTimerPaused } = useTimer();
 
     // Auto-collapse sidebar on scroll
@@ -100,193 +85,28 @@ function StudyPageLayoutInner({
         setRewriteRequest(null);
     }, [setRewriteRequest]);
 
-    // Title editing handlers
-    const handleStartEditTitle = () => {
-        setIsEditingTitle(true);
-        setEditedTitle(currentTitle);
-        setTimeout(() => titleInputRef.current?.focus(), 50);
-    };
-
-    const handleSaveTitle = async () => {
-        const trimmedTitle = editedTitle.trim();
-        if (!trimmedTitle || trimmedTitle === currentTitle) {
-            setIsEditingTitle(false);
-            return;
-        }
-
-        setIsSavingTitle(true);
-        try {
-            const response = await fetch(`/api/deck/${deck.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: trimmedTitle }),
-            });
-
-            if (response.ok) {
-                setCurrentTitle(trimmedTitle);
-                setIsEditingTitle(false);
-                router.refresh(); // Refresh to update any cached data
-            }
-        } catch (error) {
-            console.error('Failed to save title:', error);
-        } finally {
-            setIsSavingTitle(false);
-        }
-    };
-
-    const handleCancelEditTitle = () => {
-        setIsEditingTitle(false);
-        setEditedTitle(currentTitle);
-    };
-
-    const handleTitleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSaveTitle();
-        } else if (e.key === 'Escape') {
-            handleCancelEditTitle();
-        }
-    };
-
-    const navItems = [
+    const navItems = useMemo(() => [
         { href: `/study/${deck.id}/notes`, label: 'Notes', icon: FileText },
-        { href: `/study/${deck.id}/flashcards`, label: 'Flashcards', icon: CreditCard },
-        { href: `/study/${deck.id}/quiz`, label: 'Quiz', icon: ClipboardCheck },
-        { href: `/study/${deck.id}/mindmap`, label: 'Mind Map', icon: Share2 },
-    ];
+        { href: `/study/${deck.id}/flashcards`, label: 'Flashcards', icon: Layers },
+        { href: `/study/${deck.id}/quiz`, label: 'Quiz', icon: HelpCircle },
+        { href: `/study/${deck.id}/mindmap`, label: 'Mind Map', icon: Network },
+    ], [deck.id]);
 
     // Detect if we're on the Notes page (chat enabled only here)
     const isNotesPage = pathname.endsWith('/notes');
 
-    // Determine if user can share (only owner)
-    const canShare = userRole === 'OWNER';
-
     return (
         <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
             {/* Header */}
-            <header className="bg-card border-b border-border px-3 md:px-6 h-14 md:h-16 flex items-center sticky top-0 z-30">
-                {/* Left: Mobile menu + Back button + Title */}
-                <div className="flex items-center gap-1.5 md:gap-3 min-w-0 flex-1">
-                    {/* Mobile sidebar toggle */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="md:hidden text-muted-foreground h-8 w-8 shrink-0"
-                        onClick={() => setIsMobileSidebarOpen(true)}
-                    >
-                        <Menu className="w-5 h-5" />
-                    </Button>
-                    <Link href="/dashboard" className="hidden md:block">
-                        <Button variant="ghost" size="icon" className="text-muted-foreground">
-                            <ArrowLeft className="w-5 h-5" />
-                        </Button>
-                    </Link>
-
-                    {/* Editable Title */}
-                    {isEditingTitle ? (
-                        <div className="flex items-center gap-1.5 min-w-0">
-                            <input
-                                ref={titleInputRef}
-                                type="text"
-                                value={editedTitle}
-                                onChange={(e) => setEditedTitle(e.target.value)}
-                                onKeyDown={handleTitleKeyDown}
-                                onBlur={() => setTimeout(() => { if (isEditingTitle) handleSaveTitle(); }, 150)}
-                                disabled={isSavingTitle}
-                                className="font-semibold text-sm md:text-base text-foreground bg-transparent border-b-2 border-primary outline-none px-1 py-0.5 min-w-0 w-full max-w-[100px] md:max-w-[300px]"
-                                placeholder="Enter title..."
-                            />
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 md:h-7 md:w-7 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 shrink-0"
-                                onClick={handleSaveTitle}
-                                disabled={isSavingTitle}
-                            >
-                                <Check className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 md:h-7 md:w-7 text-muted-foreground hover:bg-accent shrink-0"
-                                onClick={handleCancelEditTitle}
-                                disabled={isSavingTitle}
-                            >
-                                <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 group cursor-pointer min-w-0" onClick={handleStartEditTitle}>
-                            <h1
-                                className="font-semibold text-sm md:text-base text-foreground truncate"
-                                title={currentTitle}
-                            >
-                                {shortenTitle(currentTitle, 12)}
-                            </h1>
-                            <Pencil className="w-3 h-3 md:w-3.5 md:h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        </div>
-                    )}
-
-                    {/* Role Badge - hidden on mobile */}
-                    {userRole && userRole !== 'OWNER' && (
-                        <span className={cn(
-                            "px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline",
-                            userRole === 'EDITOR'
-                                ? "bg-primary/10 text-primary"
-                                : "bg-secondary text-muted-foreground"
-                        )}>
-                            {userRole === 'EDITOR' ? 'Editor' : 'Viewer'}
-                        </span>
-                    )}
-
-                    {/* Workspace Badge */}
-                    {deck.workspace && (
-                        <span
-                            className="px-2 py-0.5 text-xs font-medium rounded-full hidden md:inline-flex items-center gap-1 bg-secondary"
-                        >
-                            <div
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: deck.workspace.color }}
-                            />
-                            <span className="text-muted-foreground">{deck.workspace.name}</span>
-                        </span>
-                    )}
-                </div>
-
-                {/* Center: Timer - when not active */}
-                <div className="absolute left-1/2 -translate-x-1/2 flex justify-center">
-                    <AnimatePresence mode="wait">
-                        {!isTimerRunning && !isTimerPaused && (
-                            <motion.div
-                                key="timer-passive"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ duration: 0.12, ease: "easeOut" }}
-                            >
-                                <StudyTimer />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Right: Share Button + Theme Toggle */}
-                <div className="flex items-center gap-2 shrink-0 justify-end flex-1">
-                    {canShare && currentUserId && (
-                        <AnimatedDockButton>
-                            <Button
-                                onClick={() => setIsShareModalOpen(true)}
-                                variant="outline"
-                                size="sm"
-                                className="gap-1.5 h-8 md:h-9 px-2 md:px-3"
-                            >
-                                <UserPlus className="w-4 h-4" />
-                                <span className="hidden md:inline">Share</span>
-                            </Button>
-                        </AnimatedDockButton>
-                    )}
-                    <AnimatedThemeToggler />
-                </div>
-            </header>
+            <StudyHeader
+                deck={deck}
+                currentUserId={currentUserId}
+                userRole={userRole}
+                setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+                isTimerRunning={isTimerRunning}
+                isTimerPaused={isTimerPaused}
+                setIsShareModalOpen={setIsShareModalOpen}
+            />
 
             {/* Floating Timer - Desktop: top when running/paused */}
             <AnimatePresence>
@@ -322,183 +142,14 @@ function StudyPageLayoutInner({
 
             {/* Main Content Area with Sidebar */}
             <div className="flex-1 relative flex">
-                {/* Mobile Sidebar Overlay */}
-                <AnimatePresence>
-                    {isMobileSidebarOpen && (
-                        <>
-                            {/* Backdrop */}
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                                onClick={() => setIsMobileSidebarOpen(false)}
-                            />
-                            {/* Mobile Drawer */}
-                            <motion.aside
-                                initial={{ x: -280 }}
-                                animate={{ x: 0 }}
-                                exit={{ x: -280 }}
-                                transition={{ duration: 0.3, ease: "easeInOut" }}
-                                className="fixed left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border z-50 md:hidden flex flex-col"
-                            >
-                                {/* Mobile Drawer Header */}
-                                <div className="p-4 border-b border-border flex items-center justify-between">
-                                    <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground">
-                                        <ArrowLeft className="w-4 h-4" />
-                                        <span className="text-sm font-medium">Back to Dashboard</span>
-                                    </Link>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setIsMobileSidebarOpen(false)}
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </Button>
-                                </div>
-
-                                {/* Mobile Navigation Items */}
-                                <nav className="flex-1 p-4 space-y-2">
-                                    {navItems.map((item) => {
-                                        const Icon = item.icon;
-                                        const isActive = pathname === item.href;
-                                        return (
-                                            <Link key={item.href} href={item.href} onClick={() => setIsMobileSidebarOpen(false)}>
-                                                <AnimatedDockButton className="relative w-full">
-                                                    {/* Sliding active indicator */}
-                                                    {isActive && (
-                                                        <motion.div
-                                                            layoutId="mobile-sidebar-active-indicator"
-                                                            className="absolute inset-0 bg-primary/10 rounded-md"
-                                                            transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                                                        />
-                                                    )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        className={cn(
-                                                            "w-full gap-3 justify-start relative z-10",
-                                                            isActive && "text-primary"
-                                                        )}
-                                                    >
-                                                        <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
-                                                        <span>{item.label}</span>
-                                                    </Button>
-                                                </AnimatedDockButton>
-                                            </Link>
-                                        );
-                                    })}
-                                </nav>
-
-                                {/* Mobile Upgrade Button - Hidden during pre-launch */}
-                                {!IS_PRE_LAUNCH && (
-                                    <div className="p-4 border-t border-border">
-                                        <Button
-                                            onClick={() => { setIsPricingOpen(true); setIsMobileSidebarOpen(false); }}
-                                            className="w-full gap-2 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white shadow-lg shadow-black/20"
-                                        >
-                                            <Crown className="w-4 h-4 shrink-0" />
-                                            <span>Upgrade to Pro</span>
-                                        </Button>
-                                    </div>
-                                )}
-                            </motion.aside>
-                        </>
-                    )}
-                </AnimatePresence>
-
-                {/* Desktop Left Sidebar - Floating card style */}
-                <motion.aside
-                    initial={false}
-                    animate={{ width: isSidebarCollapsed ? 80 : 256 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="hidden md:flex bg-card/95 backdrop-blur-sm border-r border-y border-border/60 flex-col fixed left-0 top-1/2 -translate-y-1/2 h-[70vh] z-20 overflow-y-auto rounded-r-2xl shadow-xl shadow-black/20"
-                >
-                    {/* Sidebar Header with Toggle */}
-                    <div className="p-4 border-b border-border/60 flex items-center justify-start">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                        >
-                            <Menu className="w-5 h-5" />
-                        </Button>
-                    </div>
-
-                    {/* Navigation Items with sliding indicator */}
-                    <nav className="flex-1 p-4 space-y-2">
-                        {navItems.map((item) => {
-                            const Icon = item.icon;
-                            const isActive = pathname === item.href;
-                            return (
-                                <Link key={item.href} href={item.href}>
-                                    <AnimatedDockButton className="relative w-full">
-                                        {/* Sliding active indicator */}
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="sidebar-active-indicator"
-                                                className="absolute inset-0 bg-primary/10 rounded-md"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                                            />
-                                        )}
-                                        <Button
-                                            variant="ghost"
-                                            className={cn(
-                                                "w-full gap-3 transition-all duration-300 justify-start relative z-10",
-                                                isActive && "text-primary"
-                                            )}
-                                            title={isSidebarCollapsed ? item.label : undefined}
-                                        >
-                                            <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
-                                            <AnimatePresence mode="wait">
-                                                {!isSidebarCollapsed && (
-                                                    <motion.span
-                                                        initial={{ opacity: 0, width: 0 }}
-                                                        animate={{ opacity: 1, width: "auto" }}
-                                                        exit={{ opacity: 0, width: 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="whitespace-nowrap overflow-hidden"
-                                                    >
-                                                        {item.label}
-                                                    </motion.span>
-                                                )}
-                                            </AnimatePresence>
-                                        </Button>
-                                    </AnimatedDockButton>
-                                </Link>
-                            );
-                        })}
-
-
-                    </nav>
-
-                    {/* Upgrade Plan Button - Hidden during pre-launch */}
-                    {!IS_PRE_LAUNCH && (
-                        <div className="p-4 border-t border-border">
-                            <AnimatedDockButton className="w-full">
-                                <Button
-                                    onClick={() => setIsPricingOpen(true)}
-                                    className="w-full gap-2 bg-linear-to-r from-(--brand-primary) to-(--brand-secondary) hover:from-(--brand-primary-dark) hover:to-(--brand-primary) text-white shadow-lg shadow-black/20 justify-center"
-                                    title={isSidebarCollapsed ? "Upgrade to Pro" : undefined}
-                                >
-                                    <Crown className="w-4 h-4 shrink-0" />
-                                    <AnimatePresence mode="wait">
-                                        {!isSidebarCollapsed && (
-                                            <motion.span
-                                                initial={{ opacity: 0, width: 0 }}
-                                                animate={{ opacity: 1, width: "auto" }}
-                                                exit={{ opacity: 0, width: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                                className="whitespace-nowrap overflow-hidden"
-                                            >
-                                                Upgrade to Pro
-                                            </motion.span>
-                                        )}
-                                    </AnimatePresence>
-                                </Button>
-                            </AnimatedDockButton>
-                        </div>
-                    )}
-                </motion.aside>
+                <StudyNavbar
+                    navItems={navItems}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    isMobileSidebarOpen={isMobileSidebarOpen}
+                    setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+                    setIsPricingOpen={setIsPricingOpen}
+                />
 
                 {/* Main Content */}
                 <main
@@ -519,7 +170,6 @@ function StudyPageLayoutInner({
                     </motion.div>
                 </main>
 
-                {/* Chat Assistant */}
                 {/* Chat Assistant - Only available on Notes page */}
                 {isNotesPage && (
                     <ChatAssistant
