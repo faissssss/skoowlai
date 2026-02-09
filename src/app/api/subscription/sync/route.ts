@@ -293,6 +293,7 @@ export async function reconcileFromDodo(userClerkId: string) {
                 subscriptionEndsAt: true,
                 subscriptionId: true,
                 customerId: true,
+                paymentGracePeriodEndsAt: true,
             },
         });
     }
