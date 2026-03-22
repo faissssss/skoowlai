@@ -490,10 +490,20 @@ export default function LandingPage() {
                 </motion.button>
               </Link>
 
-              {/* Avatar Circles - Social Proof */}
-              <div className="flex items-center gap-3">
-                <AvatarCircles avatarUrls={avatarUrls} />
-                <span className="text-muted-foreground text-sm">Join 100+ students</span>
+              {/* Social Proof & Product Hunt */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 mt-2">
+                {/* Avatar Circles - Social Proof */}
+                <div className="flex items-center gap-3">
+                  <AvatarCircles avatarUrls={avatarUrls} />
+                  <span className="text-muted-foreground text-sm">Join 100+ students</span>
+                </div>
+                
+                <div className="hidden sm:block w-px h-8 bg-border/50"></div>
+
+                {/* Product Hunt Badge */}
+                <a href="https://www.producthunt.com/products/skoowl-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-skoowl-ai" target="_blank" rel="noopener noreferrer" className="transition-transform hover:scale-105">
+                  <img alt="Skoowl AI - Turn your study materials into study decks. | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1104386&theme=dark&t=1774189971449" />
+                </a>
               </div>
             </div>
           </motion.div>
