@@ -36,22 +36,28 @@ This project is built with the latest modern web technologies, focusing on perfo
     -   [Lucide React](https://lucide.dev/) - Beautiful, consistent icons.
 
 ### **Backend & Database**
--   **Database**: [PostgreSQL](https://www.postgresql.org/) (via [Neon](https://neon.tech/) Serverless).
--   **ORM**: [Prisma](https://www.prisma.io/) - Next-generation Node.js and TypeScript ORM.
+-   **Database**: [PostgreSQL](https://www.postgresql.org/) (via [Neon](https://neon.tech/) Serverless) & [Local SQLite](https://sqlite.org/) (for dev).
+-   **ORM**: [Prisma v5.22.0](https://www.prisma.io/) - Next-generation Node.js and TypeScript ORM.
+-   **Caching & Rate Limiting**: [Upstash Redis](https://upstash.com/) for caching and API rate limiting.
 -   **Authentication**: [Clerk](https://clerk.com/) - Complete user management and authentication.
+-   **Payments & Subscriptions**: [Dodo Payments](https://www.dodopayments.com/) - Payment gateway and subscription handling.
+-   **Webhooks**: [Svix](https://www.svix.com/) - Robust webhook signature verification.
 
 ### **Artificial Intelligence (AI)**
--   **Text Generation**: [Google Gemini 2.5 Flash](https://deepmind.google/technologies/gemini/) (via Vercel AI SDK) - Fast, efficient reasoning for notes and quizzes.
+-   **Text Generation**: [Google Gemini / OpenAI](https://deepmind.google/technologies/gemini/) (via Vercel AI SDK) - Fast, efficient reasoning for notes and quizzes.
 -   **Transcription**: 
-    -   [Groq](https://groq.com/) (Whisper Large v3) - Lightning-fast audio transcription.
-    -   [Deepgram](https://deepgram.com/) - Real-time streaming transcription capabilities.
--   **AI SDK**: [Vercel AI SDK](https://sdk.vercel.ai/docs) - The TypeScript toolkit for building AI applications.
+    -   [Deepgram](https://deepgram.com/) - High-quality real-time audio and speech transcription.
+-   **AI SDK**: [Vercel AI SDK](https://sdk.vercel.ai/docs) - The TypeScript toolkit for streaming AI applications.
 
-### **File Processing**
--   **PDFs**: `pdf-parse`
--   **Word**: `mammoth`
--   **PowerPoint**: `officeparser`
--   **YouTube**: `youtube-transcript` & `@distube/ytdl-core`
+### **Rich Interfaces & UI Enhancements**
+-   **Rich Text Editor**: [Tiptap](https://tiptap.dev/) - Headless editor for notes and interactive content.
+-   **Markdown & Math**: `react-markdown` with `remark`/`rehype` and `KaTeX` plugins for rendering AI outputs and formulas.
+-   **Diagrams**: [React Flow](https://reactflow.dev/) - For building interactive interactive mind maps.
+-   **3D UI / Advanced Graphics**: `three.js`, `@react-three/fiber`, `@shadergradient/react`, and `gsap` for powerful interactive visual layers and animations.
+
+### **File Processing & Media Extraction**
+-   **Documents**: `pdf-parse` (PDF), `mammoth` (Word), and `officeparser` (PowerPoint/Office).
+-   **YouTube**: `youtube-transcript`, `@distube/ytdl-core`, and `yt-dlp-exec` for extracting knowledge from educational videos.
 
 ---
 
