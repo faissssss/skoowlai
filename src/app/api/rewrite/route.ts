@@ -1,9 +1,12 @@
-import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
 import { z } from 'zod';
 import { NextRequest } from 'next/server';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
+import { checkCsrfOrigin } from '@/lib/csrf';
+import { createLLMRouter } from '@/lib/llm/service';
+import type { StreamTextResult } from '@/lib/llm/router';
+
+console.log('🟢 [REWRITE] Module loaded successfully');
 
 export const maxDuration = 120; // Allow longer processing time for audio
 // Node.js runtime required: uses Prisma via requireAuth/db
@@ -18,9 +21,20 @@ const REWRITE_PROMPTS: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+    console.log('🔵 [REWRITE] POST endpoint called');
+    
+    const csrfError = checkCsrfOrigin(req);
+    if (csrfError) {
+        console.log('🔴 [REWRITE] CSRF check failed');
+        return csrfError;
+    }
+
     // 1. Authenticate user first
-    const { user, errorResponse } = await requireAuth();
-    if (errorResponse) return errorResponse;
+    const { errorResponse } = await requireAuth();
+    if (errorResponse) {
+        console.log('🔴 [REWRITE] Auth check failed');
+        return errorResponse;
+    }
 
     // Rate limit check (uses User ID for authenticated users)
     const rateLimitResponse = await checkRateLimitFromRequest(req);
@@ -50,16 +64,19 @@ export async function POST(req: NextRequest) {
 
         const instruction = REWRITE_PROMPTS[action];
 
-        const result = streamText({
-            model: google('gemini-2.5-flash'),
-            messages: [
-                {
-                    role: 'user',
-                    content: text,
-                },
-            ],
-            temperature: 0.3, // Lower for consistent rewriting quality
-            system: `**Role:** Professional Multi-lingual Editor
+        // Initialize LLM Router with error handling
+        let result: StreamTextResult;
+        try {
+            const router = createLLMRouter(30000);
+            result = await router.streamText({
+                messages: [
+                    {
+                        role: 'user',
+                        content: text,
+                    },
+                ],
+                temperature: 0.3, // Lower for consistent rewriting quality
+                system: `**Role:** Professional Multi-lingual Editor
 **Task:** Rewrite the user's input text based on the selected action: "${action}" (${instruction}).
 
 **CRITICAL RULES (MUST FOLLOW):**
@@ -80,9 +97,46 @@ export async function POST(req: NextRequest) {
    * Return ONLY the rewritten text - nothing else
    * Preserve paragraph structure if present
    * Output the transformed text directly with no decorations`,
+                feature: 'rewrite',
+            });
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return new Response(JSON.stringify({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        // Create a simple text stream response
+        // Don't access result.text as it consumes the stream
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+            async start(controller) {
+                try {
+                    // Iterate over the text stream chunks
+                    for await (const textChunk of result.textStream) {
+                        controller.enqueue(encoder.encode(textChunk));
+                    }
+                    controller.close();
+                } catch (error) {
+                    console.error('[REWRITE] Stream error:', error);
+                    controller.error(error);
+                }
+            },
         });
 
-        return result.toTextStreamResponse();
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'X-Rate-Limit-Remaining': result.rateLimitInfo?.remaining.toString() || '0',
+                'X-Rate-Limit-Limit': result.rateLimitInfo?.limit.toString() || '0',
+                'X-Degraded-Mode': result.degradedMode ? 'true' : 'false',
+            },
+        });
 
     } catch (error) {
         const isProd = process.env.NODE_ENV === 'production';

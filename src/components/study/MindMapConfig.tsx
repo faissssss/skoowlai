@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2, Network, Check, X } from 'lucide-react';
+import { Loader2, Network, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import { useErrorModal } from '@/components/ErrorModal';
@@ -179,11 +179,19 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
                     return;
                 }
                 console.error('Failed to generate mind map:', data.error);
-                alert('Failed to generate mind map. Please try again.');
+                showError(
+                    'Mind map generation failed',
+                    data.details || 'Failed to generate mind map. Please try again.',
+                    'error'
+                );
             }
         } catch (error) {
             console.error('Error generating mind map:', error);
-            alert('Failed to generate mind map. Please try again.');
+            showError(
+                'Mind map generation failed',
+                'Failed to generate mind map. Please try again.',
+                'error'
+            );
         } finally {
             setIsGenerating(false);
             stopLoading();

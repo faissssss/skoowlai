@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChoiceChipGroup } from '@/components/ui/choice-chip';
-import { Loader2, Sparkles, BookOpen, MessageSquare, Wrench, FileText, List, X, Layers, Tag, Database, Shuffle, GalleryHorizontal } from 'lucide-react';
+import { Loader2, Sparkles, MessageSquare, Wrench, X, Layers, Tag, Database, Shuffle, GalleryHorizontal } from 'lucide-react';
 import { useGlobalLoader } from '@/contexts/LoaderContext';
 import PricingModal from '@/components/PricingModal';
 import { useErrorModal } from '@/components/ErrorModal';
@@ -51,13 +51,21 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
                     'limit'
                 );
             } else {
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 console.error('Failed to generate flashcards:', data.error);
-                alert('Failed to generate flashcards. Please try again.');
+                showError(
+                    'Flashcard generation failed',
+                    data.details || 'Failed to generate flashcards. Please try again.',
+                    'error'
+                );
             }
         } catch (error) {
             console.error('Error generating flashcards:', error);
-            alert('Failed to generate flashcards. Please try again.');
+            showError(
+                'Flashcard generation failed',
+                'Failed to generate flashcards. Please try again.',
+                'error'
+            );
         } finally {
             setIsGenerating(false);
             stopLoading();

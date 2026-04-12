@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
+import { createLLMRouter } from '@/lib/llm/service';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
@@ -476,20 +475,23 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
             experimental_attachments: m.experimental_attachments?.map((a: Record<string, unknown>) => ({ ...a, url: '[BASE64 DATA]' }))
         })), null, 2));
 
-        // Use streamText to keep connection alive during generation (prevents Vercel timeouts)
-        const result = streamText({
-            // @ts-ignore - Vercel AI SDK types might be behind, but we want to pass safetySettings
-            model: google('gemini-2.5-flash', {
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                ],
-            }),
+        // Initialize LLM Router with error handling
+        let router: ReturnType<typeof createLLMRouter>;
+        try {
+            router = createLLMRouter(120000);
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return NextResponse.json({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+            }, { status: 500 });
+        }
+
+        // Use LLM Router for streaming text generation
+        const result = await router.streamText({
             messages: limitedMessages,
             temperature: 0.3, // Lower temperature = faster, more deterministic
-            maxOutputTokens: 8192, // Limit output size for speed
+            feature: 'generate',
         });
 
         // Await the full text - connection stays open while streaming

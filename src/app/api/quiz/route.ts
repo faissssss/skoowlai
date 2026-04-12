@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
+import { createLLMRouter } from '@/lib/llm/service';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
+import { budgetContent } from '@/lib/study-generation/promptBudget';
 
 // Configuration types
-type QuizTimer = 'none' | '5' | '10' | '15';
 type QuizType = 'multiple-choice' | 'true-false' | 'fill-in' | 'mixed';
 type QuizDifficulty = 'basic' | 'intermediate' | 'advanced' | 'expert';
-type QuizScope = 'summary' | 'granular' | 'full';
 
 export const maxDuration = 60;
 // Node.js runtime required: uses Prisma via requireAuth/db
@@ -79,9 +77,26 @@ function buildQuizPrompt(
 - Hints should be 1-2 sentences maximum
 
 **CONTENT TO CREATE QUIZ FROM:**
-${content.slice(0, 25000)}
+${content}
 
 Generate ${count} UNIQUE quiz questions with helpful hints now.`;
+}
+
+function getQuizSourceTokenBudget(count: number, difficulty: QuizDifficulty): number {
+    const countPenalty = count * 45;
+    const difficultyPenalty = difficulty === 'expert'
+        ? 250
+        : difficulty === 'advanced'
+            ? 150
+            : difficulty === 'intermediate'
+                ? 75
+                : 0;
+    return Math.max(1600, 3400 - countPenalty - difficultyPenalty);
+}
+
+function isPromptTooLargeError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    return /request too large|tokens per minute|context limit|413/i.test(error.message);
 }
 
 // ... imports ...
@@ -150,81 +165,112 @@ export async function POST(req: NextRequest) {
         // ... rest of generation logic ...
         // Build prompt with configuration
         const finalCount = Math.min(Math.max(count || 10, 1), 50); // Clamp between 1-50
-        const prompt = buildQuizPrompt(
+        const budgetedSource = budgetContent(
             sourceContent,
+            getQuizSourceTokenBudget(finalCount, difficulty || 'basic')
+        );
+
+        if (budgetedSource.wasTrimmed) {
+            console.warn('Quiz source content trimmed to fit provider limits', {
+                deckId,
+                originalEstimatedTokens: budgetedSource.originalEstimatedTokens,
+                trimmedEstimatedTokens: budgetedSource.trimmedEstimatedTokens,
+            });
+        }
+
+        const prompt = buildQuizPrompt(
+            budgetedSource.content,
             type || 'multiple-choice',
             difficulty || 'basic',
             finalCount
         );
 
-        // Generate quiz questions
-        const { object } = await generateObject({
-            model: google('gemini-2.5-flash'),
-            schema: quizSchema,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.3, // Lower for consistent, accurate quiz questions
-        });
+        // Initialize LLM Router with error handling
+        try {
+            const router = createLLMRouter(60000);
 
-        // Delete existing quizzes for this deck first (fresh generation)
-        await db.quiz.deleteMany({
-            where: { deckId },
-        });
+            // Generate quiz questions using LLM Router
+            const { object } = await router.generateObject({
+                schema: quizSchema,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3, // Lower for consistent, accurate quiz questions
+                feature: 'quiz',
+            });
 
-        // CRITICAL: Filter out any questions without valid answers
-        // This ensures "No answer set" is IMPOSSIBLE
-        const validQuestions = object.questions.filter(q => {
-            const hasAnswer = q.answer && q.answer.trim().length > 0;
-            if (!hasAnswer) {
-                console.warn('Filtered out question without answer:', q.question);
+            // Delete existing quizzes for this deck first (fresh generation)
+            await db.quiz.deleteMany({
+                where: { deckId },
+            });
+
+            // CRITICAL: Filter out any questions without valid answers
+            // This ensures "No answer set" is IMPOSSIBLE
+            const validQuestions = object.questions.filter(q => {
+                const hasAnswer = q.answer && q.answer.trim().length > 0;
+                if (!hasAnswer) {
+                    console.warn('Filtered out question without answer:', q.question);
+                }
+                return hasAnswer;
+            });
+
+            if (validQuestions.length === 0) {
+                return NextResponse.json({
+                    error: 'Failed to generate quiz: No valid questions with answers were created',
+                }, { status: 500 });
             }
-            return hasAnswer;
-        });
 
-        if (validQuestions.length === 0) {
+            // Store generated quizzes in database WITH HINTS
+            await db.quiz.createMany({
+                data: validQuestions.map((q) => ({
+                    deckId,
+                    question: q.question,
+                    options: JSON.stringify(q.options),
+                    answer: q.answer.trim(), // Ensure trimmed answer
+                    hint: q.hint || null, // Store the generated hint
+                })),
+            });
+
+            // Fetch the created quizzes to return
+            const quizzes = await db.quiz.findMany({
+                where: { deckId },
+            });
+
+            // Parse options back to arrays for response
+            const parsedQuizzes = quizzes.map(q => ({
+                id: q.id,
+                question: q.question,
+                options: JSON.parse(q.options) as string[],
+                answer: q.answer,
+                hint: q.hint || undefined, // Include hint in response
+            }));
+
+            // Increment usage count after successful generation
+            if (limitCheck.user) {
+                await incrementFeatureUsage(limitCheck.user.id, 'quiz');
+            }
+
             return NextResponse.json({
-                error: 'Failed to generate quiz: No valid questions with answers were created',
+                success: true,
+                count: quizzes.length,
+                quizzes: parsedQuizzes,
+                timer: timer || 'none', // Return timer setting for UI
+            });
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return NextResponse.json({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
             }, { status: 500 });
         }
-
-        // Store generated quizzes in database WITH HINTS
-        await db.quiz.createMany({
-            data: validQuestions.map((q) => ({
-                deckId,
-                question: q.question,
-                options: JSON.stringify(q.options),
-                answer: q.answer.trim(), // Ensure trimmed answer
-                hint: q.hint || null, // Store the generated hint
-            })),
-        });
-
-        // Fetch the created quizzes to return
-        const quizzes = await db.quiz.findMany({
-            where: { deckId },
-        });
-
-        // Parse options back to arrays for response
-        const parsedQuizzes = quizzes.map(q => ({
-            id: q.id,
-            question: q.question,
-            options: JSON.parse(q.options) as string[],
-            answer: q.answer,
-            hint: q.hint || undefined, // Include hint in response
-        }));
-
-        // Increment usage count after successful generation
-        if (limitCheck.user) {
-            await incrementFeatureUsage(limitCheck.user.id, 'quiz');
-        }
-
-        return NextResponse.json({
-            success: true,
-            count: quizzes.length,
-            quizzes: parsedQuizzes,
-            timer: timer || 'none', // Return timer setting for UI
-        });
-
     } catch (error) {
         console.error('Quiz generation error:', error);
+
+        if (isPromptTooLargeError(error)) {
+            return NextResponse.json({
+                error: 'Input too large for quiz generation',
+                details: 'This deck is too long for the current quiz settings. Try fewer questions or shorter notes.'
+            }, { status: 413 });
+        }
+
         // Generic error message for client, detailed log for server
         return NextResponse.json({
             error: 'Internal Server Error',

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Rewrite Endpoint</title>
+</head>
+<body>
+    <h1>Test Rewrite Endpoint</h1>
+    <button onclick="testRewrite()">Test Rewrite</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testRewrite() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/rewrite', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        text: 'This is a test', 
+                        action: 'improve',
+                        deckId: null
+                    }),
+                });
+
+                resultEl.textContent = `Status: ${response.status}\n`;
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    resultEl.textContent += `Response: ${text}`;
+                } else {
+                    const error = await response.json();
+                    resultEl.textContent += `Error: ${JSON.stringify(error, null, 2)}`;
+                }
+            } catch (error) {
+                resultEl.textContent = `Fetch Error: ${error.message}\n`;
+                resultEl.textContent += `This usually means:\n`;
+                resultEl.textContent += `1. The endpoint crashed during initialization\n`;
+                resultEl.textContent += `2. CORS issue\n`;
+                resultEl.textContent += `3. Network error\n`;
+                resultEl.textContent += `\nCheck the browser Network tab for more details`;
+            }
+        }
+    </script>
+</body>
+</html>

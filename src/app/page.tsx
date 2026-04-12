@@ -333,7 +333,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/skoowl-logo.png" alt="skoowl" width={36} height={36} className="w-9 h-9" priority />
+              <Image src="/skoowl-logo.png" alt="skoowl" width={36} height={36} className="w-9 h-9" priority suppressHydrationWarning />
               <span className="text-xl font-bold text-foreground font-heading">skoowl ai</span>
             </Link>
 
@@ -1202,7 +1202,7 @@ export default function LandingPage() {
             {/* Column 1: Brand & Mission */}
             <div className="lg:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <Image src="/skoowl-logo.png" alt="skoowl ai" width={40} height={40} className="w-10 h-10" />
+                <Image src="/skoowl-logo.png" alt="skoowl ai" width={40} height={40} className="w-10 h-10" suppressHydrationWarning />
                 <span className="text-xl font-bold text-foreground">skoowl ai</span>
               </div>
               <p className="text-muted-foreground max-w-sm">

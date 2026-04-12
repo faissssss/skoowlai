@@ -178,3 +178,46 @@ model SentEmail {
   @@index([recipientEmail])
   @@index([emailType])
 }
+
+// LLM cost tracking - logs every individual LLM request with detailed metrics
+model LlmRequest {
+  id             String   @id @default(cuid())
+  timestamp      DateTime @default(now())
+  provider       String   // groq, gemini
+  model          String   // llama-3.3-70b-versatile, gemini-2.5-flash, etc.
+  feature        String   // chat, generate, flashcards, quiz, mindmap, rewrite, generate-audio-notes
+  inputTokens    Int
+  outputTokens   Int
+  estimatedCost  Float
+  latencyMs      Int
+  success        Boolean
+  errorCode      String?
+  fallbackUsed   Boolean  @default(false)
+  userId         String?
+  requestId      String   @unique
+
+  @@index([timestamp])
+  @@index([provider])
+  @@index([feature])
+  @@index([userId])
+}
+
+// LLM cost summaries - aggregated daily statistics per provider and feature
+model CostSummary {
+  id             String   @id @default(cuid())
+  provider       String   // groq, gemini
+  feature        String   // chat, generate, flashcards, quiz, mindmap, rewrite, generate-audio-notes
+  date           DateTime // date for this summary (day granularity)
+  totalRequests  Int
+  totalTokens    Int
+  totalCost      Float
+  avgLatencyMs   Float
+  successRate    Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([provider, feature, date])
+  @@index([provider])
+  @@index([feature])
+  @@index([date])
+}

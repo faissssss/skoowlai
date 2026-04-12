@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
+import { createLLMRouter } from '@/lib/llm/service';
+import { budgetContent } from '@/lib/study-generation/promptBudget';
 
 // Schema for flashcards
 const flashcardsSchema = z.object({
@@ -73,9 +73,20 @@ function buildFlashcardPrompt(
 7. **CRITICAL: Keep text SHORT for easy mobile reading and memorization. Front side max 100 chars, back side max 300 chars. Prioritize brevity over detail.**
 
 **CONTENT TO CREATE FLASHCARDS FROM:**
-${content.slice(0, 25000)}
+${content}
 
 Generate ${count} UNIQUE flashcards now.`;
+}
+
+function getFlashcardSourceTokenBudget(count: number, detail: FlashcardDetail): number {
+    const countPenalty = count * 35;
+    const detailPenalty = detail === 'detailed' ? 250 : detail === 'standard' ? 100 : 0;
+    return Math.max(1800, 3600 - countPenalty - detailPenalty);
+}
+
+function isPromptTooLargeError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    return /request too large|tokens per minute|context limit|413/i.test(error.message);
 }
 
 export async function POST(req: NextRequest) {
@@ -141,55 +152,85 @@ export async function POST(req: NextRequest) {
 
         // Build prompt with configuration
         const finalCount = Math.min(Math.max(count || 10, 1), 50); // Clamp between 1-50
-        const prompt = buildFlashcardPrompt(
+        const budgetedSource = budgetContent(
             sourceContent,
+            getFlashcardSourceTokenBudget(finalCount, detail || 'standard')
+        );
+
+        if (budgetedSource.wasTrimmed) {
+            console.warn('Flashcard source content trimmed to fit provider limits', {
+                deckId,
+                originalEstimatedTokens: budgetedSource.originalEstimatedTokens,
+                trimmedEstimatedTokens: budgetedSource.trimmedEstimatedTokens,
+            });
+        }
+
+        const prompt = buildFlashcardPrompt(
+            budgetedSource.content,
             focus || 'mix',
             format || 'classic',
             detail || 'standard',
             finalCount
         );
 
-        // Generate flashcards
-        const { object } = await generateObject({
-            model: google('gemini-2.5-flash'),
-            schema: flashcardsSchema,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.4, // Balanced creativity for varied flashcards
-        });
+        // Initialize LLM Router with error handling
+        try {
+            const router = createLLMRouter(60000);
 
-        // Delete existing cards for this deck first (fresh generation)
-        await db.card.deleteMany({
-            where: { deckId },
-        });
+            // Generate flashcards using LLM Router
+            const { object } = await router.generateObject({
+                schema: flashcardsSchema,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.4, // Balanced creativity for varied flashcards
+                feature: 'flashcards',
+            });
 
-        // Store generated flashcards in database
-        const createdCards = await db.card.createMany({
-            data: object.flashcards.map((card) => ({
-                deckId,
-                front: card.front,
-                back: card.back,
-            })),
-        });
+            // Delete existing cards for this deck first (fresh generation)
+            await db.card.deleteMany({
+                where: { deckId },
+            });
 
-        // Fetch the created cards to return
-        const cards = await db.card.findMany({
-            where: { deckId },
-        });
+            // Store generated flashcards in database
+            await db.card.createMany({
+                data: object.flashcards.map((card) => ({
+                    deckId,
+                    front: card.front,
+                    back: card.back,
+                })),
+            });
 
-        // Increment usage count after successful generation
-        if (limitCheck.user) {
-            await incrementFeatureUsage(limitCheck.user.id, 'flashcard');
+            // Fetch the created cards to return
+            const cards = await db.card.findMany({
+                where: { deckId },
+            });
+
+            // Increment usage count after successful generation
+            if (limitCheck.user) {
+                await incrementFeatureUsage(limitCheck.user.id, 'flashcard');
+            }
+
+            return NextResponse.json({
+                success: true,
+                count: cards.length,
+                cards
+            });
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return NextResponse.json({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+            }, { status: 500 });
         }
-
-        return NextResponse.json({
-            success: true,
-            count: cards.length,
-            cards
-        });
-
     } catch (error) {
         // Enhanced error logging for debugging
         console.error('Flashcard generation error:', error);
+
+        if (isPromptTooLargeError(error)) {
+            return NextResponse.json({
+                error: 'Input too large for flashcard generation',
+                details: 'This deck is too long for the current generation settings. Try shorter notes or fewer cards.'
+            }, { status: 413 });
+        }
 
         // Log specific Google API error if available
         if (error instanceof Error) {

@@ -46,9 +46,12 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const transcriptBoxRef = useRef<HTMLDivElement>(null);
     const audioLevelIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const stateRef = useRef<RecordingState>('idle');
+    const manualRecognitionStopRef = useRef(false);
     const { showError } = useErrorModal();
 
     useEffect(() => { setBrowserInfo(getBrowserInfo()); }, []);
+    useEffect(() => { stateRef.current = state; }, [state]);
 
     const getSupportedMimeType = (): string => {
         const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
@@ -107,6 +110,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
 
     // Start browser speech recognition
     const startSpeechRecognition = useCallback(() => {
+        if (recognitionRef.current) return;
         const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         if (!SpeechRecognitionAPI) {
@@ -117,7 +121,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
         const recognition = new SpeechRecognitionAPI();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = navigator.languages?.[0] || navigator.language || 'en-US';
         recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
@@ -148,17 +152,22 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             console.warn('Speech recognition error:', event.error);
-            if (event.error === 'no-speech') {
-                // Restart on no-speech error
-                try { recognition.start(); } catch { }
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                setTranscriptionActive(false);
             }
         };
 
         recognition.onend = () => {
             console.log('Speech recognition ended');
-            // Restart if still recording
-            if (state === 'recording' && recognitionRef.current) {
-                try { recognition.start(); } catch { }
+            setTranscriptionActive(false);
+            recognitionRef.current = null;
+            // Auto-restart only when recording is still active and stop was not manual.
+            if (stateRef.current === 'recording' && !manualRecognitionStopRef.current) {
+                setTimeout(() => {
+                    if (stateRef.current === 'recording' && !manualRecognitionStopRef.current) {
+                        startSpeechRecognition();
+                    }
+                }, 200);
             }
         };
 
@@ -167,8 +176,9 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             recognitionRef.current = recognition;
         } catch (e) {
             console.error('Failed to start speech recognition:', e);
+            recognitionRef.current = null;
         }
-    }, [state]);
+    }, []);
 
     const startRecording = async () => {
         try {
@@ -203,11 +213,13 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
                 }
             };
 
-            // Start speech recognition for live transcription
-            startSpeechRecognition();
-
             mediaRecorder.start(250);
             setState('recording');
+
+            // Start speech recognition after state switches to recording.
+            manualRecognitionStopRef.current = false;
+            startSpeechRecognition();
+
             setRecordingTime(0);
             timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
             drawWaveform();
@@ -224,6 +236,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             mediaRecorderRef.current.pause();
             if (timerRef.current) clearInterval(timerRef.current);
             if (recognitionRef.current) {
+                manualRecognitionStopRef.current = true;
                 try { recognitionRef.current.stop(); } catch { }
             }
             stopAudioLevelMonitoring();
@@ -235,6 +248,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
         if (mediaRecorderRef.current && state === 'paused') {
             mediaRecorderRef.current.resume();
             timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+            manualRecognitionStopRef.current = false;
             startSpeechRecognition();
             startAudioLevelMonitoring();
             setState('recording');
@@ -247,6 +261,7 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
         setTranscriptionActive(false);
 
         if (recognitionRef.current) {
+            manualRecognitionStopRef.current = true;
             try { recognitionRef.current.stop(); } catch { }
             recognitionRef.current = null;
         }
@@ -312,7 +327,10 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
             if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
             if (timerRef.current) clearInterval(timerRef.current);
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch { } }
+            if (recognitionRef.current) {
+                manualRecognitionStopRef.current = true;
+                try { recognitionRef.current.stop(); } catch { }
+            }
         };
     }, []);
 

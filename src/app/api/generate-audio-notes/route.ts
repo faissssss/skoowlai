@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
-import { google } from '@ai-sdk/google';
-import { generateText } from 'ai';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
-import { verifyUsageLimits, USAGE_LIMITS } from '@/lib/usageVerifier';
+import { verifyUsageLimits } from '@/lib/usageVerifier';
 import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
+import { createLLMRouter } from '@/lib/llm/service';
 
 export const maxDuration = 120; // Allow longer processing time for audio
 // Node.js runtime required: uses OpenAI SDK/Buffer
@@ -86,7 +85,7 @@ export async function POST(req: NextRequest) {
     if (csrfError) return csrfError;
 
     // 1. Authenticate user first
-    const { user, errorResponse } = await requireAuth();
+        const { errorResponse } = await requireAuth();
     if (errorResponse) return errorResponse;
 
     // Rate limit check (uses User ID for authenticated users)
@@ -148,14 +147,33 @@ export async function POST(req: NextRequest) {
         console.log('✅ Transcription complete, length:', transcript.length);
         console.log('📝 Transcript preview:', transcript.slice(0, 200));
 
-        // Step 2: Generate structured notes with Gemini
-        console.log('🤖 Generating notes with Gemini...');
+        // Step 2: Generate structured notes with LLM Router
+        console.log('🤖 Generating notes with LLM Router...');
 
-        const { text: notes } = await generateText({
-            model: google('gemini-2.5-flash'),
+        // Initialize LLM Router with error handling
+        let router: ReturnType<typeof createLLMRouter>;
+        try {
+            router = createLLMRouter(30000);
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return NextResponse.json({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+            }, { status: 500 });
+        }
+
+        // Use LLM Router for streaming text generation
+        const result = await router.streamText({
+            messages: [
+                { role: 'user', content: `Create study notes from this transcript:\n\n${transcript}` }
+            ],
+            temperature: 0.3,
             system: NOTE_GENERATION_PROMPT,
-            prompt: `Create study notes from this transcript:\n\n${transcript}`,
+            feature: 'generate-audio-notes',
         });
+
+        // Await the full text
+        const notes = await result.text;
 
         console.log('✅ Notes generated successfully.');
         console.log('📝 Notes length:', notes?.length || 0);

@@ -51,13 +51,21 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
                     'limit'
                 );
             } else {
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 console.error('Failed to generate quiz:', data.error);
-                alert('Failed to generate quiz. Please try again.');
+                showError(
+                    'Quiz generation failed',
+                    data.details || 'Failed to generate quiz. Please try again.',
+                    'error'
+                );
             }
         } catch (error) {
             console.error('Error generating quiz:', error);
-            alert('Failed to generate quiz. Please try again.');
+            showError(
+                'Quiz generation failed',
+                'Failed to generate quiz. Please try again.',
+                'error'
+            );
         } finally {
             setIsGenerating(false);
             stopLoading();

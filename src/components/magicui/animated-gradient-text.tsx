@@ -24,6 +24,7 @@ export function AnimatedGradientText({
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
             }}
+            suppressHydrationWarning
         >
             {children}
         </span>

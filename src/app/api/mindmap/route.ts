@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
+import { createLLMRouter } from '@/lib/llm/service';
+import { budgetContent } from '@/lib/study-generation/promptBudget';
 
 export const maxDuration = 120;
 // Node.js runtime required: uses Prisma via requireAuth/db
@@ -71,11 +71,38 @@ function buildMindMapPrompt(
 5. Make connections flow from more general to more specific concepts
 6. Ensure all nodes are connected to the tree
 7. Structure the diagram according to the specified layout type
+8. Return JSON with EXACTLY this top-level shape:
+{
+  "nodes": [
+    { "id": "root", "label": "${title.slice(0, 40)}", "isRoot": true },
+    { "id": "child-1", "label": "Example child", "isRoot": false, "parentId": "root" }
+  ],
+  "connections": [
+    { "sourceId": "root", "targetId": "child-1" }
+  ]
+}
+9. Use the exact property names: nodes, connections, id, label, isRoot, parentId, sourceId, targetId
+10. Do NOT use any other top-level keys such as edges, root, metadata, layout, or summary
+11. Every non-root node must include parentId
+12. Every connection must reference valid existing node IDs
+13. There must be exactly one root node with isRoot=true
+14. Output ONLY JSON
 
 **CONTENT TO ANALYZE:**
-${content.slice(0, 20000)}
+${content}
 
 Generate a clear, educational ${layout} structure now.`;
+}
+
+function getMindMapSourceTokenBudget(depth: MindMapDepth, layout: MindMapLayout): number {
+    const depthPenalty = depth === 'deep' ? 450 : depth === 'medium' ? 250 : 0;
+    const layoutPenalty = layout === 'logic' || layout === 'fishbone' || layout === 'timeline' ? 150 : 0;
+    return Math.max(1700, 3300 - depthPenalty - layoutPenalty);
+}
+
+function isPromptTooLargeError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    return /request too large|tokens per minute|context limit|413/i.test(error.message);
 }
 
 
@@ -556,11 +583,36 @@ export async function POST(req: NextRequest) {
         }
 
         const sourceContent = deck.summary || deck.content;
-        const prompt = buildMindMapPrompt(sourceContent, deck.title, depth, style);
+        const budgetedSource = budgetContent(
+            sourceContent,
+            getMindMapSourceTokenBudget(depth, style)
+        );
+
+        if (budgetedSource.wasTrimmed) {
+            console.warn('Mind map source content trimmed to fit provider limits', {
+                deckId,
+                originalEstimatedTokens: budgetedSource.originalEstimatedTokens,
+                trimmedEstimatedTokens: budgetedSource.trimmedEstimatedTokens,
+            });
+        }
+
+        const prompt = buildMindMapPrompt(budgetedSource.content, deck.title, depth, style);
+
+        // Initialize LLM Router with error handling
+        let router: ReturnType<typeof createLLMRouter>;
+        try {
+            router = createLLMRouter(120000);
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return NextResponse.json({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+            }, { status: 500 });
+        }
 
         // Generate mind map structure using AI
-        const { object } = await generateObject({
-            model: google('gemini-2.5-flash'),
+        const { object } = await router.generateObject({
+            feature: 'mindmap',
             schema: mindMapSchema,
             messages: [{ role: 'user', content: prompt }],
             temperature: 0.4, // Balanced creativity for diverse mind map structures
@@ -597,6 +649,17 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Mind map generation error:', error);
+        if (error instanceof Error && 'issues' in error) {
+            console.error('Mind map validation issues:', (error as Error & { issues?: unknown }).issues);
+        }
+
+        if (isPromptTooLargeError(error)) {
+            return NextResponse.json({
+                error: 'Input too large for mind map generation',
+                details: 'This deck is too long for the current mind map settings. Try shorter notes or a shallower map.'
+            }, { status: 413 });
+        }
+
         // Generic error message for client, detailed log for server
         return NextResponse.json({
             error: 'Internal Server Error',

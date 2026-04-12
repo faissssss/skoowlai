@@ -1,5 +1,3 @@
-import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,6 +5,7 @@ import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
+import { createLLMRouter } from '@/lib/llm/service';
 
 export const maxDuration = 60;
 // Node.js runtime required: uses Prisma via requireAuth/db
@@ -90,11 +89,7 @@ export async function POST(req: NextRequest) {
         // Store userId for increment in onFinish
         const userId = limitCheck.user?.id;
 
-        const result = streamText({
-            model: google('gemini-2.5-flash'),
-            messages: allMessages,
-            temperature: 0.4, // Slightly higher for conversational responses
-            system: `You are Skoowl AI, a friendly study assistant. Help students understand their notes clearly and concisely.
+        const systemPrompt = `You are Skoowl AI, a friendly study assistant. Help students understand their notes clearly and concisely.
 
 **CRITICAL FORMATTING RULES:**
 
@@ -127,52 +122,90 @@ The concept was introduced...
 
 Here are the student's notes for reference:
 ${context}
-`,
-            async onFinish({ text }) {
-                // Save both user message and assistant response to database
-                if (deckId) {
-                    const userMessage = messages[messages.length - 1];
+`;
 
-                    // Clean up content for DB storage: remove the prepended citation if it exists
-                    let dbContent = userMessage.content;
-                    if (userMessage.citation) {
-                        const citationPart = `> "${userMessage.citation}"\n\n`;
-                        if (dbContent.startsWith(citationPart)) {
-                            dbContent = dbContent.slice(citationPart.length);
-                        } else if (dbContent.startsWith(`> "${userMessage.citation}"`)) {
-                            dbContent = dbContent.replace(`> "${userMessage.citation}"`, '').trim();
+        // Initialize LLM Router with error handling
+        try {
+            const router = createLLMRouter(30000);
+            const result = await router.streamText({
+                messages: allMessages,
+                temperature: 0.4, // Slightly higher for conversational responses
+                system: systemPrompt,
+                feature: 'chat',
+                async onFinish({ text }) {
+                    // Save both user message and assistant response to database
+                    if (deckId) {
+                        const userMessage = messages[messages.length - 1];
+
+                        // Clean up content for DB storage: remove the prepended citation if it exists
+                        let dbContent = userMessage.content;
+                        if (userMessage.citation) {
+                            const citationPart = `> "${userMessage.citation}"\n\n`;
+                            if (dbContent.startsWith(citationPart)) {
+                                dbContent = dbContent.slice(citationPart.length);
+                            } else if (dbContent.startsWith(`> "${userMessage.citation}"`)) {
+                                dbContent = dbContent.replace(`> "${userMessage.citation}"`, '').trim();
+                            }
+                        }
+
+                        // Save messages SEQUENTIALLY to ensure correct ordering
+                        // User message first
+                        await db.chatMessage.create({
+                            data: {
+                                deckId,
+                                role: 'user',
+                                content: dbContent,
+                                citation: userMessage.citation || null,
+                            },
+                        });
+
+                        // Small delay to ensure distinct timestamps, then assistant message
+                        await db.chatMessage.create({
+                            data: {
+                                deckId,
+                                role: 'assistant',
+                                content: text,
+                            },
+                        });
+
+                        // Increment chat usage count
+                        if (userId) {
+                            await incrementFeatureUsage(userId, 'chat');
                         }
                     }
+                },
+            });
 
-                    // Save messages SEQUENTIALLY to ensure correct ordering
-                    // User message first
-                    await db.chatMessage.create({
-                        data: {
-                            deckId,
-                            role: 'user',
-                            content: dbContent,
-                            citation: userMessage.citation || null,
-                        },
-                    });
-
-                    // Small delay to ensure distinct timestamps, then assistant message
-                    await db.chatMessage.create({
-                        data: {
-                            deckId,
-                            role: 'assistant',
-                            content: text,
-                        },
-                    });
-
-                    // Increment chat usage count
-                    if (userId) {
-                        await incrementFeatureUsage(userId, 'chat');
+            // Convert router's streaming response to Vercel AI SDK format
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream({
+                async start(controller) {
+                    try {
+                        for await (const chunk of result.textStream) {
+                            controller.enqueue(encoder.encode(chunk));
+                        }
+                        controller.close();
+                    } catch (error) {
+                        controller.error(error);
                     }
-                }
-            },
-        });
+                },
+            });
 
-        return result.toTextStreamResponse();
+            return new Response(stream, {
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'X-Rate-Limit-Remaining': result.rateLimitInfo?.remaining.toString() || '0',
+                    'X-Rate-Limit-Limit': result.rateLimitInfo?.limit.toString() || '0',
+                    'X-Degraded-Mode': result.degradedMode ? 'true' : 'false',
+                },
+            });
+        } catch (error) {
+            console.error('Failed to load LLM configuration:', error);
+            return NextResponse.json({
+                error: 'LLM Configuration Error',
+                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+            }, { status: 500 });
+        }
     } catch (error) {
         const isProd = process.env.NODE_ENV === 'production';
         console.error('Chat API Error Details:', {
