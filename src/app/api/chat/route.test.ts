@@ -125,9 +125,10 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response).toBeDefined();
+    if (!response) throw new Error('Response is undefined');
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
     expect(response.headers.get('X-Rate-Limit-Remaining')).toBe('25');
@@ -173,7 +174,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     expect(db.chatMessage.findMany).toHaveBeenCalledWith({
@@ -214,7 +215,7 @@ describe('POST /api/chat', () => {
     // Record the call count before this test
     const callCountBefore = vi.mocked(db.chatMessage.create).mock.calls.length;
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     // Trigger onFinish callback by consuming the stream
@@ -271,7 +272,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -300,7 +301,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(403);
     const data = await response.json();
@@ -326,7 +327,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(404);
     const data = await response.json();
@@ -353,7 +354,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(500);
     const data = await response.json();
@@ -374,7 +375,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -420,7 +421,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     // Consume stream to trigger onFinish
@@ -458,7 +459,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Rate-Limit-Remaining')).toBeTruthy();
@@ -498,7 +499,7 @@ describe('POST /api/chat', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Degraded-Mode')).toBe('true');

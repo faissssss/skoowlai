@@ -839,7 +839,7 @@ test('Groq streaming supports both textStream and text for single-consumer strea
   require.cache[openAiModulePath] = {
     ...require.cache[openAiModulePath],
     exports: FakeOpenAI,
-  };
+  } as any;
 
   try {
     const router = new LLMRouter(makeConfig({ enableFallback: false }));
@@ -866,7 +866,7 @@ test('Groq streaming supports both textStream and text for single-consumer strea
       require.cache[openAiModulePath] = {
         ...require.cache[openAiModulePath],
         exports: originalOpenAiModule,
-      };
+      } as any;
     } else {
       delete require.cache[openAiModulePath];
     }

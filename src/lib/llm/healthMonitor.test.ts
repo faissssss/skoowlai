@@ -83,7 +83,7 @@ function test(name: string, run: () => void | Promise<void>) {
 
 function createMonitor(
   initialIso = '2026-04-12T10:00:00.000Z',
-  checkers: ConstructorParameters<typeof HealthMonitor>[3]['providerCheckers'] = {},
+  checkers: Record<string, () => Promise<boolean>> = {},
 ) {
   const clock = new FakeClock(initialIso);
   const redis = new FakeHealthRedis();
@@ -133,7 +133,7 @@ test('Property 16: success rate equals successful checks divided by total checks
 
 test('executes a health check, stores history, and updates provider metrics', async () => {
   const { redis, monitor } = createMonitor('2026-04-12T10:00:00.000Z', {
-    groq: async () => {},
+    groq: async () => { return true; },
   });
 
   const result = await monitor.checkHealth('groq');
@@ -151,9 +151,7 @@ test('executes a health check, stores history, and updates provider metrics', as
 
 test('measures latency based on the elapsed time during a provider check', async () => {
   const { clock, monitor } = createMonitor('2026-04-12T10:00:00.000Z', {
-    groq: async () => {
-      clock.advanceMs(275);
-    },
+    groq: async () => { clock.advanceMs(275); return true; },
   });
 
   const result = await monitor.checkHealth('groq');
@@ -191,7 +189,7 @@ test('marks a provider unhealthy after 3 consecutive failures', async () => {
 
 test('filters health history to the requested time window', async () => {
   const { clock, monitor } = createMonitor('2026-04-12T10:00:00.000Z', {
-    groq: async () => {},
+    groq: async () => { return true; },
   });
 
   await monitor.checkHealth('groq');

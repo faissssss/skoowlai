@@ -6,8 +6,12 @@ import {
   CostTracker,
   DEFAULT_COST_TRACKER_CONFIG,
   InMemoryCostStorage,
+  PrismaCostStorage,
   type CostEntry,
+  type CostTrackerConfig,
 } from './costTracker';
+import { db } from '../db';
+import type { Provider } from './config';
 
 type TestCase = {
   name: string;
@@ -173,6 +177,109 @@ test('detects when daily cost crosses a configured threshold', async () => {
   );
 });
 
+test('PrismaCostStorage stores and retrieves cost entries from database', async () => {
+  const storage = new PrismaCostStorage(db);
+  const tracker = new CostTracker(storage);
+
+  const testRequestId = `test-prisma-${Date.now()}`;
+  
+  const logged = await tracker.logRequest(makeEntry({
+    requestId: testRequestId,
+    inputTokens: 1_000,
+    outputTokens: 500,
+    latencyMs: 250,
+    success: true,
+    fallbackUsed: false,
+  }));
+
+  const summary = await tracker.getSummary(
+    'gemini',
+    new Date('2026-04-12T00:00:00.000Z'),
+    new Date('2026-04-12T23:59:59.999Z'),
+  );
+
+  // Verify the entry was stored and retrieved
+  assert.ok(summary.totalRequests >= 1);
+  assert.ok(summary.totalCost >= logged.estimatedCost);
+  
+  // Clean up test data
+  await db.llmRequest.deleteMany({
+    where: { requestId: testRequestId },
+  });
+});
+
+test('threshold alerts trigger when daily cost exceeds threshold', async () => {
+  const storage = new InMemoryCostStorage();
+  let alertTriggered = false;
+  let alertProvider: Provider | null = null;
+  let alertCost = 0;
+  let alertThreshold = 0;
+
+  const config: CostTrackerConfig = {
+    ...DEFAULT_COST_TRACKER_CONFIG,
+    thresholdAlerts: {
+      enabled: true,
+      thresholdUSD: 0.001,
+      onThresholdExceeded: async (provider, cost, threshold) => {
+        alertTriggered = true;
+        alertProvider = provider;
+        alertCost = cost;
+        alertThreshold = threshold;
+      },
+    },
+  };
+
+  const tracker = new CostTracker(storage, config);
+
+  // Log a request that exceeds the threshold
+  await tracker.logRequest(makeEntry({
+    requestId: 'req-alert-1',
+    inputTokens: 10_000,
+    outputTokens: 10_000,
+  }));
+
+  assert.equal(alertTriggered, true);
+  assert.equal(alertProvider, 'gemini');
+  assert.ok(alertCost >= 0.001);
+  assert.equal(alertThreshold, 0.001);
+});
+
+test('threshold alerts only trigger once per day per provider', async () => {
+  const storage = new InMemoryCostStorage();
+  let alertCount = 0;
+
+  const config: CostTrackerConfig = {
+    ...DEFAULT_COST_TRACKER_CONFIG,
+    thresholdAlerts: {
+      enabled: true,
+      thresholdUSD: 0.001,
+      onThresholdExceeded: async () => {
+        alertCount += 1;
+      },
+    },
+  };
+
+  const tracker = new CostTracker(storage, config);
+
+  // Log multiple requests on the same day
+  await tracker.logRequest(makeEntry({
+    requestId: 'req-1',
+    timestamp: new Date('2026-04-12T10:00:00.000Z'),
+    inputTokens: 10_000,
+    outputTokens: 10_000,
+  }));
+
+  await tracker.logRequest(makeEntry({
+    requestId: 'req-2',
+    timestamp: new Date('2026-04-12T14:00:00.000Z'),
+    inputTokens: 10_000,
+    outputTokens: 10_000,
+  }));
+
+  // Alert should only trigger once
+  assert.equal(alertCount, 1);
+});
+
 let passed = 0;
 
 async function main() {
@@ -192,6 +299,9 @@ async function main() {
   if (!process.exitCode) {
     console.log(`All ${passed} CostTracker tests passed.`);
   }
+  
+  // Disconnect Prisma client
+  await db.$disconnect();
 }
 
 void main();

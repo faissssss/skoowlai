@@ -127,7 +127,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -154,7 +154,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -173,7 +173,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -192,7 +192,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -211,7 +211,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -233,7 +233,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -263,7 +263,7 @@ describe('POST /api/flashcards', () => {
       body: JSON.stringify({}),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -284,7 +284,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(404);
     const data = await response.json();
@@ -310,7 +310,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(403);
     const data = await response.json();
@@ -329,7 +329,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -348,7 +348,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -366,7 +366,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { incrementFeatureUsage } = await import('@/lib/featureLimits');
@@ -391,7 +391,7 @@ describe('POST /api/flashcards', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(500);
     const data = await response.json();

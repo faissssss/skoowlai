@@ -83,7 +83,9 @@ export async function GET(request: Request) {
       const data = byProvider[provider];
       data.avgLatency = data.requests > 0 ? data.totalLatency / data.requests : 0;
       data.successRate = data.requests > 0 ? (data.successful / data.requests) * 100 : 0;
-      delete data.totalLatency;
+      // Remove totalLatency as it's no longer needed
+      const { totalLatency, ...rest } = data;
+      byProvider[provider] = rest as typeof data;
     });
     
     return NextResponse.json({

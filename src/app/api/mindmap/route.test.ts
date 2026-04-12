@@ -83,7 +83,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
-import { __mockGenerateObject } from '@/lib/llm/router';
+// Removed unused import
 
 describe('/api/mindmap', () => {
     const mockDeckId = 'deck123';
@@ -130,7 +130,7 @@ describe('/api/mindmap', () => {
             edges: JSON.stringify([]),
         } as any);
 
-        vi.mocked(__mockGenerateObject).mockResolvedValue({
+        vi.mocked(require('@/lib/llm/router').__mockGenerateObject).mockResolvedValue({
             object: mockMindMapData,
         });
     });
@@ -143,7 +143,7 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(200);
@@ -163,7 +163,7 @@ describe('/api/mindmap', () => {
                 }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(200);
@@ -180,7 +180,7 @@ describe('/api/mindmap', () => {
                 }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(200);
@@ -197,7 +197,7 @@ describe('/api/mindmap', () => {
                 }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(200);
@@ -217,7 +217,7 @@ describe('/api/mindmap', () => {
                 }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(200);
@@ -267,7 +267,7 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({}),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(400);
@@ -284,7 +284,7 @@ describe('/api/mindmap', () => {
                 }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(400);
@@ -301,7 +301,7 @@ describe('/api/mindmap', () => {
                 }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(400);
@@ -317,7 +317,7 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(404);
@@ -336,7 +336,7 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(403);
@@ -355,7 +355,7 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
 
             expect(response.status).toBe(401);
         });
@@ -373,14 +373,14 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
 
             expect(response.status).toBe(429);
         });
 
         it('should return error when rate limit exceeded', async () => {
             vi.mocked(checkRateLimitFromRequest).mockResolvedValue(
-                new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429 })
+                new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429 }) as any
             );
 
             const req = new NextRequest('http://localhost:3000/api/mindmap', {
@@ -389,13 +389,13 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
 
             expect(response.status).toBe(429);
         });
 
         it('should handle LLM generation errors gracefully', async () => {
-            vi.mocked(__mockGenerateObject).mockRejectedValue(new Error('LLM error'));
+            vi.mocked(require('@/lib/llm/router').__mockGenerateObject).mockRejectedValue(new Error('LLM error'));
 
             const req = new NextRequest('http://localhost:3000/api/mindmap', {
                 method: 'POST',
@@ -403,7 +403,7 @@ describe('/api/mindmap', () => {
                 body: JSON.stringify({ deckId: mockDeckId }),
             });
 
-            const response = await POST(req);
+            const response = (await POST(req))!
             const data = await response.json();
 
             expect(response.status).toBe(500);

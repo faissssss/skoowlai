@@ -174,7 +174,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response).toBeDefined();
     expect(response.status).toBe(200);
@@ -207,7 +207,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -234,7 +234,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -275,7 +275,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -300,7 +300,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -344,7 +344,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(401);
     const data = await response.json();
@@ -369,7 +369,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(429);
     const data = await response.json();
@@ -398,7 +398,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(500);
     const data = await response.json();
@@ -445,7 +445,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const data = await response.json();
@@ -490,7 +490,7 @@ describe('POST /api/generate-audio-notes', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const data = await response.json();

@@ -1,3 +1,5 @@
+import type { PrismaClient } from '@prisma/client';
+
 import type { Provider } from './config';
 
 export interface CostEntry {
@@ -33,6 +35,11 @@ export interface ProviderPricing {
 
 export interface CostTrackerConfig {
   pricing: Record<Provider, ProviderPricing>;
+  thresholdAlerts?: {
+    enabled: boolean;
+    thresholdUSD: number;
+    onThresholdExceeded?: (provider: Provider, cost: number, threshold: number) => void | Promise<void>;
+  };
 }
 
 export interface CostStorage {
@@ -56,6 +63,61 @@ export class InMemoryCostStorage implements CostStorage {
   }
 }
 
+export class PrismaCostStorage implements CostStorage {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async insert(entry: CostEntry): Promise<void> {
+    await this.prisma.llmRequest.create({
+      data: {
+        timestamp: entry.timestamp,
+        provider: entry.provider,
+        model: entry.model,
+        feature: entry.feature,
+        inputTokens: entry.inputTokens,
+        outputTokens: entry.outputTokens,
+        estimatedCost: entry.estimatedCost,
+        latencyMs: entry.latencyMs ?? 0,
+        success: entry.success ?? true,
+        errorCode: entry.errorCode ?? null,
+        fallbackUsed: entry.fallbackUsed ?? false,
+        userId: entry.userId ?? null,
+        requestId: entry.requestId,
+      },
+    });
+  }
+
+  async list(params: { provider?: Provider; start: Date; end: Date }): Promise<CostEntry[]> {
+    const records = await this.prisma.llmRequest.findMany({
+      where: {
+        timestamp: {
+          gte: params.start,
+          lte: params.end,
+        },
+        ...(params.provider ? { provider: params.provider } : {}),
+      },
+      orderBy: {
+        timestamp: 'asc',
+      },
+    });
+
+    return records.map((record) => ({
+      timestamp: record.timestamp,
+      provider: record.provider as Provider,
+      model: record.model,
+      feature: record.feature,
+      inputTokens: record.inputTokens,
+      outputTokens: record.outputTokens,
+      estimatedCost: record.estimatedCost,
+      requestId: record.requestId,
+      latencyMs: record.latencyMs,
+      success: record.success,
+      errorCode: record.errorCode ?? undefined,
+      fallbackUsed: record.fallbackUsed,
+      userId: record.userId ?? undefined,
+    }));
+  }
+}
+
 export const DEFAULT_COST_TRACKER_CONFIG: CostTrackerConfig = {
   pricing: {
     groq: {
@@ -70,6 +132,8 @@ export const DEFAULT_COST_TRACKER_CONFIG: CostTrackerConfig = {
 };
 
 export class CostTracker {
+  private lastThresholdCheck: Map<Provider, Date> = new Map();
+
   constructor(
     private readonly storage: CostStorage,
     private readonly config: CostTrackerConfig = DEFAULT_COST_TRACKER_CONFIG,
@@ -88,6 +152,12 @@ export class CostTracker {
     };
 
     await this.storage.insert(completeEntry);
+
+    // Check threshold alerts if enabled
+    if (this.config.thresholdAlerts?.enabled) {
+      await this.checkAndAlertThreshold(entry.provider, entry.timestamp);
+    }
+
     return completeEntry;
   }
 
@@ -157,5 +227,31 @@ export class CostTracker {
     const inputCost = (inputTokens / 1_000) * pricing.inputCostPer1kTokens;
     const outputCost = (outputTokens / 1_000) * pricing.outputCostPer1kTokens;
     return inputCost + outputCost;
+  }
+
+  private async checkAndAlertThreshold(provider: Provider, timestamp: Date): Promise<void> {
+    if (!this.config.thresholdAlerts?.enabled || !this.config.thresholdAlerts.onThresholdExceeded) {
+      return;
+    }
+
+    // Only check once per day per provider to avoid excessive checks
+    const lastCheck = this.lastThresholdCheck.get(provider);
+    const today = new Date(Date.UTC(
+      timestamp.getUTCFullYear(),
+      timestamp.getUTCMonth(),
+      timestamp.getUTCDate(),
+    ));
+
+    if (lastCheck && lastCheck >= today) {
+      return;
+    }
+
+    const dailyCost = await this.getDailyCost(provider, timestamp);
+    const threshold = this.config.thresholdAlerts.thresholdUSD;
+
+    if (dailyCost >= threshold) {
+      this.lastThresholdCheck.set(provider, today);
+      await this.config.thresholdAlerts.onThresholdExceeded(provider, dailyCost, threshold);
+    }
   }
 }

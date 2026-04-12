@@ -148,7 +148,7 @@ describe('POST /api/generate', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     if (response.status !== 200) {
       const errorData = await response.json();
@@ -183,7 +183,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     if (response.status !== 200) {
       const errorData = await response.json();
@@ -219,7 +219,7 @@ describe('POST /api/generate', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -261,7 +261,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -283,7 +283,7 @@ describe('POST /api/generate', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -307,7 +307,7 @@ describe('POST /api/generate', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -325,7 +325,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -340,7 +340,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -359,7 +359,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -396,7 +396,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { db } = await import('@/lib/db');
@@ -425,7 +425,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { incrementUsage } = await import('@/lib/usageVerifier');
@@ -444,7 +444,7 @@ describe('POST /api/generate', () => {
       body: formData,
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     // Wait for async audit log

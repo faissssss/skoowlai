@@ -9,7 +9,7 @@ The migration follows an incremental approach with per-endpoint rollout capabili
 ## Tasks
 
 - [ ] 1. Set up core infrastructure and configuration
-  - [-] 1.1 Install dependencies and configure environment
+  - [x] 1.1 Install dependencies and configure environment
     - Install `@ai-sdk/groq` package for Groq Cloud integration
     - Install `ioredis` for Redis client (rate limiting and queue state)
     - Install `fast-check` for property-based testing
@@ -195,7 +195,7 @@ The migration follows an incremental approach with per-endpoint rollout capabili
     - _Requirements: 15.2_
 
 - [ ] 10. Implement cost tracking
-  - [~] 10.1 Create cost tracker module
+  - [x] 10.1 Create cost tracker module
     - Create `src/lib/llm/costTracker.ts` with `CostTracker` class
     - Implement request logging with provider, model, tokens, timestamp
     - Implement cost calculation based on provider pricing

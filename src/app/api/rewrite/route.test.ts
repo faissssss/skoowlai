@@ -88,7 +88,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response).toBeDefined();
     expect(response.status).toBe(200);
@@ -128,7 +128,7 @@ describe('POST /api/rewrite', () => {
         }),
       });
 
-      const response = await POST(request);
+      const response = (await POST(request))!
 
       expect(response.status).toBe(200);
       expect(response.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
@@ -147,7 +147,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -185,7 +185,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -205,7 +205,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -227,7 +227,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -254,7 +254,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(500);
     const data = await response.json();
@@ -273,7 +273,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Rate-Limit-Remaining')).toBeTruthy();
@@ -312,7 +312,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Degraded-Mode')).toBe('true');
@@ -331,7 +331,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
   });
@@ -349,7 +349,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
 
     expect(response.status).toBe(200);
   });
@@ -366,7 +366,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -388,7 +388,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
@@ -410,7 +410,7 @@ describe('POST /api/rewrite', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = (await POST(request))!
     expect(response.status).toBe(200);
 
     const { LLMRouter } = await import('@/lib/llm/router');
