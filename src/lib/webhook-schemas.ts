@@ -119,7 +119,7 @@ export function validateDodoWebhook(payload: unknown): { success: true; data: z.
     }
     return {
       success: false,
-      error: `Invalid Dodo webhook payload: ${result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`
+      error: `Invalid Dodo webhook payload: ${result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`
     };
   } catch (error) {
     return {
@@ -212,7 +212,7 @@ export function validateClerkWebhook(payload: unknown): { success: true; data: z
     }
     return {
       success: false,
-      error: `Invalid Clerk webhook payload: ${result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`
+      error: `Invalid Clerk webhook payload: ${result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`
     };
   } catch (error) {
     return {

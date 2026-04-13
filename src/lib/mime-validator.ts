@@ -14,7 +14,7 @@ export interface MimeValidationResult {
 }
 
 // Allowed MIME types for documents
-const ALLOWED_DOCUMENT_TYPES = [
+export const ALLOWED_DOCUMENT_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
   'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
@@ -22,7 +22,7 @@ const ALLOWED_DOCUMENT_TYPES = [
 ];
 
 // Allowed MIME types for audio
-const ALLOWED_AUDIO_TYPES = [
+export const ALLOWED_AUDIO_TYPES = [
   'audio/webm',
   'audio/mpeg',
   'audio/wav',
@@ -30,6 +30,9 @@ const ALLOWED_AUDIO_TYPES = [
   'audio/ogg',
   'audio/x-m4a',
 ];
+
+// All allowed types combined
+export const ALL_ALLOWED_TYPES = [...ALLOWED_DOCUMENT_TYPES, ...ALLOWED_AUDIO_TYPES];
 
 /**
  * Validate MIME type using magic number detection
