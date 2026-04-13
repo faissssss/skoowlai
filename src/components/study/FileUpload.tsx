@@ -103,7 +103,9 @@ export default function FileUpload() {
                     return;
                 }
 
-                throw new Error(errorData.error || errorData.details || 'Upload failed');
+                const rawMessage = errorData.details || errorData.error || 'Upload failed';
+                const message = typeof rawMessage === 'string' ? rawMessage.split('\n')[0].trim() : 'Upload failed';
+                throw new Error(message || 'Upload failed');
             }
 
             startLoading('Finalizing your study set...');

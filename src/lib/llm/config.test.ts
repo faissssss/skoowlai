@@ -126,14 +126,26 @@ test('supports disabling fallback', () => {
   assert.equal(config.isFallbackEnabled(), false);
 });
 
-test('throws a descriptive error when required env vars are missing', () => {
+test('uses sensible defaults when provider selection env vars are missing', () => {
+  applyValidEnv();
+  delete process.env.PRIMARY_LLM_PROVIDER;
+  delete process.env.FALLBACK_LLM_PROVIDER;
+  delete process.env.ENABLE_LLM_FALLBACK;
+
+  const config = ProviderConfig.load();
+
+  assert.equal(config.getPrimaryProvider(), 'groq');
+  assert.equal(config.getFallbackProvider(), 'gemini');
+  assert.equal(config.isFallbackEnabled(), true);
+});
+
+test('throws a descriptive error when required API keys are missing', () => {
   applyValidEnv();
   delete process.env.GROQ_API_KEY;
-  delete process.env.PRIMARY_LLM_PROVIDER;
 
   const error = assertConfigurationError(ProviderConfig.load, /Remediation steps/);
 
-  assert.deepEqual(error.missingKeys, ['GROQ_API_KEY', 'PRIMARY_LLM_PROVIDER']);
+  assert.deepEqual(error.missingKeys, ['GROQ_API_KEY']);
 });
 
 test('throws a descriptive error when provider names are invalid', () => {

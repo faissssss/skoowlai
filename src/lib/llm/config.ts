@@ -218,27 +218,25 @@ export class ProviderConfig {
     }
 
     // Load and validate primary provider (Requirement 10.1)
-    const primaryProvider = process.env.PRIMARY_LLM_PROVIDER as Provider;
-    if (!primaryProvider) {
-      missingKeys.push('PRIMARY_LLM_PROVIDER');
-    } else if (primaryProvider !== 'groq' && primaryProvider !== 'gemini') {
+    const primaryProviderEnv = process.env.PRIMARY_LLM_PROVIDER;
+    const primaryProvider = (primaryProviderEnv || 'groq') as Provider;
+    if (primaryProvider !== 'groq' && primaryProvider !== 'gemini') {
       invalidKeys.push('PRIMARY_LLM_PROVIDER (must be "groq" or "gemini")');
     }
 
     // Load and validate fallback provider (Requirement 10.2)
-    const fallbackProvider = process.env.FALLBACK_LLM_PROVIDER as Provider;
-    if (!fallbackProvider) {
-      missingKeys.push('FALLBACK_LLM_PROVIDER');
-    } else if (fallbackProvider !== 'groq' && fallbackProvider !== 'gemini') {
+    const fallbackProviderEnv = process.env.FALLBACK_LLM_PROVIDER;
+    const fallbackProvider = (fallbackProviderEnv || (primaryProvider === 'groq' ? 'gemini' : 'groq')) as Provider;
+    if (fallbackProvider !== 'groq' && fallbackProvider !== 'gemini') {
       invalidKeys.push('FALLBACK_LLM_PROVIDER (must be "groq" or "gemini")');
     }
 
     // Load and validate fallback enable flag (Requirement 10.5)
     const fallbackEnabledStr = process.env.ENABLE_LLM_FALLBACK;
-    if (!fallbackEnabledStr) {
-      missingKeys.push('ENABLE_LLM_FALLBACK');
+    if (fallbackEnabledStr && fallbackEnabledStr !== 'true' && fallbackEnabledStr !== 'false') {
+      invalidKeys.push('ENABLE_LLM_FALLBACK (must be "true" or "false")');
     }
-    const fallbackEnabled = fallbackEnabledStr === 'true';
+    const fallbackEnabled = fallbackEnabledStr !== 'false';
 
     // Load content size routing configuration (Requirement 23.8)
     const contentSizeRoutingEnabledStr = process.env.ENABLE_CONTENT_SIZE_ROUTING;

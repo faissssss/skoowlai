@@ -525,7 +525,9 @@ export default function DashboardClient({ decks }: DashboardClientProps) {
                     return;
                 }
 
-                throw new Error(errorData.details || errorData.error || 'Failed to process YouTube video');
+                const rawMessage = errorData.details || errorData.error || 'Failed to process YouTube video';
+                const message = typeof rawMessage === 'string' ? rawMessage.split('\n')[0].trim() : 'Failed to process YouTube video';
+                throw new Error(message || 'Failed to process YouTube video');
             }
 
             startLoading('Finalizing your study set...');

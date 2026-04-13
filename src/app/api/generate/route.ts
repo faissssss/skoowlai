@@ -294,24 +294,43 @@ export async function POST(req: NextRequest) {
             console.log('🔄 Starting file parsing for type:', file.type);
 
             const resolvedMimeType = mimeValidation.detectedType || file.type;
+            const createDocumentParseError = (message: string) => NextResponse.json({
+                error: 'Failed to read document',
+                details: message,
+            }, { status: 400 });
 
             if (resolvedMimeType === 'application/pdf') {
+                try {
                 console.log('📑 Parsing PDF...');
                 const pdfParse = require('pdf-parse');
                 const data = await pdfParse(buffer);
                 text = data.text;
                 console.log('✅ PDF parsed, text length:', text.length);
+                } catch (parseErr) {
+                    console.error('PDF parsing error:', parseErr);
+                    return createDocumentParseError('We could not read that PDF. Please try another file.');
+                }
             } else if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                try {
                 console.log('📝 Parsing DOCX...');
                 const mammoth = await import('mammoth');
                 const result = await mammoth.extractRawText({ buffer });
                 text = result.value;
                 console.log('✅ DOCX parsed, text length:', text.length);
+                } catch (parseErr) {
+                    console.error('DOCX parsing error:', parseErr);
+                    return createDocumentParseError('We could not read that DOCX file. Please try another file.');
+                }
             } else if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+                try {
                 console.log('📊 Parsing PPT...');
                 const officeParser = require('officeparser');
                 text = await officeParser.parseOfficeAsync(buffer);
                 console.log('✅ PPT parsed, text length:', text.length);
+                } catch (parseErr) {
+                    console.error('PPTX parsing error:', parseErr);
+                    return createDocumentParseError('We could not read that PPTX file. Please try another file.');
+                }
             } else if (resolvedMimeType === 'text/plain') {
                 console.log('📄 Parsing TXT...');
                 text = buffer.toString('utf-8');
@@ -348,6 +367,13 @@ export async function POST(req: NextRequest) {
             } else {
                 console.log('❌ Unsupported file type:', file.type);
                 return NextResponse.json({ error: 'Unsupported file type.' }, { status: 400 });
+            }
+
+            if (!resolvedMimeType.startsWith('audio/') && !text.trim()) {
+                return NextResponse.json({
+                    error: 'No readable content found',
+                    details: 'The uploaded file appears empty or does not contain extractable text.',
+                }, { status: 400 });
             }
 
             // --- DUPLICATE DETECTION START ---
@@ -525,7 +551,9 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
             console.error('Failed to load LLM configuration:', error);
             return NextResponse.json({
                 error: 'LLM Configuration Error',
-                details: error instanceof Error ? error.message : 'Failed to load LLM configuration'
+                details: isProd
+                    ? 'Study generation is temporarily unavailable due to a server configuration issue.'
+                    : (error instanceof Error ? error.message : 'Failed to load LLM configuration')
             }, { status: 500 });
         }
 
