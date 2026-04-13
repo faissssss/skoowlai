@@ -91,7 +91,8 @@ async function verifySchema() {
       errors.forEach(error => console.log(`  - ${error}`));
       console.log('\n💡 Action required:');
       console.log('  Run: npx prisma migrate deploy');
-      console.log('  This will apply pending migrations to sync the database schema.\n');
+      console.log('  If this still reports "No pending migrations", the database likely has migration-history drift');
+      console.log('  and needs a new corrective migration committed and deployed.\n');
       process.exit(1);
     } else {
       console.log('\n✅ SCHEMA VERIFICATION PASSED\n');
