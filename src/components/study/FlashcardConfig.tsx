@@ -63,7 +63,7 @@ export default function FlashcardConfig({ deckId, isOpen, onClose, onGenerated, 
             console.error('Error generating flashcards:', error);
             showError(
                 'Flashcard generation failed',
-                'Failed to generate flashcards. Please try again.',
+                error instanceof Error ? error.message : 'Failed to generate flashcards. Please try again.',
                 'error'
             );
         } finally {

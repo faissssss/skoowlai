@@ -1,0 +1,284 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-heading: var(--font-poppins);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Magic UI Animations */
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  --animate-slide: slide var(--speed) ease-in-out infinite alternate;
+  --animate-gradient: gradient 8s linear infinite;
+
+  @keyframes spin-around {
+    0% {
+      transform: translateZ(0) rotate(0);
+    }
+
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
+    }
+
+    100% {
+      transform: translateZ(0) rotate(360deg);
+    }
+  }
+
+  @keyframes slide {
+    to {
+      transform: translate(calc(100% + var(--gap)), 0);
+    }
+  }
+
+  @keyframes gradient {
+    to {
+      background-position: var(--bg-size) 0;
+    }
+  }
+
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% center;
+  }
+
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.animate-gradient-shift {
+  animation: gradient-shift 3s linear infinite;
+}
+
+.animate-gradient {
+  animation: gradient-shift 3s linear infinite;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+.animate-orbit {
+  animation: orbit calc(var(--duration)*1s) linear infinite;
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg) translateY(calc(var(--radius) * 1px)) rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg) translateY(calc(var(--radius) * 1px)) rotate(-360deg);
+  }
+}
+
+:root {
+  --radius: 0.625rem;
+  --brand-primary: #5B4DFF;
+  --brand-primary-dark: #4A3FFF;
+  --brand-secondary: #4F46E5;
+  --brand-accent: #22D3EE;
+  --brand-dark: #0B0D14;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.16 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.16 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0.01 260);
+  --primary: oklch(0.42 0.23 275);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.92 0.01 260);
+  --secondary-foreground: oklch(0.16 0.01 260);
+  --muted: oklch(0.86 0.01 260);
+  --muted-foreground: oklch(0.56 0.02 260);
+  --accent: oklch(0.78 0.17 210);
+  --accent-foreground: oklch(0.13 0.02 265);
+  --destructive: oklch(0.6 0.22 30);
+  --border: oklch(0.9 0.01 260);
+  --input: oklch(0.9 0.01 260);
+  --ring: oklch(0.42 0.23 275);
+  --chart-1: oklch(0.42 0.23 275);
+  --chart-2: oklch(0.78 0.17 210);
+  --chart-3: oklch(0.6 0.22 30);
+  --chart-4: oklch(0.55 0.15 150);
+  --chart-5: oklch(0.65 0.18 70);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.16 0.01 260);
+  --sidebar-primary: oklch(0.42 0.23 275);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.92 0.01 260);
+  --sidebar-accent-foreground: oklch(0.16 0.01 260);
+  --sidebar-border: oklch(0.9 0.01 260);
+  --sidebar-ring: oklch(0.42 0.23 275);
+}
+
+.dark {
+  /* Dark Mode - Renewed Color Palette */
+  --brand-primary: #5B4DFF;
+  --brand-primary-dark: #4A3FFF;
+  --brand-secondary: #4F46E5;
+  --brand-accent: #22D3EE;
+  --brand-dark: #0B0D14;
+  --background: oklch(0.13 0.02 265);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.17 0.02 265);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.17 0.02 265);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.7 0.22 275);
+  --primary-foreground: oklch(0.13 0.02 265);
+  --secondary: oklch(0.32 0.01 260);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.32 0.01 260);
+  --muted-foreground: oklch(0.7 0.02 260);
+  --accent: oklch(0.74 0.18 210);
+  --accent-foreground: oklch(0.13 0.02 265);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(0.25 0.02 260);
+  --input: oklch(0.25 0.02 260);
+  --ring: oklch(0.7 0.22 275);
+  --chart-1: oklch(0.7 0.22 275);
+  --chart-2: oklch(0.74 0.18 210);
+  --chart-3: oklch(0.65 0.2 25);
+  --chart-4: oklch(0.55 0.15 150);
+  --chart-5: oklch(0.65 0.18 70);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+
+}
+
+/* ========================================
+   Clerk Billing: Force checkout modal above all elements
+   ======================================== */
+/* Clerk renders checkout in a portal - force it to be on top */
+.cl-modalContent,
+.cl-modal,
+.cl-modalBackdrop,
+.cl-checkout,
+.cl-checkoutPage,
+[data-clerk-component] .cl-modal,
+[data-clerk-component] .cl-modalContent,
+.cl-rootBox .cl-modal,
+.cl-rootBox .cl-modalContent,
+div[data-floating-ui-portal] {
+  z-index: 99999999 !important;
+  position: relative !important;
+}
+
+/* Clerk Pricing Table: Bright checkmarks - new brand purple */
+[data-clerk-component] li svg,
+.cl-pricingTable svg,
+.cl-pricingTableFeatureListItem svg,
+.cl-pricingTableCard li svg {
+  color: #5B4DFF !important;
+}
+
+[data-clerk-component] li svg path,
+.cl-pricingTable svg path,
+.cl-pricingTableFeatureListItem svg path {
+  stroke: #5B4DFF !important;
+  fill: none !important;
+}
+
+/* Clerk Pricing Table: Upcoming badge styling - new brand purple */
+[data-clerk-component] [class*="badge"]:not([class*="active"]),
+.cl-badge,
+.cl-pricingTableCard [class*="badge"] {
+  background: linear-gradient(135deg, #5B4DFF 0%, #4A3FFF 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: none !important;
+}

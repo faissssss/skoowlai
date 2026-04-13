@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String         @id @default(cuid())
+  clerkId             String         @unique
+  email               String         @unique
+  createdAt           DateTime       @default(now())
+  isDeleted           Boolean        @default(false)
+  deletedAt           DateTime?
+  dailyUsageCount     Int            @default(0)
+  lastUsageDate       DateTime?
+  // Feature usage tracking
+  flashcardUsageCount Int            @default(0)
+  quizUsageCount      Int            @default(0)
+  mindmapUsageCount   Int            @default(0)
+  chatUsageCount      Int            @default(0)
+  lastFlashcardUsageDate DateTime?
+  lastQuizUsageDate      DateTime?
+  lastMindmapUsageDate   DateTime?
+  lastStudyDeckUsageDate DateTime?
+  lastChatUsageDate   DateTime?
+  // Subscription fields (Dodo Payments)
+  subscriptionStatus  String         @default("free") // free, active, cancelled, expired
+  subscriptionPlan    String? // monthly, yearly
+  subscriptionId      String? // Dodo subscription ID
+  customerId          String? // Dodo customer ID
+  subscriptionEndsAt  DateTime?
+  trialUsedAt         DateTime?      // Tracks when user started their first trial (prevents re-trial abuse)
+  paymentGracePeriodEndsAt DateTime?  // Grace period end date after payment failure (keeps access during retries)
+  collaborators       Collaborator[]
+  decks               Deck[]
+  workspaces          Workspace[]
+  AuditLog            AuditLog[]
+}
+
+model Workspace {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  color       String    @default("#6366f1")
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  decks       Deck[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+
+  @@index([userId])
+}
+
+model Deck {
+  id            String         @id @default(cuid())
+  userId        String
+  title         String
+  content       String
+  summary       String
+  sourceType    String         @default("doc")
+  fileUrl       String?
+  fileType      String?
+  isPublic      Boolean        @default(false)
+  noteConfig    Json? // Stores { depth, style, tone } preferences after generation
+  workspaceId   String?
+  createdAt     DateTime       @default(now())
+  isDeleted     Boolean        @default(false)
+  deletedAt     DateTime?
+  cards         Card[]
+  messages      ChatMessage[]
+  collaborators Collaborator[]
+  user          User           @relation(fields: [userId], references: [id])
+  workspace     Workspace?     @relation(fields: [workspaceId], references: [id])
+  mindmap       MindMap?
+  quizzes       Quiz[]
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model Card {
+  id        String    @id @default(cuid())
+  deckId    String
+  front     String
+  back      String
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
+}
+
+model Quiz {
+  id        String    @id @default(cuid())
+  deckId    String
+  question  String
+  options   String
+  answer    String
+  hint      String?
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
+}
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  deckId    String
+  role      String
+  content   String
+  citation  String?
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
+}
+
+model MindMap {
+  id        String    @id @default(cuid())
+  deckId    String    @unique
+  nodes     String
+  edges     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
+}
+
+model Collaborator {
+  id        String    @id @default(cuid())
+  userId    String
+  deckId    String
+  role      String
+  createdAt DateTime  @default(now())
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, deckId])
+  @@index([deckId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // e.g. "GENERATE_DECK", "DELETE_DECK"
+  resourceId String?
+  details    String? // JSON string or text summary
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+}
+
+// Email idempotency tracking - prevents duplicate emails on webhook retries
+model SentEmail {
+  id               String   @id @default(cuid())
+  idempotencyKey   String   @unique // e.g. "welcome:sub_123" or "receipt:pay_456"
+  emailType        String   // welcome, receipt, renewal, cancellation, etc.
+  recipientEmail   String
+  createdAt        DateTime @default(now())
+
+  @@index([recipientEmail])
+  @@index([emailType])
+}
+
+// LLM cost tracking - logs every individual LLM request with detailed metrics
+model LlmRequest {
+  id             String   @id @default(cuid())
+  timestamp      DateTime @default(now())
+  provider       String   // groq, gemini
+  model          String   // llama-3.3-70b-versatile, gemini-2.5-flash, etc.
+  feature        String   // chat, generate, flashcards, quiz, mindmap, rewrite, generate-audio-notes
+  inputTokens    Int
+  outputTokens   Int
+  estimatedCost  Float
+  latencyMs      Int
+  success        Boolean
+  errorCode      String?
+  fallbackUsed   Boolean  @default(false)
+  userId         String?
+  requestId      String   @unique
+
+  @@index([timestamp])
+  @@index([provider])
+  @@index([feature])
+  @@index([userId])
+}
+
+// LLM cost summaries - aggregated daily statistics per provider and feature
+model CostSummary {
+  id             String   @id @default(cuid())
+  provider       String   // groq, gemini
+  feature        String   // chat, generate, flashcards, quiz, mindmap, rewrite, generate-audio-notes
+  date           DateTime // date for this summary (day granularity)
+  totalRequests  Int
+  totalTokens    Int
+  totalCost      Float
+  avgLatencyMs   Float
+  successRate    Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([provider, feature, date])
+  @@index([provider])
+  @@index([feature])
+  @@index([date])
+}

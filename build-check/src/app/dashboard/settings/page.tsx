@@ -1,0 +1,531 @@
+"use client";
+
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Bug, Lightbulb, MessageSquare, Loader2, User, LogOut } from 'lucide-react';
+import { useUser, useClerk } from '@clerk/nextjs';
+import BugReportModal from '@/components/BugReportModal';
+import FeedbackModal from '@/components/FeedbackModal';
+import PricingModal from '@/components/PricingModal';
+import { motion, LayoutGroup } from 'framer-motion';
+
+import { SubscriptionManagement } from '@/components/billingsdk/subscription-management';
+import { SettingsButton } from '@/components/ui/settings-button';
+import { plans, type CurrentPlan as CurrentPlanType, type Plan } from '@/lib/billingsdk-config';
+
+function SubscriptionCard() {
+    type SubscriptionDTO = {
+        status: string;
+        plan: string | null;
+        subscriptionEndsAt?: string | null;
+        customerId?: string | null;
+        subscriptionId?: string | null;
+        isActive?: boolean;
+    };
+    const [subscription, setSubscription] = useState<SubscriptionDTO | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [showPricing, setShowPricing] = useState(false);
+    const [error, setError] = useState(false);
+
+    // Client-side cache to render instantly while we refresh in background
+    const CACHE_KEY = 'sub-cache-v1';
+    const CACHE_TTL = 120000; // 2 minutes
+
+    const fetchSubscription = async (showSpinner = true) => {
+        try {
+            if (showSpinner) setLoading(true);
+
+            // 1) Fast path: fetch current subscription quickly with a short timeout
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 1500);
+
+            try {
+                const res = await fetch(`/api/subscription?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    credentials: 'include',
+                    headers: {
+                        'pragma': 'no-cache',
+                        'cache-control': 'no-cache',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    signal: controller.signal,
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+                    setSubscription(data);
+                } else {
+                    setError(true);
+                }
+            } catch (e) {
+                console.warn('[Settings] initial /api/subscription fetch timed out or failed', e);
+            } finally {
+                clearTimeout(timer);
+                // Render UI immediately after the quick fetch attempt
+                setLoading(false);
+            }
+
+            // 2) Background sync: throttle to at most once per minute
+            try {
+                const throttleMs = 60_000;
+                const key = 'sub-sync-at';
+                const last = Number(sessionStorage.getItem(key) || '0');
+                const now = Date.now();
+
+                if (now - last > throttleMs) {
+                    sessionStorage.setItem(key, String(now));
+
+                    await fetch('/api/subscription/sync', {
+                        method: 'POST',
+                        cache: 'no-store',
+                        credentials: 'include',
+                        headers: {
+                            'pragma': 'no-cache',
+                            'cache-control': 'no-cache',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    // Re-fetch after sync to refresh data if anything changed
+                    const refreshed = await fetch(`/api/subscription?t=${Date.now()}`, {
+                        cache: 'no-store',
+                        credentials: 'include',
+                        headers: {
+                            'pragma': 'no-cache',
+                            'cache-control': 'no-cache',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    if (refreshed.ok) {
+                        const next = await refreshed.json();
+                        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: next })); } catch {}
+                        setSubscription(next);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Settings] background subscription sync skipped/failed', e);
+            }
+        } catch (error) {
+            console.error('Failed to fetch subscription:', error);
+            setError(true);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        // 0) Try to serve cached data instantly
+        try {
+            const cachedRaw = sessionStorage.getItem(CACHE_KEY);
+            if (cachedRaw) {
+                const cached = JSON.parse(cachedRaw);
+                if (cached && typeof cached.ts === 'number' && cached.data && Date.now() - cached.ts < CACHE_TTL) {
+                    setSubscription(cached.data as SubscriptionDTO);
+                    setLoading(false);
+                    // Refresh in background without flashing spinner
+                    fetchSubscription(false);
+                    return;
+                }
+            }
+        } catch {}
+        // No cache → do normal fetch (with spinner)
+        fetchSubscription(true);
+    }, []);
+
+    if (error) {
+        return (
+            <Card className="border-red-200 dark:border-red-900/50">
+                <CardContent className="py-8 text-center text-red-600 dark:text-red-400">
+                    <p>Failed to load subscription details.</p>
+                    <Button
+                        variant="link"
+                        className="text-red-600 dark:text-red-400 underline"
+                        onClick={() => window.location.reload()}
+                    >
+                        Retry
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (loading) {
+        return (
+            <Card>
+                <CardContent className="py-8 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Derive status from server + local fallback
+    const nowMs = Date.now();
+    const endsAtMs = subscription?.subscriptionEndsAt ? new Date(subscription.subscriptionEndsAt).getTime() : null;
+
+    const isCancelled = subscription?.status === 'cancelled';
+    const isTrial = subscription?.status === 'trialing';
+    // Prefer server-computed isActive when available; otherwise recompute with paid-period grace
+    const isActive =
+        (typeof subscription?.isActive === 'boolean')
+            ? subscription.isActive
+            : (subscription?.status === 'active' || isTrial || (isCancelled && endsAtMs !== null && endsAtMs > nowMs));
+
+    // Check if the subscription period has ended (cancelled and past end date)
+    const hasSubscriptionEnded = isCancelled && (endsAtMs === null || endsAtMs <= nowMs);
+
+    // Display status badge rules:
+    // - If subscription period has ended (cancelled + past end date), show 'free'
+    // - Show 'cancelled' badge only if cancelled but still within paid period
+    // - Else show 'trialing' during trial, 'active' when active, or 'free'
+    const displayStatus: 'trialing' | 'active' | 'cancelled' | 'free' =
+        hasSubscriptionEnded ? 'free' :
+        (isCancelled ? 'cancelled' : (isTrial ? 'trialing' : (isActive ? 'active' : 'free')));
+
+    console.log('[Settings] Subscription data:', {
+        apiStatus: subscription?.status,
+        isCancelled,
+        isTrial,
+        isActive,
+        hasSubscriptionEnded,
+        displayStatus,
+        subscriptionEndsAt: subscription?.subscriptionEndsAt
+    });
+
+    // Determine the plan card to display:
+    // - Show Free when not active AND subscription has ended
+    // - Keep Pro card when paid cancellation scheduled at period end (still active until end)
+    const showProCard = isActive && !hasSubscriptionEnded;
+    const currentPlanData: Plan = showProCard ? plans[1] : plans[0];
+
+    // UI helper for trigger text
+    const isFreeUI = !showProCard;
+
+    // For Free plan users (after subscription ended), don't show the old end date
+    const endDate = (showProCard && subscription?.subscriptionEndsAt) 
+        ? new Date(subscription.subscriptionEndsAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }) 
+        : 'N/A';
+
+    // Build CurrentPlan object for SubscriptionManagement
+    const currentInterval = (subscription?.plan as 'monthly' | 'yearly') || 'monthly';
+    const currentPlan: CurrentPlanType = {
+        plan: currentPlanData,
+        type: currentInterval,
+        // Show $0/month for Free plan, otherwise show actual price
+        price: isFreeUI ? '$0/month' : (subscription?.plan === 'yearly' ? '$39.99/year' : '$4.99/month'),
+        nextBillingDate: endDate,
+        // Show 'None' for free users or trialing users
+        paymentMethod: (isFreeUI || isTrial) ? 'None' : 'Credit Card',
+        status: displayStatus,
+    };
+
+
+    // For Pro/Trial/Cancelled users, show the full SubscriptionManagement UI
+    return (
+        <>
+            <SubscriptionManagement
+                className="w-full"
+                currentPlan={currentPlan}
+                updatePlan={{
+                    currentPlan: currentPlanData,
+                    plans: plans,
+                    // If subscription ended, show "Upgrade to Pro"; if cancelled but still active, show "Resubscribe"
+                    triggerText: hasSubscriptionEnded ? "Upgrade to Pro" : (isCancelled ? "Resubscribe (no trial)" : (isFreeUI ? "Upgrade to Pro" : "Update Plan")),
+                    onPlanChange: async () => {
+                        try {
+                            // For users who cancelled but still have active access, use direct session checkout
+                            if (isCancelled && !hasSubscriptionEnded) {
+                                const yearlyNoTrial = process.env.NEXT_PUBLIC_DODO_YEARLY_NO_TRIAL_PRODUCT_ID || "";
+                                const target = yearlyNoTrial
+                                  ? `/api/checkout/session?productId=${encodeURIComponent(yearlyNoTrial)}`
+                                  : `/api/checkout/session`;
+                                window.location.href = target;
+                                return;
+                            }
+                        } catch (e) {
+                            console.error("[Settings] Direct session redirect failed, falling back to Pricing modal", e);
+                        }
+                        setShowPricing(true);
+                    },
+                    currentInterval: currentInterval,
+                }}
+                cancelSubscription={{
+                    title: "Cancel Subscription",
+                    description: "We're sorry to see you go. Your access will continue until the end of your billing period.",
+                    plan: currentPlanData,
+                    warningTitle: isTrial ? "Your trial will end immediately" : "You'll lose Pro access",
+                    warningText: isTrial
+                        ? "If you cancel now, your trial will end and you'll be downgraded to the Free plan."
+                        : `Your Pro access will continue until ${endDate}. After that, you'll be downgraded to the Free plan.`,
+                    onCancel: async () => {
+                        // Cancel via our API (no redirect to Dodo portal)
+                        try {
+                            const res = await fetch('/api/subscription/cancel', {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'pragma': 'no-cache',
+                                    'cache-control': 'no-cache',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                            });
+                            if (!res.ok) {
+                                const text = await res.text().catch(() => 'Unknown error');
+                                throw new Error(text || 'Cancellation failed');
+                            }
+                            // Refresh local state after server-side cancellation
+                            await fetchSubscription();
+                            // Redirect user back to Billing tab (anchor) after cancellation
+                            window.location.href = '/dashboard/settings#billing';
+                        } catch (e) {
+                            console.error('Failed to cancel subscription via API', e);
+                            throw new Error('Unable to cancel subscription. Please try again.');
+                        }
+                    },
+                    onKeepSubscription: async () => {
+                        // Just close the dialog
+                    },
+                }}
+            />
+            <PricingModal
+                isOpen={showPricing}
+                onClose={() => {
+                    setShowPricing(false);
+                    fetchSubscription();
+                }}
+            />
+        </>
+    );
+}
+
+
+export default function SettingsPage() {
+    const router = useRouter();
+    const { user, isLoaded } = useUser();
+    const { signOut } = useClerk();
+    const [activeTab, setActiveTab] = useState<string>('account');
+    const isMounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false
+    );
+    const [isBugReportOpen, setIsBugReportOpen] = useState(false);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
+
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
+    };
+
+    const handleLogout = () => {
+        signOut(() => router.push('/'));
+    };
+
+    // Get user info from Clerk
+    const userName = user?.fullName || user?.firstName || 'User';
+    const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+
+
+
+    return (
+        <div className="p-6 pt-16 md:p-12 max-w-4xl mx-auto space-y-8">
+            <div>
+                <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+                <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
+            </div>
+
+            <div className="w-full">
+                {/* Custom Animated Tab Buttons with Sliding Indicator */}
+                <LayoutGroup>
+                    <div className="inline-flex h-10 items-center justify-center rounded-lg bg-muted border border-border p-1 text-muted-foreground lg:w-[300px] w-full relative">
+                        {['account', 'billing'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => handleTabChange(tab)}
+                                className={`relative inline-flex items-center justify-center flex-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${activeTab === tab ? 'text-primary-foreground' : 'hover:text-foreground'
+                                    }`}
+                            >
+                                {activeTab === tab && (
+                                    <motion.div
+                                        layoutId="settings-tab-indicator"
+                                        className="absolute inset-0 bg-primary rounded-md shadow-sm"
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                                    />
+                                )}
+                                <span className="relative z-10 capitalize">{tab}</span>
+                            </button>
+                        ))}
+                    </div>
+                </LayoutGroup>
+
+                {activeTab === "account" && (
+                    <div className="mt-6 space-y-6 w-full text-left">
+                        <Card className="shadow-lg border border-border bg-card">
+                            <CardHeader className="px-4 pb-4 sm:px-6 sm:pb-6">
+                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-foreground">
+                                    <div className="bg-primary/10 ring-primary/20 rounded-lg p-1.5 ring-1 sm:p-2">
+                                        <User className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
+                                    </div>
+                                    Profile Information
+                                </CardTitle>
+                                <CardDescription className="text-sm sm:text-base text-muted-foreground">
+                                    Your account details from your sign-in provider.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6 px-4 sm:space-y-8 sm:px-6">
+                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name" className="text-foreground">Name</Label>
+                                        <Input
+                                            id="name"
+                                            value={isLoaded ? userName : 'Loading...'}
+                                            disabled
+                                            className="bg-muted/50 border-input text-foreground focus-visible:ring-ring"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email" className="text-foreground">Email</Label>
+                                        <Input
+                                            id="email"
+                                            value={isLoaded ? userEmail : 'Loading...'}
+                                            disabled
+                                            className="bg-muted/50 border-input text-foreground focus-visible:ring-ring"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <span className="bg-muted rounded-full p-1"><Lightbulb className="w-3 h-3 text-yellow-500" /></span>
+                                        To update your profile, use the account menu in the top navigation.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Help & Feedback Section */}
+                        <Card className="shadow-lg border border-border bg-card">
+                            <CardHeader className="px-4 pb-4 sm:px-6 sm:pb-6">
+                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-foreground">
+                                    <div className="bg-primary/10 ring-primary/20 rounded-lg p-1.5 ring-1 sm:p-2">
+                                        <MessageSquare className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
+                                    </div>
+                                    Help & Feedback
+                                </CardTitle>
+                                <CardDescription className="text-sm sm:text-base text-muted-foreground">
+                                    Report issues or share your ideas with us.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="px-4 sm:px-6 pb-6">
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <SettingsButton
+                                        wrapperClassName="flex-1"
+                                        beamColor="#ef4444"
+                                        variant="outline"
+                                        className="gap-2 bg-card border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+                                        onClick={() => setIsBugReportOpen(true)}
+                                    >
+                                        <Bug className="w-4 h-4" />
+                                        Report a Bug
+                                    </SettingsButton>
+                                    <SettingsButton
+                                        wrapperClassName="flex-1"
+                                        beamColor="#10b981"
+                                        variant="outline"
+                                        className="gap-2 bg-card border-border text-foreground hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/50"
+                                        onClick={() => setIsFeedbackOpen(true)}
+                                    >
+                                        <Lightbulb className="w-4 h-4" />
+                                        Send Feedback
+                                    </SettingsButton>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Logout Card */}
+                        <Card className="shadow-lg border border-destructive/20 bg-card">
+                            <CardHeader className="px-4 pb-4 sm:px-6 sm:pb-6">
+                                <CardTitle className="flex items-center gap-2 text-lg sm:gap-3 sm:text-xl text-foreground">
+                                    <div className="bg-destructive/10 ring-destructive/20 rounded-lg p-1.5 ring-1 sm:p-2">
+                                        <LogOut className="text-destructive h-4 w-4 sm:h-5 sm:w-5" />
+                                    </div>
+                                    Sign Out
+                                </CardTitle>
+                                <CardDescription className="text-sm sm:text-base text-muted-foreground">
+                                    Sign out of your account on this device.
+                                </CardDescription>
+                            </CardHeader>
+                                <CardContent className="px-4 sm:px-6 pb-6">
+                                    {/* Render the logout dialog only after mount to avoid hydration ID mismatches */}
+                                    {isMounted && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <SettingsButton
+                                                    variant="destructive"
+                                                    wrapperClassName="w-full sm:w-auto"
+                                                    beamColor="#ef4444"
+                                                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0"
+                                                >
+                                                    <LogOut className="w-4 h-4 mr-2" />
+                                                    Log Out
+                                                </SettingsButton>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent className="bg-background border-border text-foreground">
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle className="text-foreground">Are you sure you want to log out?</AlertDialogTitle>
+                                                    <AlertDialogDescription className="text-muted-foreground">
+                                                        You will be signed out of your account and redirected to the landing page.
+                                                        Any unsaved changes will be lost.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel className="bg-background border-border text-foreground hover:bg-accent hover:text-accent-foreground">Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={handleLogout}
+                                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                                    >
+                                                        Yes, Log Out
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {activeTab === "billing" && (
+                    <div className="mt-6 space-y-6">
+                        <SubscriptionCard />
+                    </div>
+                )}
+            </div>
+
+            {/* Bug Report Modal */}
+            <BugReportModal isOpen={isBugReportOpen} onClose={() => setIsBugReportOpen(false)} />
+
+            {/* Feedback Modal */}
+            <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+        </div>
+    );
+}

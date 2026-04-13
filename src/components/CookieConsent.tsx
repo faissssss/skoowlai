@@ -1,29 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 export default function CookieConsent() {
-    const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        // Check if user has already made a choice
-        const consent = localStorage.getItem("cookie-consent");
-        if (!consent) {
-            setIsVisible(true);
-        }
-    }, []);
+    const [isDismissed, setIsDismissed] = useState(false);
+    const needsConsent = useSyncExternalStore(
+        () => () => { },
+        () => window.localStorage.getItem("cookie-consent") === null,
+        () => false
+    );
 
     const handleAccept = () => {
         localStorage.setItem("cookie-consent", "accepted");
-        setIsVisible(false);
+        setIsDismissed(true);
     };
 
     const handleDecline = () => {
         localStorage.setItem("cookie-consent", "declined");
-        setIsVisible(false);
+        setIsDismissed(true);
     };
 
-    if (!isVisible) return null;
+    if (!needsConsent || isDismissed) return null;
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-card border-t border-border shadow-lg">

@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import { motion, useAnimation } from "framer-motion";
+import { useCallback, useEffect, useId, useRef, useState, type SVGProps } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+type GridPosition = [number, number];
+type AnimatedSquare = {
+    id: number;
+    pos: GridPosition;
+};
 
 interface AnimatedGridPatternProps {
     width?: number;
     height?: number;
     x?: number;
     y?: number;
-    strokeDasharray?: any;
+    strokeDasharray?: SVGProps<SVGPathElement>["strokeDasharray"];
     numSquares?: number;
     className?: string;
     maxOpacity?: number;
@@ -31,25 +37,30 @@ export function AnimatedGridPattern({
     ...props
 }: AnimatedGridPatternProps) {
     const id = useId();
-    const containerRef = useRef(null);
+    const containerRef = useRef<SVGSVGElement | null>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const [squares, setSquares] = useState(() => generateSquares(numSquares));
+    
+    const generateSquares = useCallback((count: number): AnimatedSquare[] => {
+        return Array.from({ length: count }, (_, i) => ({
+            id: i,
+            pos: [0, 0],
+        }));
+    }, []);
 
-    function getPos() {
+    const [squares, setSquares] = useState<AnimatedSquare[]>(() => generateSquares(numSquares));
+
+    const getPos = useCallback((): GridPosition => {
+        if (!dimensions.width || !dimensions.height) {
+            return [0, 0];
+        }
+
         return [
             Math.floor((Math.random() * dimensions.width) / width),
             Math.floor((Math.random() * dimensions.height) / height),
         ];
-    }
+    }, [dimensions.height, dimensions.width, height, width]);
 
-    function generateSquares(count: number) {
-        return Array.from({ length: count }, (_, i) => ({
-            id: i,
-            pos: [0, 0], // placeholder
-        }));
-    }
-
-    const updateSquarePosition = (id: number) => {
+    const updateSquarePosition = useCallback((id: number) => {
         setSquares((currentSquares) =>
             currentSquares.map((sq) =>
                 sq.id === id
@@ -60,34 +71,39 @@ export function AnimatedGridPattern({
                     : sq,
             ),
         );
-    };
+    }, [getPos]);
 
     useEffect(() => {
-        if (dimensions.width && dimensions.height) {
-            setSquares(generateSquares(numSquares).map((sq) => ({ ...sq, pos: getPos() })));
-        }
-    }, [dimensions, numSquares]);
+        const element = containerRef.current;
+        if (!element) return;
 
-    useEffect(() => {
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                setDimensions({
+                const nextDimensions = {
                     width: entry.contentRect.width,
                     height: entry.contentRect.height,
-                });
+                };
+
+                setDimensions(nextDimensions);
+                setSquares(
+                    generateSquares(numSquares).map((sq) => ({
+                        ...sq,
+                        pos: [
+                            Math.floor((Math.random() * nextDimensions.width) / width),
+                            Math.floor((Math.random() * nextDimensions.height) / height),
+                        ],
+                    })),
+                );
             }
         });
 
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
+        resizeObserver.observe(element);
 
         return () => {
-            if (containerRef.current) {
-                resizeObserver.unobserve(containerRef.current);
-            }
+            resizeObserver.unobserve(element);
+            resizeObserver.disconnect();
         };
-    }, [containerRef]);
+    }, [generateSquares, height, numSquares, width]);
 
     return (
         <svg
@@ -125,6 +141,7 @@ export function AnimatedGridPattern({
                             duration,
                             repeat: 1,
                             delay: index * 0.1,
+                            repeatDelay,
                             repeatType: "reverse",
                         }}
                         onAnimationComplete={() => updateSquarePosition(id)}

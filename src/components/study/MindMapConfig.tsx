@@ -189,7 +189,7 @@ export default function MindMapConfig({ deckId, isOpen, onClose, onGenerated }: 
             console.error('Error generating mind map:', error);
             showError(
                 'Mind map generation failed',
-                'Failed to generate mind map. Please try again.',
+                error instanceof Error ? error.message : 'Failed to generate mind map. Please try again.',
                 'error'
             );
         } finally {

@@ -63,7 +63,7 @@ export default function QuizConfig({ deckId, isOpen, onClose, onGenerated, isSub
             console.error('Error generating quiz:', error);
             showError(
                 'Quiz generation failed',
-                'Failed to generate quiz. Please try again.',
+                error instanceof Error ? error.message : 'Failed to generate quiz. Please try again.',
                 'error'
             );
         } finally {

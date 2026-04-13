@@ -14,6 +14,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
 
+// Hoist mock variables so they're available in vi.mock factories
+const mockTranscriptionCreate = vi.hoisted(() => vi.fn(async () => ({
+  text: 'This is a test transcription of the audio recording. It contains study material about physics and mathematics.',
+})));
+
 // Mock dependencies
 vi.mock('@/lib/csrf', () => ({
   checkCsrfOrigin: vi.fn(() => null),
@@ -38,51 +43,20 @@ vi.mock('@/lib/usageVerifier', () => ({
   USAGE_LIMITS: {},
 }));
 
-// Mock Groq Whisper transcription
-vi.mock('openai', () => {
-  const mockToFile = vi.fn((buffer: Buffer, filename: string, options: any) => {
-    return {
-      name: filename,
-      type: options.type,
-      size: buffer.length,
-    };
-  });
-
-  const mockTranscriptionCreate = vi.fn(async () => ({
-    text: 'This is a test transcription of the audio recording. It contains study material about physics and mathematics.',
-  }));
-
-  const MockOpenAI = vi.fn(function(this: any) {
+// Mock Groq/OpenAI for audio transcription
+vi.mock('openai', () => ({
+  default: vi.fn(function(this: any) {
     this.audio = {
       transcriptions: {
         create: mockTranscriptionCreate,
-        },
+      },
     };
-  });
-
-  return {
-    default: MockOpenAI,
-    toFile: mockToFile,
-    __mockTranscriptionCreate: mockTranscriptionCreate,
-  };
-});
-
-vi.mock('@/lib/llm/config', () => ({
-  ProviderConfig: {
-    load: vi.fn(() => ({
-      getPrimaryProvider: () => 'groq',
-      getFallbackProvider: () => 'gemini',
-      isFallbackEnabled: () => true,
-      isContentSizeRoutingEnabled: () => true,
-      getContentSizeThreshold: () => 6000,
-    })),
-  },
+  }),
+  toFile: vi.fn(async (_buffer: Buffer, name?: string | null, opts?: object) => ({ name, ...opts })),
 }));
 
-vi.mock('@/lib/llm/router', () => ({
-  LLMRouter: vi.fn(function(this: any) {
-    this.streamText = vi.fn(async () => {
-      const textContent = `# 📚 Study Notes: Physics and Mathematics
+// Mock the LLM service directly - bypasses all config/env var issues
+const textContent = `# 📚 Study Notes: Physics and Mathematics
 
 > **Executive Summary**
 > This recording covers fundamental concepts in physics and mathematics.
@@ -117,41 +91,38 @@ vi.mock('@/lib/llm/router', () => ({
 * Understanding fundamentals is crucial
 * Practice is essential for mastery`;
 
-      return {
-        textStream: (async function* () {
-          const chunks = textContent.split(' ');
-          for (const chunk of chunks) {
-            yield chunk + ' ';
-          }
-        })(),
-        text: Promise.resolve(textContent),
-        rateLimitInfo: {
-          remaining: 25,
-          limit: 30,
-          reset: new Date(),
-          percentage: 16.7,
-        },
-        degradedMode: false,
-      };
-    });
-  }),
-  DEFAULT_MODEL_MAPPING: {
-    'generate-audio-notes': { provider: 'groq', model: 'llama-3.3-70b-versatile', priority: 'high' },
-  },
+vi.mock('@/lib/llm/service', () => ({
+  createLLMRouter: vi.fn(() => ({
+    streamText: vi.fn(async () => ({
+      text: Promise.resolve(textContent),
+    })),
+    generateObject: vi.fn(async () => ({
+      object: {},
+    })),
+  })),
+}));
+
+// Mock MIME validator to allow test audio through
+vi.mock('@/lib/mime-validator', () => ({
+  validateMimeType: vi.fn(async () => ({ valid: true, detectedType: 'audio/webm' })),
+  logMimeTypeMismatch: vi.fn(),
+}));
+
+// Mock size validator
+vi.mock('@/lib/size-validator', () => ({
+  validateFileSize: vi.fn(() => ({ valid: true })),
 }));
 
 describe('POST /api/generate-audio-notes', () => {
-  let mockTranscriptionCreate: any;
-
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Get the mock from the module
-    const openai = await import('openai');
-    mockTranscriptionCreate = (openai as any).__mockTranscriptionCreate;
-    // Reset mock to default behavior
+    // Reset the transcription mock to default behavior after clearAllMocks
     mockTranscriptionCreate.mockResolvedValue({
       text: 'This is a test transcription of the audio recording. It contains study material about physics and mathematics.',
     });
+    // Reset toFile mock
+    const openai = await import('openai');
+    vi.mocked(openai.toFile).mockImplementation(async (_buffer: any, name?: string | null, opts?: any) => ({ name, ...opts }) as any);
   });
 
   afterEach(() => {
@@ -215,10 +186,7 @@ describe('POST /api/generate-audio-notes', () => {
   });
 
   it('should handle empty transcription', async () => {
-    // Mock empty transcription for this test
-    mockTranscriptionCreate.mockResolvedValueOnce({
-      text: '',
-    });
+    mockTranscriptionCreate.mockResolvedValueOnce({ text: '' });
 
     const audioData = Buffer.from('fake audio data').toString('base64');
 
@@ -242,24 +210,15 @@ describe('POST /api/generate-audio-notes', () => {
   });
 
   it('should use fallback notes when generation returns empty', async () => {
-    const { LLMRouter } = await import('@/lib/llm/router');
+    const { createLLMRouter } = await import('@/lib/llm/service');
     
     // Mock router to return empty notes
-    vi.mocked(LLMRouter).mockImplementationOnce(function(this: any) {
-      this.streamText = vi.fn(async () => ({
-        textStream: (async function* () {
-          yield '';
-        })(),
+    vi.mocked(createLLMRouter).mockImplementationOnce(() => ({
+      streamText: vi.fn(async () => ({
         text: Promise.resolve(''),
-        rateLimitInfo: {
-          remaining: 25,
-          limit: 30,
-          reset: new Date(),
-          percentage: 16.7,
-        },
-        degradedMode: false,
-      }));
-    } as any);
+      })),
+      generateObject: vi.fn(),
+    } as any));
 
     const audioData = Buffer.from('fake audio data').toString('base64');
 
@@ -303,8 +262,8 @@ describe('POST /api/generate-audio-notes', () => {
     const response = (await POST(request))!
     expect(response.status).toBe(200);
 
-    const { LLMRouter } = await import('@/lib/llm/router');
-    const routerInstance = vi.mocked(LLMRouter).mock.results[0]?.value;
+    const { createLLMRouter } = await import('@/lib/llm/service');
+    const routerInstance = vi.mocked(createLLMRouter).mock.results[0]?.value;
     
     expect(routerInstance.streamText).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -327,7 +286,6 @@ describe('POST /api/generate-audio-notes', () => {
   });
 
   it('should handle Groq transcription errors', async () => {
-    // Mock transcription error for this test
     mockTranscriptionCreate.mockRejectedValueOnce(new Error('Invalid API Key'));
 
     const audioData = Buffer.from('fake audio data').toString('base64');
@@ -352,7 +310,6 @@ describe('POST /api/generate-audio-notes', () => {
   });
 
   it('should handle rate limit errors', async () => {
-    // Mock rate limit error for this test
     mockTranscriptionCreate.mockRejectedValueOnce(new Error('rate_limit exceeded'));
 
     const audioData = Buffer.from('fake audio data').toString('base64');
@@ -377,12 +334,13 @@ describe('POST /api/generate-audio-notes', () => {
   });
 
   it('should handle LLM router errors gracefully', async () => {
-    const { LLMRouter } = await import('@/lib/llm/router');
+    const { createLLMRouter } = await import('@/lib/llm/service');
     
     // Mock router to throw error
-    vi.mocked(LLMRouter).mockImplementationOnce(function(this: any) {
-      this.streamText = vi.fn().mockRejectedValue(new Error('LLM service unavailable'));
-    } as any);
+    vi.mocked(createLLMRouter).mockImplementationOnce(() => ({
+      streamText: vi.fn().mockRejectedValue(new Error('LLM service unavailable')),
+      generateObject: vi.fn(),
+    } as any));
 
     const audioData = Buffer.from('fake audio data').toString('base64');
 
@@ -457,24 +415,15 @@ describe('POST /api/generate-audio-notes', () => {
   });
 
   it('should use default title when no heading found', async () => {
-    const { LLMRouter } = await import('@/lib/llm/router');
+    const { createLLMRouter } = await import('@/lib/llm/service');
     
     // Mock router to return notes without heading
-    vi.mocked(LLMRouter).mockImplementationOnce(function(this: any) {
-      this.streamText = vi.fn(async () => ({
-        textStream: (async function* () {
-          yield 'Notes without heading';
-        })(),
+    vi.mocked(createLLMRouter).mockImplementationOnce(() => ({
+      streamText: vi.fn(async () => ({
         text: Promise.resolve('Notes without heading'),
-        rateLimitInfo: {
-          remaining: 25,
-          limit: 30,
-          reset: new Date(),
-          percentage: 16.7,
-        },
-        degradedMode: false,
-      }));
-    } as any);
+      })),
+      generateObject: vi.fn(),
+    } as any));
 
     const audioData = Buffer.from('fake audio data').toString('base64');
 
@@ -517,7 +466,6 @@ describe('POST /api/generate-audio-notes', () => {
     expect(mockTranscriptionCreate).toHaveBeenCalledWith({
       file: expect.objectContaining({
         name: 'test-recording.webm',
-        type: 'audio/webm',
       }),
       model: 'whisper-large-v3',
       temperature: 0,

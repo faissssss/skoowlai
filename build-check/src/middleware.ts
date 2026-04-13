@@ -1,0 +1,54 @@
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+// Define protected routes that require authentication
+const isProtectedRoute = createRouteMatcher([
+    "/dashboard(.*)",
+    "/study(.*)",
+    "/notes(.*)",
+    "/quiz(.*)",
+    "/mindmap(.*)",
+    "/account(.*)",
+]);
+
+// Define public routes that don't require authentication
+const isPublicRoute = createRouteMatcher([
+    "/",
+    "/sign-in(.*)",
+    "/sign-up(.*)",
+    "/share(.*)",
+    "/api/webhooks(.*)",
+]);
+
+// Check if this is a webhook route - skip ALL middleware processing
+function isWebhookRoute(req: NextRequest): boolean {
+    return req.nextUrl.pathname.startsWith('/api/webhooks');
+}
+
+export default clerkMiddleware(async (auth, req) => {
+    // CRITICAL: Skip ALL processing for webhook routes to prevent 307 redirects
+    if (isWebhookRoute(req)) {
+        return NextResponse.next();
+    }
+
+    // Force HTTPS in production
+    if (process.env.NODE_ENV === "production" && req.headers.get("x-forwarded-proto") === "http") {
+        return NextResponse.redirect(new URL(req.url.replace("http://", "https://"), req.url), 301);
+    }
+
+    // Protect routes that require authentication
+    if (isProtectedRoute(req)) {
+        await auth.protect();
+    }
+});
+
+export const config = {
+    matcher: [
+        // Skip Next.js internals, static files, AND webhook routes
+        // IMPORTANT: api/webhooks MUST be excluded here because matcher uses OR logic
+        "/((?!_next|api/webhooks|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+        // API routes except webhooks
+        "/(api(?!/webhooks)|trpc)(.*)",
+    ],
+};

@@ -135,7 +135,7 @@ export default function DashboardLayoutClient({
   const initialBillingOpenRef = useState(() => searchParams?.get('billing') === '1')[0];
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isPricingOpen, setIsPricingOpen] = useState(initialBillingOpenRef);
   const mounted = useSyncExternalStore(
     () => () => { },
     () => true,
@@ -155,9 +155,7 @@ export default function DashboardLayoutClient({
   useEffect(() => {
     if (!searchParams) return;
     if (searchParams.get('billing') === '1') {
-      // Open the pricing modal first
-      setIsPricingOpen(true);
-      // Then remove the billing param from the URL to avoid reopening on navigation
+      // Clean the URL so the modal doesn't auto-reopen on navigation.
       const params = new URLSearchParams(searchParams.toString());
       params.delete('billing');
       const qs = params.toString();
@@ -165,8 +163,6 @@ export default function DashboardLayoutClient({
       router.replace(nextUrl, { scroll: false });
     }
   }, [searchParams, pathname, router]);
-
-  const pricingOpen = isPricingOpen || initialBillingOpenRef;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -240,7 +236,7 @@ export default function DashboardLayoutClient({
 
       {/* Pricing Modal */}
       <PricingModal
-        isOpen={pricingOpen}
+        isOpen={isPricingOpen}
         onClose={() => setIsPricingOpen(false)}
       />
 

@@ -52,38 +52,22 @@ vi.mock('@/lib/db', () => ({
     },
 }));
 
-vi.mock('@/lib/llm/router', () => {
-    const mockGenerateObject = vi.fn();
-    class MockLLMRouter {
-        generateObject = mockGenerateObject;
-    }
-    return {
-        LLMRouter: vi.fn(MockLLMRouter),
-        DEFAULT_MODEL_MAPPING: {},
-        __mockGenerateObject: mockGenerateObject,
-    };
-});
+// Mock the LLM service directly - bypasses all config/env var issues
+const mockGenerateObject = vi.fn();
 
-vi.mock('@/lib/llm/config', () => ({
-    ProviderConfig: {
-        load: vi.fn(() => ({
-            getPrimaryProvider: () => 'groq',
-            getFallbackProvider: () => 'gemini',
-            isFallbackEnabled: () => true,
-            getModelMapping: () => ({}),
-            isContentSizeRoutingEnabled: () => true,
-            getContentSizeThreshold: () => 6000,
-            isMigrationEnabled: () => true,
-            getEndpointOverride: () => undefined,
+vi.mock('@/lib/llm/service', () => ({
+    createLLMRouter: vi.fn(() => ({
+        streamText: vi.fn(async () => ({
+            text: Promise.resolve('Generated content'),
         })),
-    },
+        generateObject: mockGenerateObject,
+    })),
 }));
 
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
-// Removed unused import
 
 describe('/api/mindmap', () => {
     const mockDeckId = 'deck123';
@@ -130,7 +114,7 @@ describe('/api/mindmap', () => {
             edges: JSON.stringify([]),
         } as any);
 
-        vi.mocked(require('@/lib/llm/router').__mockGenerateObject).mockResolvedValue({
+        mockGenerateObject.mockResolvedValue({
             object: mockMindMapData,
         });
     });
@@ -395,7 +379,7 @@ describe('/api/mindmap', () => {
         });
 
         it('should handle LLM generation errors gracefully', async () => {
-            vi.mocked(require('@/lib/llm/router').__mockGenerateObject).mockRejectedValue(new Error('LLM error'));
+            mockGenerateObject.mockRejectedValueOnce(new Error('LLM error'));
 
             const req = new NextRequest('http://localhost:3000/api/mindmap', {
                 method: 'POST',
