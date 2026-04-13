@@ -16,49 +16,127 @@ ENABLE_LLM_FALLBACK=true
 - **FALLBACK_LLM_PROVIDER**: Backup provider if primary fails
 - **ENABLE_LLM_FALLBACK**: Enable automatic fallback to secondary provider
 
-### Content Size Routing
+### Content Size Routing (Production-Ready Configuration)
 
 ```bash
 ENABLE_CONTENT_SIZE_ROUTING=true
-CONTENT_SIZE_THRESHOLD_TOKENS=100000
-GROQ_CONTEXT_LIMIT_TOKENS=128000
+CONTENT_SIZE_THRESHOLD_TOKENS=20000
+GROQ_CONTEXT_LIMIT_TOKENS=120000
 ```
 
 - **ENABLE_CONTENT_SIZE_ROUTING**: Enable intelligent routing based on content size
-- **CONTENT_SIZE_THRESHOLD_TOKENS**: Token threshold for routing decisions (default: 100,000)
-  - Content below this threshold → Groq (cost-effective, fast)
-  - Content above this threshold → Gemini (large context window)
-- **GROQ_CONTEXT_LIMIT_TOKENS**: Maximum tokens Groq can handle (default: 128,000)
-  - Llama 3.3 70B supports up to 128k tokens
+- **CONTENT_SIZE_THRESHOLD_TOKENS**: Token threshold for routing decisions (default: 20,000)
+  - **≤20,000 tokens** → Groq (fast, within free tier TPM limit)
+  - **>20,000 tokens** → Gemini (reliable, 1M TPM free tier)
+- **GROQ_CONTEXT_LIMIT_TOKENS**: Maximum tokens Groq can handle (default: 120,000)
+  - Set to 120k (not 128k) to leave 8k buffer for output generation
   - Content exceeding this limit will automatically route to Gemini
+
+### Why 20,000 Token Threshold?
+
+**Groq Free Tier Constraint:**
+- **TPM Limit**: 20,000 tokens per minute (input + output combined)
+- **Safe Input**: 20,000 tokens leaves headroom for output (~3-5k tokens)
+- **Predictability**: No surprise rate limits during user sessions
+- **Single Request Safety**: Ensures each request stays within TPM budget
+
+**Gemini Free Tier Advantage:**
+- **TPM Limit**: 1,000,000 tokens per minute (practically unlimited)
+- **Reliability**: Handles large content without rate limit concerns
+- **Quality**: Superior large-context understanding
+
+**Trade-off:**
+- ✅ Gain: Predictable, production-ready behavior
+- ✅ Gain: No mid-session rate limit errors
+- ⚠️ Loss: Medium content (20-50k tokens) uses Gemini instead of Groq's speed
+- ✅ Net: Reliability > Speed for production use
 
 ## Content Size Estimates
 
-### Podcast Duration to Token Estimation
+### Content Type to Token Mapping
 
-| Duration | Words | Characters | Estimated Tokens |
-|----------|-------|------------|------------------|
-| 30 min   | 4,500 | 22,500     | ~5,625           |
-| 1 hour   | 9,000 | 45,000     | ~11,250          |
-| 2 hours  | 18,000| 90,000     | ~22,500          |
-| 3 hours  | 27,000| 135,000    | ~33,750          |
+| Content Type | Typical Size | Tokens | Provider | Reasoning |
+|--------------|--------------|--------|----------|-----------|
+| **Short Content (Groq Territory)** |
+| Article/Blog | 2-5k words | 2,500-6,250 | Groq | Fast processing, well within limit |
+| Short PDF (5-15 pages) | 2.5-7.5k words | 3,125-9,375 | Groq | Quick turnaround |
+| 30min Podcast | 4,500 words | ~5,625 | Groq | Efficient processing |
+| 1hr Podcast | 9,000 words | ~11,250 | Groq | Within safe threshold |
+| Medium PDF (15-20 pages) | 7.5-10k words | 9,375-12,500 | Groq | Still fast |
+| **Large Content (Gemini Territory)** |
+| 1.5hr Podcast | 13,500 words | ~16,875 | Groq | Near threshold |
+| 2hr Podcast | 18,000 words | ~22,500 | Gemini | Exceeds 20k threshold |
+| Medium PDF (20-50 pages) | 10-25k words | 12,500-31,250 | Gemini | Better comprehension |
+| Large PDF (50-100 pages) | 25-50k words | 31,250-62,500 | Gemini | Large context handling |
+| 3hr Podcast | 27,000 words | ~33,750 | Gemini | Long-form content |
+| Book (100-300 pages) | 50-150k words | 62,500-187,500 | Gemini | Exceeds Groq limit |
+| 5hr+ Podcast | 45,000+ words | ~56,250+ | Gemini | Very large content |
 
 **Calculation:**
 - Average speaking rate: 150 words/minute
 - Average word length: 5 characters
 - Token estimation: characters / 4
 
+### Threshold Decision Point
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 20,000 Token Threshold (Production-Ready)              │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  0 - 20,000 tokens (≤80 pages or ≤1.5hr podcast)       │
+│  ├─ Provider: GROQ                                      │
+│  ├─ Speed: ⚡ Very Fast (~20-30 seconds)                │
+│  ├─ TPM Safety: ✅ Within 20k free tier limit          │
+│  └─ Use Cases: Articles, short-medium docs, <1.5hr     │
+│                                                          │
+│  20,001 - 120,000 tokens (80-480 pages or 1.5-8hr)     │
+│  ├─ Provider: GEMINI                                    │
+│  ├─ Speed: Fast (~30-60 seconds)                        │
+│  ├─ TPM Safety: ✅ Well within 1M free tier limit      │
+│  ├─ Quality: ⭐ Superior large-context understanding    │
+│  └─ Use Cases: Long docs, 2-8hr podcasts, books        │
+│                                                          │
+│  120,001+ tokens (480+ pages or 8+ hr podcasts)        │
+│  ├─ Provider: GEMINI (automatic)                        │
+│  ├─ Reason: Exceeds Groq context limit                 │
+│  ├─ TPM Safety: ✅ Still within 1M limit               │
+│  └─ Use Cases: Very long books, multi-hour content     │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
 ### Recommended Settings by Use Case
 
-#### Standard Use (Most Content)
+#### Production-Ready Hybrid (Recommended)
 ```bash
 ENABLE_CONTENT_SIZE_ROUTING=true
-CONTENT_SIZE_THRESHOLD_TOKENS=100000
-GROQ_CONTEXT_LIMIT_TOKENS=128000
+CONTENT_SIZE_THRESHOLD_TOKENS=20000
+GROQ_CONTEXT_LIMIT_TOKENS=120000
 ```
-- Handles up to 3-hour podcasts on Groq
-- Only routes to Gemini for extremely large content (>128k tokens)
-- Cost-effective for most use cases
+- **Philosophy**: Reliability over speed
+- **Groq**: Short content (≤20k tokens, ≤1.5hr podcasts)
+  - Fast processing
+  - No TPM rate limit concerns
+  - Predictable behavior
+- **Gemini**: Everything else (>20k tokens)
+  - Reliable large-context handling
+  - 1M TPM free tier (practically unlimited)
+  - Superior quality for long-form content
+- **Best for**: Production environments, user-facing apps
+- **Trade-off**: Medium content uses Gemini (slightly slower) for reliability
+
+#### Aggressive Groq Usage (Speed Optimized)
+```bash
+ENABLE_CONTENT_SIZE_ROUTING=true
+CONTENT_SIZE_THRESHOLD_TOKENS=50000
+GROQ_CONTEXT_LIMIT_TOKENS=120000
+```
+- **Philosophy**: Maximize Groq's speed advantage
+- Handles up to 4-hour podcasts on Groq
+- Processes 50-page PDFs on Groq
+- **Risk**: May hit TPM limits with concurrent requests
+- **Best for**: Low-traffic apps, development/testing
 
 #### High-Volume Long-Form Content
 ```bash
@@ -93,18 +171,24 @@ GROQ_CONTEXT_LIMIT_TOKENS=128000
 ## Provider Capabilities
 
 ### Groq (Llama 3.3 70B)
-- **Context Window**: 128,000 tokens
-- **Speed**: Very fast (optimized inference)
-- **Cost**: Lower cost per token
-- **Best For**: Most content, including 2-3 hour podcasts
-- **Limitations**: Fixed context window, rate limits
+- **Context Window**: 128,000 tokens (120k safe limit with output buffer)
+- **Speed**: ⚡ Very fast (~20-30 seconds for most content)
+- **Free Tier TPM**: 20,000 tokens/minute (input + output)
+- **Free Tier RPM**: 30 requests/minute
+- **Free Tier RPD**: 14,400 requests/day
+- **Cost (Paid)**: $0.59/1M input tokens, $0.79/1M output tokens
+- **Best For**: Short-medium content (≤20k tokens)
+- **Limitations**: TPM limit requires careful threshold management
 
 ### Gemini (2.5 Flash)
-- **Context Window**: 1,000,000+ tokens
-- **Speed**: Fast
-- **Cost**: Higher cost per token
-- **Best For**: Extremely large content (>128k tokens)
-- **Limitations**: May experience high demand (503 errors)
+- **Context Window**: 1,048,576 tokens (1M+)
+- **Speed**: Fast (~30-60 seconds)
+- **Free Tier TPM**: 1,000,000 tokens/minute (practically unlimited)
+- **Free Tier RPM**: 15 requests/minute
+- **Free Tier RPD**: 1,500 requests/day
+- **Cost (Paid)**: $0.075/1M tokens (<128k), $0.15/1M tokens (>128k)
+- **Best For**: Large content (>20k tokens), long-form analysis
+- **Limitations**: Lower RPM/RPD than Groq, occasional high demand (503 errors)
 
 ## Troubleshooting
 
