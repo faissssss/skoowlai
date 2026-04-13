@@ -133,8 +133,8 @@ All 7 endpoints successfully migrated from direct Gemini calls to LLM Router:
 
 ```bash
 # Provider API Keys
-GROQ_API_KEY=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
-GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyAM5hn7B6nUYtyhPhUtlFE9_C1ubvm8YKo
+GROQ_API_KEY=your_groq_api_key_here
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_api_key_here
 
 # Provider Selection
 PRIMARY_LLM_PROVIDER=groq
@@ -142,7 +142,7 @@ FALLBACK_LLM_PROVIDER=gemini
 ENABLE_LLM_FALLBACK=true
 
 # Redis Connection
-REDIS_URL=https://awaited-jackal-40054.upstash.io
+REDIS_URL=your_redis_url_here
 
 # Migration Control
 LLM_MIGRATION_ENABLED=true
