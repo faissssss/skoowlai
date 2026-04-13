@@ -240,8 +240,25 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'No file provided' }, { status: 400 });
             }
 
-            // Determine input type and verify usage limits
+            // SECURITY: Validate file size FIRST (before reading buffer)
             const inputType: InputType = file.type.startsWith('audio/') ? 'audio' : 'document';
+            const { validateFileSize } = await import('@/lib/size-validator');
+            const sizeValidation = validateFileSize(file.size, inputType);
+            
+            if (!sizeValidation.valid) {
+                console.warn('[Security] File size limit exceeded', {
+                    userId: user.id,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    maxSize: sizeValidation.maxSize,
+                });
+                return NextResponse.json({
+                    error: 'File too large',
+                    details: sizeValidation.error
+                }, { status: 413 });
+            }
+
+            // Verify usage limits
             const usageCheck = await verifyUsageLimits({
                 inputType,
                 fileSize: file.size
@@ -250,6 +267,29 @@ export async function POST(req: NextRequest) {
 
             title = file.name;
             const buffer = Buffer.from(await file.arrayBuffer());
+
+            // SECURITY: Validate MIME type using magic number detection (not client-provided type)
+            const { validateMimeType, logMimeTypeMismatch } = await import('@/lib/mime-validator');
+            const mimeValidation = await validateMimeType(buffer, inputType);
+            
+            if (!mimeValidation.valid) {
+                console.warn('[Security] MIME type validation failed', {
+                    userId: user.id,
+                    fileName: file.name,
+                    clientType: file.type,
+                    detectedType: mimeValidation.detectedType,
+                    error: mimeValidation.error,
+                });
+                return NextResponse.json({
+                    error: 'Invalid file type',
+                    details: 'The file type is not supported or the file may be corrupted.'
+                }, { status: 400 });
+            }
+
+            // Log MIME type mismatch for security monitoring
+            if (mimeValidation.detectedType && mimeValidation.detectedType !== file.type) {
+                logMimeTypeMismatch(user.id, file.name, file.type, mimeValidation.detectedType);
+            }
 
             console.log('🔄 Starting file parsing for type:', file.type);
 

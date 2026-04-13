@@ -1,15 +1,14 @@
 import { db } from '@/lib/db';
 import { sendSubscriptionReminderEmail } from '@/lib/email';
 import { NextResponse } from 'next/server';
+import { verifyCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-    // Basic authorization using a secret query param or header (for cron job security)
-    const authHeader = req.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    // SECURITY: Verify cron authentication (enforced in ALL environments)
+    const auth = verifyCronAuth(req);
+    if (!auth.authorized) return auth.response;
 
     try {
         const today = new Date();

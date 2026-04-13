@@ -3,7 +3,18 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    const email = 'yourskoowlai@gmail.com';
+    const email = process.env.DEBUG_USER_EMAIL || process.argv[2];
+    
+    if (!email) {
+        console.error('❌ Missing required argument: email');
+        console.log('\nUsage:');
+        console.log('  npx tsx scripts/debug-user-state.ts <email>');
+        console.log('\nOr set environment variable:');
+        console.log('  DEBUG_USER_EMAIL=user@example.com');
+        console.log('  npx tsx scripts/debug-user-state.ts');
+        process.exit(1);
+    }
+    
     console.log(`Checking status for ${email}...`);
 
     try {

@@ -113,6 +113,39 @@ export async function POST(req: NextRequest) {
         }
         const buffer = Buffer.from(bytes);
 
+        // SECURITY: Validate file size FIRST
+        const { validateFileSize } = await import('@/lib/size-validator');
+        const sizeValidation = validateFileSize(buffer.length, 'audio');
+        
+        if (!sizeValidation.valid) {
+            console.warn('[Security] Audio file size limit exceeded', {
+                fileName: fileName || 'audio.webm',
+                fileSize: buffer.length,
+                maxSize: sizeValidation.maxSize,
+            });
+            return NextResponse.json({
+                error: 'Audio file too large',
+                details: sizeValidation.error
+            }, { status: 413 });
+        }
+
+        // SECURITY: Validate MIME type using magic number detection
+        const { validateMimeType } = await import('@/lib/mime-validator');
+        const mimeValidation = await validateMimeType(buffer, 'audio');
+        
+        if (!mimeValidation.valid) {
+            console.warn('[Security] Audio MIME type validation failed', {
+                fileName: fileName || 'audio.webm',
+                clientType: mimeType || 'audio/webm',
+                detectedType: mimeValidation.detectedType,
+                error: mimeValidation.error,
+            });
+            return NextResponse.json({
+                error: 'Invalid audio format',
+                details: 'The audio format is not supported. Please use WebM, MP3, WAV, or M4A.'
+            }, { status: 400 });
+        }
+
         // Verify usage limits with audio file size
         const usageCheck = await verifyUsageLimits({
             inputType: 'audio',

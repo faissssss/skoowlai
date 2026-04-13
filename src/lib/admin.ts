@@ -24,13 +24,23 @@ export async function requireAdmin() {
 
 export function requireDebugSecret(req: Request, envVarName: string) {
   const expected = process.env[envVarName];
+  
+  // Fail secure: missing secret = deny access
   if (!expected) {
+    console.warn(`[Security] ${envVarName} not configured - denying access`);
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const url = new URL(req.url);
-  const provided = req.headers.get('x-debug-secret') || url.searchParams.get('secret');
+  // SECURITY: Only accept header-based authentication (NOT query parameters)
+  // Query parameters get logged in web server access logs, making them insecure for secrets
+  const provided = req.headers.get('x-debug-secret');
+  
   if (provided !== expected) {
+    // Log authentication failure for audit
+    console.warn(`[Security] Failed debug auth attempt for ${envVarName}`, {
+      timestamp: new Date().toISOString(),
+      hasHeader: !!provided,
+    });
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

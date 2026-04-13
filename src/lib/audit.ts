@@ -2,6 +2,18 @@ import { db } from '@/lib/db';
 import { redis } from './redis';
 
 /**
+ * Audit event interface for security logging
+ */
+export interface AuditEvent {
+    userId: string;
+    action: string;
+    resourceId?: string;
+    details?: string | object;
+    ipAddress?: string;
+    timestamp?: Date;
+}
+
+/**
  * Log a critical action to the database for security auditing.
  * This function is fire-and-forget to avoid blocking the main thread.
  */
@@ -11,13 +23,7 @@ export async function logAudit({
     resourceId,
     details,
     ipAddress
-}: {
-    userId: string;
-    action: string;
-    resourceId?: string;
-    details?: string | object;
-    ipAddress?: string;
-}) {
+}: AuditEvent) {
     const logData = {
         userId,
         action,

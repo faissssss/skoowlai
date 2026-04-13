@@ -9,6 +9,7 @@ import { SubscriptionStatus } from '@/lib/subscription';
 import { DISABLE_PAYMENTS } from '@/lib/config';
 import { dodoClient } from '@/lib/dodo';
 import { syncSubscriptionToClerk, clearClerkSubscription } from '@/lib/clerkSync';
+import { validateDodoWebhook } from '@/lib/webhook-schemas';
 
 /**
  * Dodo Payments Webhook Handler
@@ -69,8 +70,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
+        // 4. Validate webhook payload structure
+        const validation = validateDodoWebhook(event);
+        if (!validation.success) {
+            console.error('❌ Webhook payload validation failed:', validation.error);
+            return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
+        }
 
-        // 4. Process event
+
+        // 5. Process event
         const eventType = event.type;
         const data = event.data;
 

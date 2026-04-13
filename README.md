@@ -7,7 +7,7 @@ Grab your skoowl ai here! www.skoowlai.com
 
 ## 🚀 Overview
 
-**skoowl ai** is a modern, AI-powered study platform designed to supercharge learning. It eliminates the tedious work of manual summarization by using advanced LLMs to process raw educational content—PDFs, YouTube lectures, or audio recordings—into structured, study-ready materials.
+**Skoowl AI** is a modern, AI-powered study platform designed to supercharge learning. It eliminates the tedious work of manual summarization by using advanced LLMs to process raw educational content—PDFs, YouTube lectures, or audio recordings—into structured, study-ready materials.
 
 ### ✨ Key Features
 
@@ -115,6 +115,24 @@ npm run dev
 \`\`\`
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+---
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the `/docs` directory:
+
+- **[Security Checklist](SECURITY_CHECKLIST.md)** ⭐ - Pre-push security verification (required reading)
+- **[Documentation Index](docs/README.md)** - Complete documentation index
+- **[Security Documentation](docs/security/)** - Security hardening, analysis, and verification
+- **[Troubleshooting Guides](docs/troubleshooting/)** - Common issues and solutions
+- **[Fix History](docs/fixes/)** - Historical bug fixes and resolutions
+
+### Quick Links
+- 🔒 [Security Pre-Push Verification](docs/security/SECURITY_PRE_PUSH_VERIFICATION.md)
+- 🔑 [Secrets Rotation Guide](docs/security/SECRETS_ROTATION.md)
+- 🛡️ [Security Layers Analysis](docs/security/SECURITY_LAYERS_ANALYSIS.md)
+- ⚠️ [Error Handling Analysis](docs/security/USER_ERROR_HANDLING_ANALYSIS.md)
 
 ---
 

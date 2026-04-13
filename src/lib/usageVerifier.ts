@@ -5,8 +5,8 @@ import { requireAuth } from './auth';
 // ============ FREE BETA LIMITS ============
 export const USAGE_LIMITS = {
     DAILY_LIMIT: 3,              // Max items per day (combined total)
-    MAX_DOC_SIZE_MB: 10,         // Max document file size in MB
-    MAX_AUDIO_SIZE_MB: 50,       // Max audio file size in MB (proxy for ~60min)
+    MAX_DOC_SIZE_MB: 50,         // Max document file size in MB (aligned with size-validator.ts)
+    MAX_AUDIO_SIZE_MB: 100,      // Max audio file size in MB (aligned with size-validator.ts)
     MAX_YOUTUBE_DURATION_SEC: 3600, // Max YouTube video duration (60 min)
 } as const;
 

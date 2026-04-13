@@ -6,6 +6,7 @@ import { checkFeatureLimit, incrementFeatureUsage } from '@/lib/featureLimits';
 import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
 import { createLLMRouter } from '@/lib/llm/service';
+import { validateTextSize, MAX_TEXT_SIZE } from '@/lib/input-validator';
 
 export const maxDuration = 60;
 // Node.js runtime required: uses Prisma via requireAuth/db
@@ -51,6 +52,28 @@ export async function POST(req: NextRequest) {
 
         const { messages, context, deckId } = payload.data;
         console.log('Chat API Request:', { messagesLength: messages?.length, contextLength: context?.length, deckId });
+
+        // Validate text size for context
+        if (context) {
+            const contextValidation = validateTextSize(context, MAX_TEXT_SIZE);
+            if (!contextValidation.valid) {
+                return NextResponse.json({
+                    error: contextValidation.error
+                }, { status: 413 });
+            }
+        }
+
+        // Validate text size for messages
+        for (const message of messages) {
+            if (message.content && typeof message.content === 'string') {
+                const messageValidation = validateTextSize(message.content, MAX_TEXT_SIZE);
+                if (!messageValidation.valid) {
+                    return NextResponse.json({
+                        error: messageValidation.error
+                    }, { status: 413 });
+                }
+            }
+        }
 
         if (deckId) {
             // Verify deck ownership

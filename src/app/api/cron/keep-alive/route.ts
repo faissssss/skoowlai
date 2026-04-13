@@ -1,18 +1,14 @@
 import { warmupConnection } from '@/lib/db';
 import { checkRedisHealth } from '@/lib/redis';
 import { NextResponse } from 'next/server';
+import { verifyCronAuth } from '@/lib/cron-auth';
 
 // This endpoint is called by Vercel Cron every 4 minutes
 // to keep both Neon database and Upstash Redis from auto-suspending
 export async function GET(request: Request) {
-    // Verify the request is from Vercel Cron (security)
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        // In development, allow without auth
-        if (process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-    }
+    // SECURITY: Verify cron authentication (enforced in ALL environments)
+    const auth = verifyCronAuth(request);
+    if (!auth.authorized) return auth.response;
 
     try {
         // Warm up both database and Redis connections

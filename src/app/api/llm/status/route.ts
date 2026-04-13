@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-
+import { requireAdmin } from '@/lib/admin';
 import { createLLMRouter, getLLMRequestLogs, refreshLLMProviderHealth } from '@/lib/llm/service';
 
 /**
@@ -10,8 +10,13 @@ import { createLLMRouter, getLLMRequestLogs, refreshLLMProviderHealth } from '@/
  * - Rate limit usage
  * - Queue depth
  * - Degraded mode status
+ * 
+ * SECURITY: Requires admin authentication
  */
 export async function GET() {
+  // SECURITY: Require admin authentication
+  const admin = await requireAdmin();
+  if (!admin.ok) return admin.response;
   try {
     const router = createLLMRouter(30000);
     await refreshLLMProviderHealth();

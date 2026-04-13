@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth';
 import { checkCsrfOrigin } from '@/lib/csrf';
 import { createLLMRouter } from '@/lib/llm/service';
 import type { StreamTextResult } from '@/lib/llm/router';
+import { validateTextSize } from '@/lib/input-validator';
 
 console.log('🟢 [REWRITE] Module loaded successfully');
 
@@ -61,6 +62,15 @@ export async function POST(req: NextRequest) {
         }
 
         const { text, action } = payload.data;
+
+        // Validate text size (already limited to 5000 chars in schema, but check bytes)
+        const textValidation = validateTextSize(text);
+        if (!textValidation.valid) {
+            return new Response(JSON.stringify({ error: textValidation.error }), {
+                status: 413,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
 
         const instruction = REWRITE_PROMPTS[action];
 

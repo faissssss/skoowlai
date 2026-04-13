@@ -4,7 +4,18 @@ const prisma = new PrismaClient();
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 async function main() {
-    const email = 'yourskoowlai@gmail.com';
+    const email = process.env.DEBUG_CLERK_EMAIL || process.argv[2];
+    
+    if (!email) {
+        console.error('❌ Missing required argument: email');
+        console.log('\nUsage:');
+        console.log('  npx tsx scripts/debug-clerk-sub.ts <email>');
+        console.log('\nOr set environment variable:');
+        console.log('  DEBUG_CLERK_EMAIL=user@example.com');
+        console.log('  npx tsx scripts/debug-clerk-sub.ts');
+        process.exit(1);
+    }
+    
     console.log(`Checking Clerk subscription for ${email}...`);
 
     if (!CLERK_SECRET_KEY) {

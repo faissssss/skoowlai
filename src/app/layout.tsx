@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import "@/lib/init"; // Run startup validation
 
 const inter = Inter({
   variable: "--font-inter",

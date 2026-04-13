@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
+import { validateTextFields } from '@/lib/input-validator';
 
 interface FeedbackPayload {
     type: "feature" | "improvement" | "general";
@@ -44,6 +45,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: "Summary is required" },
                 { status: 400 }
+            );
+        }
+
+        // Validate text size
+        const validation = validateTextFields({
+            summary,
+            details: details || '',
+        });
+        if (!validation.valid) {
+            return NextResponse.json(
+                { error: "Text content too large", details: validation.errors },
+                { status: 413 }
             );
         }
 

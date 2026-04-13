@@ -33,6 +33,24 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Database files (SECURITY: Never commit databases)
+*.db
+*.db-shm
+*.db-wal
+dev.db
+prisma/dev.db
+
+# Temporary test files (SECURITY: May contain test data)
+.tmp-llm-tests/
+
+# User uploads (SECURITY: May contain PII)
+public/uploads/
+
+# Local utility scripts (SECURITY: May contain hardcoded values)
+kill_port.ps1
+*.local.ps1
+*.local.sh
+
 # vercel
 .vercel
 

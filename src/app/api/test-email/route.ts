@@ -13,14 +13,21 @@ export async function POST(req: NextRequest) {
     const csrfError = checkCsrfOrigin(req);
     if (csrfError) return csrfError;
 
-    // Security: Only allow in development or for specific admin
+    // Security: Only allow in development or for configured admins
     const isDev = process.env.NODE_ENV === 'development';
     const { userId } = await auth();
 
-    // Add your admin clerk ID here for production testing
-    const ADMIN_CLERK_IDS = ['user_2abc123']; // Replace with your actual Clerk user ID
+    // SECURITY: Use environment variable for admin IDs (not hardcoded placeholders)
+    const adminIds = (process.env.ADMIN_USER_IDS || '')
+        .split(',')
+        .map(id => id.trim())
+        .filter(Boolean);
 
-    if (!isDev && (!userId || !ADMIN_CLERK_IDS.includes(userId))) {
+    if (!isDev && (!userId || !adminIds.includes(userId))) {
+        console.warn('[Security] Unauthorized test-email access attempt', {
+            userId: userId || 'none',
+            timestamp: new Date().toISOString(),
+        });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

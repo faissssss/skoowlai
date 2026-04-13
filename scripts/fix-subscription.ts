@@ -16,13 +16,30 @@ import { sendWelcomeEmail } from '../src/lib/email';
 const prisma = new PrismaClient();
 
 // ========================================
-// UPDATE THESE VALUES FROM DODO DASHBOARD
+// UPDATE THESE VALUES FROM ENV OR CLI ARGS
 // ========================================
-const USER_EMAIL = 'faiswibowo14@gmail.com';
-const SUBSCRIPTION_ID = 'sub_0NWB7mbwknxctZunKQ2Ji';
-const CUSTOMER_ID = 'cus_0NWB7mblPbviqTETcSahi';
-const SUBSCRIPTION_PLAN = 'monthly'; // or 'yearly'
-const NEXT_BILLING_DATE = new Date('2026-01-20T05:39:00Z'); // Adjust timezone if needed
+const USER_EMAIL = process.env.FIX_SUBSCRIPTION_EMAIL || process.argv[2];
+const SUBSCRIPTION_ID = process.env.FIX_SUBSCRIPTION_ID || process.argv[3];
+const CUSTOMER_ID = process.env.FIX_SUBSCRIPTION_CUSTOMER_ID || process.argv[4];
+const SUBSCRIPTION_PLAN = process.env.FIX_SUBSCRIPTION_PLAN || process.argv[5] || 'monthly'; // or 'yearly'
+const NEXT_BILLING_DATE_STR = process.env.FIX_SUBSCRIPTION_NEXT_BILLING || process.argv[6];
+
+// Validate required arguments
+if (!USER_EMAIL || !SUBSCRIPTION_ID || !CUSTOMER_ID || !NEXT_BILLING_DATE_STR) {
+    console.error('❌ Missing required arguments');
+    console.log('\nUsage:');
+    console.log('  npx tsx scripts/fix-subscription.ts <email> <subscription_id> <customer_id> <plan> <next_billing_date>');
+    console.log('\nOr set environment variables:');
+    console.log('  FIX_SUBSCRIPTION_EMAIL=user@example.com');
+    console.log('  FIX_SUBSCRIPTION_ID=sub_xxx');
+    console.log('  FIX_SUBSCRIPTION_CUSTOMER_ID=cus_xxx');
+    console.log('  FIX_SUBSCRIPTION_PLAN=monthly');
+    console.log('  FIX_SUBSCRIPTION_NEXT_BILLING=2026-01-20T05:39:00Z');
+    console.log('  npx tsx scripts/fix-subscription.ts');
+    process.exit(1);
+}
+
+const NEXT_BILLING_DATE = new Date(NEXT_BILLING_DATE_STR);
 
 async function fixSubscription() {
     try {

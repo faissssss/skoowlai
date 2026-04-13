@@ -12,7 +12,7 @@ import NoteConfigModal from '@/components/NoteConfigModal';
 import { NoteConfig } from '@/lib/noteConfig/types';
 import { useErrorModal } from '@/components/ErrorModal';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes (Free Beta limit)
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
 export default function FileUpload() {
     const [file, setFile] = useState<File | null>(null);
@@ -79,7 +79,7 @@ export default function FileUpload() {
             }, 1500);
 
             const analysisTimer = setTimeout(() => {
-                startLoading('Generating notes & flashcards...');
+                startLoading('Generating notes...');
             }, 4000);
 
             const response = await fetch('/api/generate', {
@@ -133,7 +133,7 @@ export default function FileUpload() {
                     <div>
                         <h3 className="text-lg font-semibold text-foreground">Upload your material</h3>
                         <p className="text-muted-foreground mt-1">Drag & drop or click to browse</p>
-                        <p className="text-xs text-muted-foreground/70 mt-2">📄 PDF, DOCX, PPT, TXT • Max 10MB</p>
+                        <p className="text-xs text-muted-foreground/70 mt-2">📄 PDF, DOCX, PPT, TXT • Max 50MB</p>
                     </div>
                     <input
                         type="file"
@@ -162,7 +162,7 @@ export default function FileUpload() {
                                     File too large
                                 </p>
                                 <p className="text-xs text-amber/80 mt-0.5 wrap-break-word">
-                                    Your file is {(file.size / 1024 / 1024).toFixed(1)} MB. Max size is 10MB.
+                                    Your file is {(file.size / 1024 / 1024).toFixed(1)} MB. Max size is 50MB.
                                 </p>
                             </div>
                         </div>

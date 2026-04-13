@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { sendWelcomeEmail, sendReceiptEmail, sendCancellationEmail, sendPlanChangeEmail, sendTrialWelcomeEmail } from '@/lib/email';
 import { sendEmailWithIdempotency, generateEmailIdempotencyKey } from '@/lib/emailIdempotency';
+import { validateClerkWebhook } from '@/lib/webhook-schemas';
 
 /**
  * Clerk Webhook Handler
@@ -27,6 +28,13 @@ export async function POST(req: NextRequest) {
 
         // Step 1: Verify the webhook FIRST (this is fast and required)
         evt = await verifyWebhook(req);
+        
+        // Step 1.5: Validate webhook payload structure
+        const validation = validateClerkWebhook(evt);
+        if (!validation.success) {
+            console.error('[Clerk Webhook] Payload validation failed:', validation.error);
+            return new Response('Invalid webhook payload', { status: 400 });
+        }
     } catch (err) {
         console.error('[Clerk Webhook] Error verifying webhook:', err);
         return new Response('Error verifying webhook', { status: 400 });

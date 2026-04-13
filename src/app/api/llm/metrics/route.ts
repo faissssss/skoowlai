@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-
+import { requireAdmin } from '@/lib/admin';
 import { createLLMRouter, getLLMRequestLogs } from '@/lib/llm/service';
 
 /**
@@ -9,8 +9,13 @@ import { createLLMRouter, getLLMRequestLogs } from '@/lib/llm/service';
  * - Request logs with timing and token usage
  * - Cost tracking data
  * - Performance statistics
+ * 
+ * SECURITY: Requires admin authentication
  */
 export async function GET(request: Request) {
+  // SECURITY: Require admin authentication
+  const admin = await requireAdmin();
+  if (!admin.ok) return admin.response;
   try {
     const { searchParams } = new URL(request.url);
     const limit = Number.parseInt(searchParams.get('limit') || '100', 10);

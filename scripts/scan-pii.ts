@@ -17,6 +17,14 @@ const PII_PATTERNS = [
     { name: 'Unmasked Card Variable', pattern: /cardNumber\s*[:=]\s*["'][0-9]{13,19}["']/gi },
     // Detects actual card numbers in template strings like ${4111111111111111}
     { name: 'Card Number in Template', pattern: /\$\{[0-9]{13,19}\}/g },
+    
+    // API Key patterns (SECURITY: Critical to detect)
+    { name: 'Groq API Key', pattern: /gsk_[a-zA-Z0-9]{32,}/g },
+    { name: 'Stripe Secret Key', pattern: /sk_(test|live)_[a-zA-Z0-9]{24,}/g },
+    { name: 'Resend API Key', pattern: /re_[a-zA-Z0-9]{24,}/g },
+    { name: 'Google API Key', pattern: /AIzaSy[a-zA-Z0-9_-]{33}/g },
+    { name: 'Webhook Secret', pattern: /whsec_[a-zA-Z0-9]{32,}/g },
+    { name: 'Generic API Key Pattern', pattern: /['"](sk|pk|api|key)_[a-zA-Z0-9]{20,}['"]/gi },
 ];
 
 // Files/patterns to exclude
@@ -29,6 +37,8 @@ const EXCLUDE_PATTERNS = [
     /\.test\./,
     /\.spec\./,
     /scan-.*\.ts$/,  // Exclude scanner scripts themselves
+    /\.env/,         // Exclude .env files (secrets belong here)
+    /\.env\./,       // Exclude .env.local, .env.production, etc.
 ];
 
 // Only scan these file types
@@ -109,15 +119,19 @@ function scanFile(filePath: string): ScanResult[] {
 
 function main() {
     const srcDir = path.join(__dirname, '../src');
+    const scriptsDir = path.join(__dirname, '../scripts');
 
-    console.log('🔍 Scanning for PII leaks...\n');
+    console.log('🔍 Scanning for PII leaks and exposed API keys...\n');
 
     if (!fs.existsSync(srcDir)) {
         console.error(`❌ Directory not found: ${srcDir}`);
         process.exit(1);
     }
 
-    const files = getAllFiles(srcDir);
+    const srcFiles = getAllFiles(srcDir);
+    const scriptFiles = getAllFiles(scriptsDir);
+    const files = [...srcFiles, ...scriptFiles];
+    
     console.log(`Scanning ${files.length} files...\n`);
 
     let allResults: ScanResult[] = [];
@@ -128,11 +142,11 @@ function main() {
     }
 
     if (allResults.length === 0) {
-        console.log('✅ No PII leaks detected!\n');
+        console.log('✅ No PII leaks or exposed API keys detected!\n');
         console.log('All source files are safe.');
         process.exit(0);
     } else {
-        console.log(`❌ Found ${allResults.length} potential PII leak(s):\n`);
+        console.log(`❌ Found ${allResults.length} potential security issue(s):\n`);
         allResults.forEach(result => {
             console.log(`  📍 ${result.file}:${result.line}`);
             console.log(`     Type: ${result.pattern}`);
@@ -140,7 +154,8 @@ function main() {
             console.log(`     Context: ${result.context}`);
             console.log('');
         });
-        console.log('⚠️  Please review and mask any real PII before deploying.');
+        console.log('⚠️  CRITICAL: Review and remove any real secrets before committing!');
+        console.log('⚠️  API keys should only be in .env files (which are gitignored).');
         process.exit(1);
     }
 }

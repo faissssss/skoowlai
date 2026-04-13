@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/admin';
 import { IS_PRE_LAUNCH, DISABLE_PAYMENTS } from '@/lib/config';
 
 // Lightweight health/config endpoint for billing-related services.
 // Useful for verifying environment before enabling payments in production.
+// SECURITY: Requires admin authentication
 
 export async function GET() {
+  // SECURITY: Require admin authentication
+  const admin = await requireAdmin();
+  if (!admin.ok) return admin.response;
   const env = process.env;
 
   const checks = {
