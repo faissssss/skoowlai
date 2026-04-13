@@ -13,7 +13,7 @@ export interface Message {
 
 export interface ContentSizeConfig {
   thresholdTokens: number; // Default: 6000
-  groqContextLimit: number; // Default: 8000
+  groqContextLimit: number; // Default: 128000 (Llama 3.3 70B supports 128k context)
   enableRouting: boolean; // Default: true
 }
 
@@ -29,7 +29,7 @@ export class ContentSizeDetector {
   constructor(config?: Partial<ContentSizeConfig>) {
     this.config = {
       thresholdTokens: config?.thresholdTokens ?? 6000,
-      groqContextLimit: config?.groqContextLimit ?? 8000,
+      groqContextLimit: config?.groqContextLimit ?? 128000, // Updated default to 128k
       enableRouting: config?.enableRouting ?? true,
     };
   }

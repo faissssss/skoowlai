@@ -288,10 +288,16 @@ export class LLMRouter {
 
       this.logs.push(snapshot);
     });
+    
+    // Read Groq context limit from environment variable
+    const groqContextLimit = process.env.GROQ_CONTEXT_LIMIT_TOKENS 
+      ? parseInt(process.env.GROQ_CONTEXT_LIMIT_TOKENS, 10) 
+      : 128000;
+    
     this.contentSizeDetector = deps.contentSizeDetector ?? new ContentSizeDetector({
       enableRouting: config.enableContentSizeRouting ?? true,
       thresholdTokens: config.contentSizeThreshold ?? 6000,
-      groqContextLimit: 8000,
+      groqContextLimit: groqContextLimit,
     });
   }
 
