@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Square, Loader2, CheckCircle2, AlertCircle, Volume2, Pause, Play, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useErrorModal } from '@/components/ErrorModal';
+import { uploadFileToBlob } from '@/lib/blob-upload-client';
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'processing' | 'complete' | 'error';
 
@@ -283,13 +284,22 @@ export default function LiveAudioRecorder({ onComplete }: LiveAudioRecorderProps
 
     const processAudio = async (blob: Blob) => {
         try {
-            const arrayBuffer = await blob.arrayBuffer();
-            const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+            const extension = blob.type.includes('webm') ? 'webm'
+                : blob.type.includes('mp4') ? 'm4a' : 'wav';
+            const file = new File([blob], `recording-${Date.now()}.${extension}`, { type: blob.type });
+            const uploadedBlob = await uploadFileToBlob(file, 'audio');
 
-            const response = await fetch('/api/generate-audio-notes', {
+            const response = await fetch('/api/generate-audio-notes-from-blob', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audio: base64, mimeType: blob.type, fileName: `recording-${Date.now()}.webm` }),
+                body: JSON.stringify({
+                    blob: {
+                        pathname: uploadedBlob.pathname,
+                        contentType: uploadedBlob.contentType,
+                        originalName: file.name,
+                        size: file.size,
+                    },
+                }),
             });
 
             if (!response.ok) {

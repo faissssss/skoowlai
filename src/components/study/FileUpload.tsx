@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import NoteConfigModal from '@/components/NoteConfigModal';
 import { NoteConfig } from '@/lib/noteConfig/types';
 import { useErrorModal } from '@/components/ErrorModal';
+import { uploadFileToBlob } from '@/lib/blob-upload-client';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
@@ -68,27 +69,25 @@ export default function FileUpload() {
         setIsUploading(true);
         startLoading('Uploading your document...');
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('noteConfig', JSON.stringify(config));
-
         try {
-            // Update progress after short delay to show upload started
-            const progressTimer = setTimeout(() => {
-                startLoading('Analyzing content...');
-            }, 1500);
+            const blob = await uploadFileToBlob(file, 'document');
+            startLoading('Analyzing content...');
 
-            const analysisTimer = setTimeout(() => {
-                startLoading('Generating notes...');
-            }, 4000);
-
-            const response = await fetch('/api/generate', {
+            const response = await fetch('/api/generate-from-blob', {
                 method: 'POST',
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    blob: {
+                        pathname: blob.pathname,
+                        contentType: blob.contentType,
+                        originalName: file.name,
+                        size: file.size,
+                    },
+                    noteConfig: config,
+                }),
             });
-
-            clearTimeout(progressTimer);
-            clearTimeout(analysisTimer);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));

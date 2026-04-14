@@ -6,6 +6,7 @@ import { Mic, Square, Loader2, CheckCircle2, FileAudio, X, AlertCircle } from 'l
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useErrorModal } from '@/components/ErrorModal';
+import { uploadFileToBlob } from '@/lib/blob-upload-client';
 
 type RecordingStep = 'idle' | 'recording' | 'uploading' | 'transcribing' | 'generating' | 'complete' | 'error';
 
@@ -189,19 +190,27 @@ export default function AudioNoteCreator({ onNotesGenerated, onCancel }: AudioNo
     // Process audio - send to API
     const processAudio = useCallback(async (blob: Blob) => {
         try {
-            setStep('transcribing');
-
-            // Convert blob to file
+            setStep('uploading');
             const extension = blob.type.includes('webm') ? 'webm' :
                 blob.type.includes('mp4') ? 'm4a' : 'wav';
             const file = new File([blob], `recording.${extension}`, { type: blob.type });
+            const uploadedBlob = await uploadFileToBlob(file, 'audio');
 
-            const formData = new FormData();
-            formData.append('audio', file);
+            setStep('transcribing');
 
-            const response = await fetch('/api/generate-audio-notes', {
+            const response = await fetch('/api/generate-audio-notes-from-blob', {
                 method: 'POST',
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    blob: {
+                        pathname: uploadedBlob.pathname,
+                        contentType: uploadedBlob.contentType,
+                        originalName: file.name,
+                        size: file.size,
+                    },
+                }),
             });
 
             if (!response.ok) {
