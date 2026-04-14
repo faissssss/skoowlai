@@ -18,14 +18,14 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin.ok) return admin.response;
   try {
-    const router = createLLMRouter(30000);
+    const router = await createLLMRouter(30000);
     await refreshLLMProviderHealth();
     
     // Get provider status
     const status = await router.getProviderStatus();
     
     // Get logs to calculate content size routing metrics
-    const logs = getLLMRequestLogs();
+    const logs = await getLLMRequestLogs();
     
     // Calculate content size routing statistics
     const contentSizeStats = {

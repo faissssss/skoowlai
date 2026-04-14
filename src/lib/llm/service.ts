@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, warmupConnection, withRetry } from '@/lib/db';
 
 import { ProviderConfig, type Provider } from './config';
 import { CostTracker, InMemoryCostStorage, type CostEntry, type CostStorage } from './costTracker';
@@ -162,37 +162,59 @@ class InMemoryHealthRedis implements HealthRedisLike {
 
 class PrismaCostStorage implements CostStorage {
   async insert(entry: CostEntry): Promise<void> {
-    await db.llmRequest.upsert({
-      where: { requestId: entry.requestId },
-      create: {
-        timestamp: entry.timestamp,
-        provider: entry.provider,
-        model: entry.model,
-        feature: entry.feature,
-        inputTokens: entry.inputTokens,
-        outputTokens: entry.outputTokens,
-        estimatedCost: entry.estimatedCost,
-        latencyMs: entry.latencyMs ?? 0,
-        success: entry.success ?? true,
-        errorCode: entry.errorCode,
-        fallbackUsed: entry.fallbackUsed ?? false,
-        userId: entry.userId,
-        requestId: entry.requestId,
-      },
-      update: {
-        provider: entry.provider,
-        model: entry.model,
-        feature: entry.feature,
-        inputTokens: entry.inputTokens,
-        outputTokens: entry.outputTokens,
-        estimatedCost: entry.estimatedCost,
-        latencyMs: entry.latencyMs ?? 0,
-        success: entry.success ?? true,
-        errorCode: entry.errorCode,
-        fallbackUsed: entry.fallbackUsed ?? false,
-        userId: entry.userId,
-      },
-    });
+    try {
+      await withRetry(() => db.llmRequest.upsert({
+        where: { requestId: entry.requestId },
+        create: {
+          timestamp: entry.timestamp,
+          provider: entry.provider,
+          model: entry.model,
+          feature: entry.feature,
+          inputTokens: entry.inputTokens,
+          outputTokens: entry.outputTokens,
+          estimatedCost: entry.estimatedCost,
+          latencyMs: entry.latencyMs ?? 0,
+          success: entry.success ?? true,
+          errorCode: entry.errorCode,
+          fallbackUsed: entry.fallbackUsed ?? false,
+          userId: entry.userId,
+          requestId: entry.requestId,
+        },
+        update: {
+          provider: entry.provider,
+          model: entry.model,
+          feature: entry.feature,
+          inputTokens: entry.inputTokens,
+          outputTokens: entry.outputTokens,
+          estimatedCost: entry.estimatedCost,
+          latencyMs: entry.latencyMs ?? 0,
+          success: entry.success ?? true,
+          errorCode: entry.errorCode,
+          fallbackUsed: entry.fallbackUsed ?? false,
+          userId: entry.userId,
+        },
+      }));
+    } catch (error: any) {
+      // Detect configuration errors that should fail fast
+      const isConfigurationError = 
+        !process.env.DATABASE_URL ||
+        error?.message?.includes('Environment variable not found: DATABASE_URL') ||
+        error?.message?.includes('Invalid connection string') ||
+        error?.code === 'P1013' || // Invalid database string
+        error?.code === 'P1012';   // Schema validation error
+      
+      if (isConfigurationError) {
+        // Throw configuration errors immediately - don't fall back
+        throw new Error(
+          `Database configuration error: ${error?.message || 'DATABASE_URL not configured'}. ` +
+          'Cost tracking cannot function without proper database configuration.'
+        );
+      }
+      
+      // For transient errors (P1001, P1002, connection timeouts), allow fallback
+      // These are already retried by withRetry, so if we reach here, retries exhausted
+      throw error;
+    }
   }
 
   async list(params: { provider?: Provider; start: Date; end: Date }): Promise<CostEntry[]> {
@@ -257,10 +279,33 @@ class ResilientCostStorage implements CostStorage {
     }
 
     this.warned = true;
-    console.warn(
-      '[LLM Service] Falling back to in-memory cost storage. ' +
-      `Error: ${error instanceof Error ? error.message : String(error)}`
-    );
+    
+    // Determine error type and extract details
+    const errorObj = error as any;
+    const errorCode = errorObj?.code;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Classify error type based on Prisma error codes
+    const isConfigurationError = 
+      !process.env.DATABASE_URL ||
+      errorMessage.includes('Environment variable not found: DATABASE_URL') ||
+      errorMessage.includes('Invalid connection string') ||
+      errorCode === 'P1013' || // Invalid database string
+      errorCode === 'P1012';   // Schema validation error
+    
+    const errorType = isConfigurationError ? 'configuration' : 'transient';
+    
+    // Build detailed error message
+    let detailedMessage = '[LLM Service] Falling back to in-memory cost storage. ';
+    detailedMessage += `Error type: ${errorType}`;
+    
+    if (errorCode) {
+      detailedMessage += `, Code: ${errorCode}`;
+    }
+    
+    detailedMessage += `, Message: ${errorMessage}`;
+    
+    console.warn(detailedMessage);
   }
 }
 
@@ -308,13 +353,17 @@ function createSharedLogger(logs: RequestLogEntry[]): (entry: RequestLogEntry) =
   };
 }
 
-function createSharedRuntime(): SharedLLMRuntime {
+async function createSharedRuntime(): Promise<SharedLLMRuntime> {
   const logs: RequestLogEntry[] = [];
   const logger = createSharedLogger(logs);
   const rateLimitTracker = new RateLimitTracker(new InMemoryCounterRedis(), DEFAULT_RATE_LIMIT_CONFIG);
   const requestQueue = new RequestQueue(new InMemoryQueueRedis());
   const healthMonitor = new HealthMonitor(new InMemoryHealthRedis());
   const fallbackHandler = new FallbackHandler(DEFAULT_FALLBACK_CONFIG);
+  
+  // Warm up database connection before creating PrismaCostStorage
+  await warmupConnection();
+  
   const costStorage = new ResilientCostStorage(new PrismaCostStorage(), new InMemoryCostStorage());
   const costTracker = new CostTracker(costStorage);
   const retryStrategy = new RetryStrategy(DEFAULT_RETRY_CONFIG);
@@ -333,14 +382,16 @@ function createSharedRuntime(): SharedLLMRuntime {
   };
 }
 
-function getSharedRuntime(): SharedLLMRuntime {
-  globalThis.__studybuddyLLMRuntime ??= createSharedRuntime();
+async function getSharedRuntime(): Promise<SharedLLMRuntime> {
+  if (!globalThis.__studybuddyLLMRuntime) {
+    globalThis.__studybuddyLLMRuntime = await createSharedRuntime();
+  }
   return globalThis.__studybuddyLLMRuntime;
 }
 
-export function createLLMRouter(timeout: number): LLMRouter {
+export async function createLLMRouter(timeout: number): Promise<LLMRouter> {
   const config = ProviderConfig.load();
-  const runtime = getSharedRuntime();
+  const runtime = await getSharedRuntime();
 
   return new LLMRouter(
     {
@@ -367,12 +418,13 @@ export function createLLMRouter(timeout: number): LLMRouter {
   );
 }
 
-export function getLLMRequestLogs(): RequestLogEntry[] {
-  return [...getSharedRuntime().logs];
+export async function getLLMRequestLogs(): Promise<RequestLogEntry[]> {
+  const runtime = await getSharedRuntime();
+  return [...runtime.logs];
 }
 
 export async function refreshLLMProviderHealth(): Promise<void> {
-  const runtime = getSharedRuntime();
+  const runtime = await getSharedRuntime();
   await Promise.all([
     runtime.healthMonitor.checkHealth('groq'),
     runtime.healthMonitor.checkHealth('gemini'),

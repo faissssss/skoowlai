@@ -32,10 +32,10 @@ export async function GET(request: Request) {
       successRate?: number;
     };
     
-    void createLLMRouter(30000);
+    void (await createLLMRouter(30000));
     
     // Get request logs
-    let logs = getLLMRequestLogs();
+    let logs = await getLLMRequestLogs();
     
     // Filter by feature if specified
     if (feature) {

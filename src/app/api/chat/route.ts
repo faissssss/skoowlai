@@ -149,7 +149,7 @@ ${context}
 
         // Initialize LLM Router with error handling
         try {
-            const router = createLLMRouter(30000);
+            const router = await createLLMRouter(30000);
             const result = await router.streamText({
                 messages: allMessages,
                 temperature: 0.4, // Slightly higher for conversational responses

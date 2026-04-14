@@ -544,9 +544,9 @@ Remember: Your notes must be based ONLY on the content between BEGIN TRANSCRIPT 
         })), null, 2));
 
         // Initialize LLM Router with error handling
-        let router: ReturnType<typeof createLLMRouter>;
+        let router: Awaited<ReturnType<typeof createLLMRouter>>;
         try {
-            router = createLLMRouter(120000);
+            router = await createLLMRouter(120000);
         } catch (error) {
             console.error('Failed to load LLM configuration:', error);
             return NextResponse.json({

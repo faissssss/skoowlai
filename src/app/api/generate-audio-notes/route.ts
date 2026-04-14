@@ -237,9 +237,9 @@ export async function POST(req: NextRequest) {
         console.log('🤖 Generating notes with LLM Router...');
 
         // Initialize LLM Router with error handling
-        let router: ReturnType<typeof createLLMRouter>;
+        let router: Awaited<ReturnType<typeof createLLMRouter>>;
         try {
-            router = createLLMRouter(30000);
+            router = await createLLMRouter(30000);
         } catch (error) {
             console.error('Failed to load LLM configuration:', error);
             return NextResponse.json({

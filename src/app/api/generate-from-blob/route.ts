@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { db, warmupConnection } from '@/lib/db';
 import { checkRateLimitFromRequest } from '@/lib/ratelimit';
 import { requireAuth } from '@/lib/auth';
 import { verifyUsageLimits, incrementUsage, type InputType } from '@/lib/usageVerifier';
@@ -15,6 +15,8 @@ import { createLLMRouter } from '@/lib/llm/service';
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+let dbWarmedUp = false;
 
 const blobGenerateSchema = z.object({
   blob: z.object({
@@ -31,6 +33,12 @@ const blobGenerateSchema = z.object({
 }).strict();
 
 export async function POST(req: NextRequest) {
+  // Warm up database connection on cold start
+  if (!dbWarmedUp) {
+    await warmupConnection();
+    dbWarmedUp = true;
+  }
+
   const csrfError = checkCsrfOrigin(req);
   if (csrfError) return csrfError;
 
@@ -274,9 +282,9 @@ ${text.slice(0, 30000)}
 ---END TRANSCRIPT---
 `;
 
-    let router: ReturnType<typeof createLLMRouter>;
+    let router: Awaited<ReturnType<typeof createLLMRouter>>;
     try {
-      router = createLLMRouter(120000);
+      router = await createLLMRouter(120000);
     } catch (error) {
       return NextResponse.json(
         {
@@ -289,13 +297,31 @@ ${text.slice(0, 30000)}
       );
     }
 
-    const result = await router.streamText({
-      messages: [{ role: 'user', content: promptText.slice(0, 35000) }],
-      temperature: 0.3,
-      feature: 'generate',
-    });
+    let result;
+    let generatedSummary;
+    
+    try {
+      result = await router.streamText({
+        messages: [{ role: 'user', content: promptText.slice(0, 35000) }],
+        temperature: 0.3,
+        feature: 'generate',
+      });
 
-    const generatedSummary = await result.text;
+      generatedSummary = await result.text;
+    } catch (error: any) {
+      // Check if this is a database configuration error from cost tracking
+      if (error?.message?.includes('Database configuration error')) {
+        return NextResponse.json(
+          {
+            error: 'Database Error',
+            details: 'Failed to persist cost tracking data',
+          },
+          { status: 500 }
+        );
+      }
+      // Re-throw other errors to be handled by outer catch
+      throw error;
+    }
     const titleMatch = generatedSummary.match(/^#\s*(.+)$/m);
     if (titleMatch && titleMatch[1].trim().length > 3) {
       title = titleMatch[1].trim();

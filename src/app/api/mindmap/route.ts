@@ -599,9 +599,9 @@ export async function POST(req: NextRequest) {
         const prompt = buildMindMapPrompt(budgetedSource.content, deck.title, depth, style);
 
         // Initialize LLM Router with error handling
-        let router: ReturnType<typeof createLLMRouter>;
+        let router: Awaited<ReturnType<typeof createLLMRouter>>;
         try {
-            router = createLLMRouter(120000);
+            router = await createLLMRouter(120000);
         } catch (error) {
             console.error('Failed to load LLM configuration:', error);
             return NextResponse.json({

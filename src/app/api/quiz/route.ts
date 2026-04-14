@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
 
         // Initialize LLM Router with error handling
         try {
-            const router = createLLMRouter(60000);
+            const router = await createLLMRouter(60000);
 
             // Generate quiz questions using LLM Router
             const { object } = await router.generateObject({

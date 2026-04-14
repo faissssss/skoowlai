@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         // Initialize LLM Router with error handling
         let result: StreamTextResult;
         try {
-            const router = createLLMRouter(30000);
+            const router = await createLLMRouter(30000);
             result = await router.streamText({
                 messages: [
                     {

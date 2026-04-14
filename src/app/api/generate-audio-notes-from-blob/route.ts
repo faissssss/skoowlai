@@ -116,9 +116,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let router: ReturnType<typeof createLLMRouter>;
+    let router: Awaited<ReturnType<typeof createLLMRouter>>;
     try {
-      router = createLLMRouter(30000);
+      router = await createLLMRouter(30000);
     } catch (error) {
       return NextResponse.json(
         {
