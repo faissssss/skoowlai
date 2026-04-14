@@ -9,11 +9,6 @@
       "memory": 1024
     }
   },
-  "api": {
-    "bodyParser": {
-      "sizeLimit": "50mb"
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/keep-alive",
