@@ -557,7 +557,7 @@ export default function LandingPage() {
                 <Users className="w-8 h-8 text-primary" />
               </div>
             </div>
-            <CountUpNumber value={100} duration={2.5} className="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
+            <CountUpNumber value={1000} duration={2.5} className="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
             <p className="text-muted-foreground text-lg mt-2">Students Learning</p>
           </motion.div>
 
@@ -575,7 +575,7 @@ export default function LandingPage() {
                   <FileText className="w-5 h-5 text-(--brand-accent)" />
                 </div>
               </div>
-              <CountUpNumber value={300} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
+              <CountUpNumber value={7500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
               <p className="text-muted-foreground text-sm mt-1">Notes Created</p>
             </motion.div>
 
@@ -591,7 +591,7 @@ export default function LandingPage() {
                   <Layers className="w-5 h-5 text-(--brand-primary)" />
                 </div>
               </div>
-              <CountUpNumber value={200} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
+              <CountUpNumber value={6000} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
               <p className="text-muted-foreground text-sm mt-1">Flashcards Made</p>
             </motion.div>
 
@@ -607,7 +607,7 @@ export default function LandingPage() {
                   <HelpCircle className="w-5 h-5 text-yellow-500" />
                 </div>
               </div>
-              <CountUpNumber value={500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
+              <CountUpNumber value={5500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
               <p className="text-muted-foreground text-sm mt-1">Quizzes Created</p>
             </motion.div>
 
@@ -623,7 +623,7 @@ export default function LandingPage() {
                   <Network className="w-5 h-5 text-pink-500" />
                 </div>
               </div>
-              <CountUpNumber value={100} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
+              <CountUpNumber value={1500} duration={2.5} className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-linear-to-r from-(--brand-primary) to-(--brand-accent)" />
               <p className="text-muted-foreground text-sm mt-1">Mind Maps</p>
             </motion.div>
           </div>
